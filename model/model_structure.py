@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch_geometric.utils import scatter
 
 NODE_FEATURE_DIM = 13
-EDGE_RAW_DIM = 1
+EDGE_RAW_DIM = 6
 DEFAULT_Y_SCALE = 25.0
 
 

@@ -24,7 +24,9 @@ Commands:
 
   data-process [processing args...]
       Run 1-data-processing.py with any extra processing arguments.
-      Example: ./run_experiment.sh data-process --all
+      With no raw batch directory, scan dataset/raw and repair missing processed batches.
+      Example: ./run_experiment.sh data-process
+      Example: ./run_experiment.sh data-process dataset/raw/<batch_name> dataset/processed --all
 
   2stg-gnn
       Run stage-1 GNN training, then stage-2 Gurobi solving on the latest checkpoint.
@@ -72,6 +74,56 @@ run_python() {
         exit 1
     fi
     run_cmd "$PYTHON_BIN" "$@"
+}
+
+normalize_data_process_args() {
+    local has_target=0
+    local positional_count=0
+    local arg
+
+    for arg in "$@"; do
+        case "$arg" in
+            --all|--file)
+                has_target=1
+                ;;
+            -*)
+                ;;
+            *)
+                positional_count=$((positional_count + 1))
+                ;;
+        esac
+    done
+
+    if [ "$has_target" -eq 0 ] && [ "$positional_count" -gt 0 ]; then
+        printf '%s\0' "$@" "--all"
+    else
+        printf '%s\0' "$@"
+    fi
+}
+
+resolve_processed_data_dir() {
+    local requested_dir="${1:-$PROCESSED_DATA_DIR}"
+
+    if compgen -G "${requested_dir}/G-*.json" > /dev/null; then
+        printf '%s\n' "$requested_dir"
+        return 0
+    fi
+
+    local latest_batch=""
+    latest_batch="$(
+        find "$requested_dir" -maxdepth 1 -mindepth 1 -type d -printf '%f\n' 2>/dev/null \
+        | grep -E '^[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{6}(__.+)?$' \
+        | sort -r \
+        | head -n 1
+    )"
+
+    if [ -n "$latest_batch" ] && compgen -G "${requested_dir}/${latest_batch}/G-*.json" > /dev/null; then
+        echo "[run_experiment] No top-level processed graphs found in $requested_dir; using latest batch ${requested_dir}/${latest_batch}" >&2
+        printf '%s\n' "${requested_dir}/${latest_batch}"
+        return 0
+    fi
+
+    printf '%s\n' "$requested_dir"
 }
 
 latest_result_dir() {
@@ -128,19 +180,22 @@ case "$COMMAND" in
         run_python 0-data-generation.py "$@"
         ;;
     data-process)
-        run_python 1-data-processing.py "$@"
+        mapfile -d '' -t data_process_args < <(normalize_data_process_args "$@")
+        run_python 1-data-processing.py "${data_process_args[@]}"
         ;;
     2stg-gnn)
-        run_python 2-stage1-training-GNN.py --data_dir "$PROCESSED_DATA_DIR" --results_root "$RESULTS_ROOT"
+        resolved_processed_dir="$(resolve_processed_data_dir "$PROCESSED_DATA_DIR")"
+        run_python 2-stage1-training-GNN.py --data_dir "$resolved_processed_dir" --results_root "$RESULTS_ROOT"
         model_path="$(latest_checkpoint "2stg_Gnn_" "best_stage1_model_real.pth")"
         log "Using latest checkpoint: $model_path"
-        run_python 3-stage2-solver-gurobi.py --model_path "$model_path" --data_dir "$PROCESSED_DATA_DIR" --results_root "$RESULTS_ROOT" --solutions_root "$SOLUTIONS_ROOT"
+        run_python 3-stage2-solver-gurobi.py --model_path "$model_path" --data_dir "$resolved_processed_dir" --results_root "$RESULTS_ROOT" --solutions_root "$SOLUTIONS_ROOT"
         ;;
     2stg-reg)
-        run_python 2-stage1-training-Reg.py --data_dir "$PROCESSED_DATA_DIR" --results_root "$RESULTS_ROOT"
+        resolved_processed_dir="$(resolve_processed_data_dir "$PROCESSED_DATA_DIR")"
+        run_python 2-stage1-training-Reg.py --data_dir "$resolved_processed_dir" --results_root "$RESULTS_ROOT"
         model_path="$(latest_checkpoint "2stg_Reg_" "best_stage1_model_real.pth")"
         log "Using latest checkpoint: $model_path"
-        run_python 3-stage2-solver-gurobi.py --model_path "$model_path" --data_dir "$PROCESSED_DATA_DIR" --results_root "$RESULTS_ROOT" --solutions_root "$SOLUTIONS_ROOT"
+        run_python 3-stage2-solver-gurobi.py --model_path "$model_path" --data_dir "$resolved_processed_dir" --results_root "$RESULTS_ROOT" --solutions_root "$SOLUTIONS_ROOT"
         ;;
     dfl-gnn)
         run_python 2-end2end-GNN.py --data_dir "$PROCESSED_DATA_DIR" --results_root "$RESULTS_ROOT" --solutions_root "$SOLUTIONS_ROOT" "$@"
