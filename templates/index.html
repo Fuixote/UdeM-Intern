@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KEP Network Explorer</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Vis.js Network -->
+    <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>KEP Explorer</h2>
+                <div class="status-badge" id="statusBadge">Connecting...</div>
+            </div>
+            
+            <div class="control-group">
+                <label for="datasetSelect">Dataset Instance</label>
+                <div class="select-wrapper">
+                    <select id="datasetSelect">
+                        {% for file in available_files %}
+                        <option value="{{ file }}" {% if file == default_file %}selected{% endif %}>{{ file }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            
+            <div class="stats-panel">
+                <h3>Network Statistics</h3>
+                <div class="stat-row">
+                    <span class="stat-label">Patients (Nodes)</span>
+                    <span class="stat-value" id="nodeCount">-</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Compatibilities (Edges)</span>
+                    <span class="stat-value" id="edgeCount">-</span>
+                </div>
+            </div>
+
+
+            <!-- Information panel for selected node/edge -->
+            <div class="info-panel" id="infoPanel" style="display: none;">
+                <h3>Selection Details</h3>
+                <div id="selectionContent"></div>
+            </div>
+            
+        </aside>
+
+        <main class="network-container">
+            <!-- Loading Overlay -->
+            <div id="loadingOverlay" class="loading-overlay">
+                <div class="spinner"></div>
+                <p>Simulating Network Physics...</p>
+            </div>
+            
+            <!-- Network Legend -->
+            <div class="network-legend">
+                <h4>Node Legend</h4>
+                <div class="legend-item">
+                    <span class="legend-color color-white"></span>
+                    <span>Altruistic Donor (NDD)</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color color-purple"></span>
+                    <span>≥ 10 (Hub/Super Donor)</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color color-blue"></span>
+                    <span>6 - 9 (Very High)</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color color-cyan"></span>
+                    <span>3 - 5 (High)</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color color-green"></span>
+                    <span>1 - 2 (Low)</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color color-yellow"></span>
+                    <span>0 (No matches)</span>
+                </div>
+            </div>
+
+            <!-- Network Div -->
+            <div id="mynetwork"></div>
+            
+            <!-- Floating Tools -->
+            <div class="floating-tools">
+                <button class="tool-btn" id="btnFit" title="Fit to Screen">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M4 14v6h6M20 10V4h-6M10 20H4v-6M14 4h6v6"/></svg>
+                </button>
+                <button class="tool-btn" id="btnPhysics" title="Toggle Physics">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <!-- Custom JS -->
+    <script src="{{ url_for('static', filename='main.js') }}"></script>
+</body>
+</html>

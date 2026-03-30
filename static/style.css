@@ -1,0 +1,368 @@
+:root {
+    --bg-primary: #121216;
+    --bg-secondary: rgba(26, 26, 30, 0.7);
+    --bg-tertiary: rgba(40, 40, 45, 0.5);
+    
+    --text-primary: #f0f0f5;
+    --text-secondary: #9a9cae;
+    --text-accent: #7e57c2;
+    
+    --border-color: rgba(255, 255, 255, 0.08);
+    --border-hover: rgba(255, 255, 255, 0.2);
+    
+    --accent-color: #6c5ce7;
+    --accent-hover: #8172ea;
+    --danger-color: #e74c3c;
+    --success-color: #00b894;
+    
+    --glass-blur: blur(12px);
+    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    overflow: hidden; /* Prevent scrolling on the page, keep it in the app-container */
+}
+
+/* Base Layout */
+.app-container {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+}
+
+/* Sidebar Styling - Premium Glassmorphism */
+.sidebar {
+    width: 320px;
+    background: var(--bg-secondary);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border-right: 1px solid var(--border-color);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    z-index: 10;
+    box-shadow: var(--glass-shadow);
+    overflow-y: auto;
+}
+
+.sidebar-header h2 {
+    margin: 0 0 8px 0;
+    font-weight: 600;
+    font-size: 1.5rem;
+    background: linear-gradient(135deg, #a29bfe, #6c5ce7);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    background: rgba(108, 92, 231, 0.1);
+    color: #a29bfe;
+    border: 1px solid rgba(162, 155, 254, 0.2);
+    transition: all 0.3s;
+}
+
+.status-badge.success {
+    background: rgba(0, 184, 148, 0.1);
+    color: var(--success-color);
+    border-color: rgba(0, 184, 148, 0.2);
+}
+
+/* Controls */
+.control-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.select-wrapper {
+    position: relative;
+}
+
+select {
+    width: 100%;
+    padding: 12px 16px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    appearance: none;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.2s;
+    font-family: 'Inter', sans-serif;
+}
+
+select:hover {
+    border-color: var(--border-hover);
+}
+
+select:focus {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 2px rgba(108, 92, 231, 0.2);
+}
+
+.select-wrapper::after {
+    content: "▼";
+    font-size: 0.7rem;
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-secondary);
+    pointer-events: none;
+}
+
+/* Stats Panel & Info Panel */
+.stats-panel, .info-panel {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 16px;
+}
+
+.stats-panel h3, .info-panel h3 {
+    margin: 0 0 12px 0;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 8px;
+}
+
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 0.95rem;
+}
+
+.stat-row:last-child {
+    margin-bottom: 0;
+}
+
+.stat-value {
+    font-weight: 600;
+    color: #a29bfe;
+}
+
+.instructions h3 {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin: 0 0 12px 0;
+}
+
+.instructions ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.instructions li {
+    margin-bottom: 8px;
+    line-height: 1.4;
+}
+
+/* Network Main Area */
+.network-container {
+    flex-grow: 1;
+    position: relative;
+    background: radial-gradient(circle at center, #1a1a20 0%, #121216 100%);
+}
+
+#mynetwork {
+    width: 100%;
+    height: 100%;
+    outline: none;
+}
+
+/* Custom Vis.js Tooltips */
+.vis-tooltip {
+    position: absolute;
+    background: rgba(20, 20, 25, 0.94) !important;
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(162, 155, 254, 0.3) !important;
+    border-radius: 10px !important;
+    padding: 10px 14px !important;
+    color: #fff !important;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 0.85rem !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5) !important;
+    z-index: 100 !important;
+    line-height: 1.45;
+    pointer-events: none;
+    max-width: 280px;
+}
+
+.vis-tooltip b {
+    color: #a29bfe;
+    font-size: 0.95rem;
+    display: block;
+    margin-top: 6px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 4px;
+}
+
+/* Floating Tools Over Graph */
+.floating-tools {
+    position: absolute;
+    bottom: 30px;
+    right: 30px;
+    display: flex;
+    gap: 12px;
+    z-index: 10;
+}
+
+.tool-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.tool-btn:hover {
+    background: var(--accent-color);
+    border-color: var(--accent-color);
+    transform: translateY(-3px) scale(1.05);
+}
+
+.tool-btn:active {
+    transform: translateY(0) scale(0.95);
+}
+
+/* Loading Overlay */
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(18, 18, 22, 0.8);
+    backdrop-filter: blur(4px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+}
+
+.loading-overlay.active {
+    opacity: 1;
+    pointer-events: all;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(162, 155, 254, 0.2);
+    border-top-color: #a29bfe;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 16px;
+}
+
+.loading-overlay p {
+    color: var(--text-primary);
+    font-weight: 500;
+    letter-spacing: 0.5px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Detail view formatting */
+.detail-item {
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+}
+.detail-label {
+    color: var(--text-secondary);
+    display: inline-block;
+    width: 80px;
+}
+.detail-value {
+    color: #fff;
+    font-weight: 500;
+}
+
+/* Network Legend */
+.network-legend {
+    position: absolute;
+    top: 24px;
+    right: 30px;
+    background: var(--bg-secondary);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 16px 20px;
+    z-index: 10;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: opacity 0.3s;
+}
+
+.network-legend h4 {
+    margin: 0 0 4px 0;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 8px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.85rem;
+    color: var(--text-primary);
+}
+
+.legend-color {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+/* Legend Colors (matching JS logic) */
+.color-white  { background: #ffffff; border: 2px solid #dddddd; }
+.color-purple { background: #a29bfe; border: 2px solid #6c5ce7; }
+.color-blue   { background: #686de0; border: 2px solid #4834d4; }
+.color-cyan   { background: #7ed6df; border: 2px solid #22a6b3; }
+.color-green  { background: #badc58; border: 2px solid #6ab04c; }
+.color-yellow { background: #f6e58d; border: 2px solid #eebb22; }

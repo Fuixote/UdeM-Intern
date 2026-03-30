@@ -1,0 +1,35 @@
+# Python cache / build artifacts
+__pycache__/
+*.py[cod]
+*.so
+
+# Local editor / tool state
+.vscode/
+.codex
+
+# Generated datasets and experiment outputs
+dataset/raw/
+dataset/processed/
+results/
+solutions/
+
+# Generated documents / intermediate files
+main.pdf
+*.aux
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.bbl
+*.blg
+*.nav
+*.snm
+*.vrb
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
+# Generated scripts / temporary files
+combined-kidney.js
+*.tmp
