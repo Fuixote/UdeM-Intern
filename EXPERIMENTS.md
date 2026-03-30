@@ -1,25 +1,32 @@
-# Experiment Reproduction Guide
+# 实验复现说明
 
-This repository now has one unified entrypoint for the main experiment lines:
+本仓库现在统一通过一个入口脚本管理主要实验流程：
 
 ```bash
 ./run_experiment.sh <command> [args...]
 ```
 
-By default the script uses:
+不再推荐使用旧的 `2stg_Gnn.sh`、`2stg_Reg.sh`。两者已经删除，后续请统一使用 `run_experiment.sh`。
+
+## 1. 运行环境
+
+默认 Python 解释器为：
 
 ```bash
 /home/weikang/miniconda3/envs/KEPs/bin/python
 ```
 
-If your environment moves, override it with:
+如果你的环境路径不同，可以临时覆盖：
 
 ```bash
 KEP_PYTHON=/path/to/python ./run_experiment.sh <command>
 ```
 
-Directory defaults are now centralized in [`experiment_config.py`](/home/weikang/projects/UdeM-Intern/Exps/experiment_config.py).
-You can override them without editing code by setting:
+## 2. 统一配置入口
+
+实验中涉及的数据目录、结果目录、解目录，已经统一收敛到 [`experiment_config.py`](/home/weikang/projects/UdeM-Intern/Exps/experiment_config.py)。
+
+默认目录可以通过环境变量覆盖，而不需要改源码：
 
 ```bash
 export KEP_DATA_DIR=/path/to/processed-data
@@ -27,229 +34,251 @@ export KEP_RESULTS_DIR=/path/to/results
 export KEP_SOLUTIONS_DIR=/path/to/solutions
 ```
 
-Most training / solving scripts also accept explicit CLI overrides such as
-`--data_dir`, `--results_root`, and `--solutions_root`.
-
-## 1. Experiment Lines
-
-### A. Data Pipeline
-
-Generate raw instances:
+大多数训练、求解、评估脚本也支持显式命令行参数：
 
 ```bash
-./run_experiment.sh data-generate --instances 1000 --patients 50
+--data_dir
+--results_root
+--solutions_root
 ```
 
-Process raw instances into unified pair/NDD graphs:
+## 3. 实验线路
+
+### 3.1 数据生成
+
+生成原始实例：
 
 ```bash
-./run_experiment.sh data-process --all
+./run_experiment.sh data-generate --instances 1000 --patients 50 --seed 42
 ```
 
-Inputs:
-- `dataset/raw/genjson-*.json`
+输入：
+- 生成器配置参数
 
-Outputs:
+输出：
+- 默认输出到独立目录：`dataset/raw/gen_<timestamp>/`
+- 目录内包含：
+  - `genjson-*.json`
+  - `config.json`
+  - `run_info.json`
+
+常用可选参数：
+
+```bash
+--seed 42
+--run_name my_run
+--output_dir /exact/output/path
+--force
+```
+
+说明：
+- 同一组参数加同一个 `--seed`，会生成一致的数据。
+- 默认每次运行都会新建一个子目录，避免不同实验的数据混在一起。
+- 如果你想覆盖一个已有输出目录，需要显式加 `--force`。
+
+### 3.2 数据预处理
+
+将原始 donor-based 图转换成统一的 pair / NDD 图：
+
+```bash
+./run_experiment.sh data-process dataset/raw/gen_<timestamp> dataset/processed --all
+```
+
+输入：
+- `dataset/raw/<run_name>/genjson-*.json`
+
+输出：
 - `dataset/processed/G-*.json`
 
-Notes:
-- `ground_truth_label` is now deterministic per edge, so re-processing the same raw file produces identical labels.
+说明：
+- `ground_truth_label` 现在是“按边确定性生成”的，同一份原始文件重复处理会得到一致结果。
+- 如果你使用分目录输出的数据生成方式，预处理时应将对应的 run 目录作为输入目录传给 `1-data-processing.py`。
 
-### B. Two-Stage Baselines
-
-#### Two-Stage GNN
+### 3.3 两阶段基线：GNN
 
 ```bash
 ./run_experiment.sh 2stg-gnn
 ```
 
-What it does:
-1. Runs `2-stage1-training-GNN.py`
-2. Finds the newest `results/2stg_Gnn_*/best_stage1_model_real.pth`
-3. Runs `3-stage2-solver-gurobi.py --model_path ...`
+执行内容：
+1. 运行 `2-stage1-training-GNN.py`
+2. 自动寻找最新的 `results/2stg_Gnn_*/best_stage1_model_real.pth`
+3. 调用 `3-stage2-solver-gurobi.py` 进行第二阶段求解
 
-Outputs:
+输出：
 - `results/2stg_Gnn_<timestamp>/`
 - `solutions/2stg_Gnn_<timestamp>/`
 
-#### Two-Stage MLP Regression
+### 3.4 两阶段基线：MLP 回归
 
 ```bash
 ./run_experiment.sh 2stg-reg
 ```
 
-Outputs:
+输出：
 - `results/2stg_Reg_<timestamp>/`
 - `solutions/2stg_Reg_<timestamp>/`
 
-Backward-compatible shortcuts still work:
-
-```bash
-./2stg_Gnn.sh
-./2stg_Reg.sh
-```
-
-### C. Decision-Focused Learning (DFL)
-
-#### DFL GNN
+### 3.5 端到端 DFL：GNN
 
 ```bash
 ./run_experiment.sh dfl-gnn
 ```
 
-Optional:
+如果想显式指定预训练模型：
 
 ```bash
 ./run_experiment.sh dfl-gnn --pretrain_PATH results/2stg_Gnn_<timestamp>/best_stage1_model_real.pth
 ```
 
-Outputs:
+输出：
 - `results/dfl_Gnn_<timestamp>/`
 - `solutions/dfl_Gnn_<timestamp>/`
 
-#### DFL MLP
+### 3.6 端到端 DFL：MLP
 
 ```bash
 ./run_experiment.sh dfl-reg
 ```
 
-Optional:
+如果想显式指定预训练模型：
 
 ```bash
 ./run_experiment.sh dfl-reg --pretrain_PATH results/2stg_Reg_<timestamp>/best_stage1_model_real.pth
 ```
 
-Outputs:
+输出：
 - `results/dfl_Reg_<timestamp>/`
 - `solutions/dfl_Reg_<timestamp>/`
 
-### D. Oracle Benchmark
+### 3.7 Oracle 基线
 
-Run oracle mode using ground-truth labels:
+使用真实 `ground_truth_label` 直接求解：
 
 ```bash
 ./run_experiment.sh oracle
 ```
 
-Recommended for fair comparison against a specific experiment:
+为了和某个实验使用同一测试集，推荐传入参考 checkpoint：
 
 ```bash
 ./run_experiment.sh oracle results/2stg_Gnn_<timestamp>/best_stage1_model_real.pth
 ```
 
-Why pass a checkpoint:
-- `3-stage2-solver-gurobi.py --gt_mode --model_path ...` copies that experiment's `test_files.txt`
-- this lets `4-evaulation.py` compare all methods on the same test split
+原因：
+- `3-stage2-solver-gurobi.py --gt_mode --model_path ...` 会复制该实验的 `test_files.txt`
+- 这样 `4-evaulation.py` 在横向比较时会使用同一个测试集
 
-Outputs:
+输出：
 - `solutions/ground_truth/`
-- `results/ground_truth/test_files.txt` if a reference checkpoint is supplied or auto-detected
+- `results/ground_truth/test_files.txt`
 
-### E. Evaluation
+### 3.8 评估
 
-Compare all solution folders under `solutions/`:
+对 `solutions/` 下所有实验目录做统一比较：
 
 ```bash
 ./run_experiment.sh evaluate
 ```
 
-Evaluate full datasets instead of test splits:
+如果要对全量图评估而不是仅测试集：
 
 ```bash
 ./run_experiment.sh evaluate --full_eval
 ```
 
-Evaluate a custom subset:
+如果要指定某个测试集文件：
 
 ```bash
 ./run_experiment.sh evaluate --test_list results/2stg_Gnn_<timestamp>/test_files.txt
 ```
 
-### F. Visualization
+### 3.9 可视化
 
-Launch the Flask app:
+启动 Flask 可视化服务：
 
 ```bash
 ./run_experiment.sh app
 ```
 
-Pages:
-- `/` explores processed graphs
-- `/solutions` explores all `solutions/*/*_sol.json` files
+页面说明：
+- `/`：查看处理后的图结构
+- `/solutions`：查看 `solutions/*/*_sol.json` 中的求解结果
 
-## 2. Recommended Reproduction Order
+## 4. 推荐复现顺序
 
-For a clean comparison, run the lines in this order:
+如果你想完整复现实验，建议按这个顺序执行：
 
-1. Data processing
+1. 预处理数据
 
 ```bash
-./run_experiment.sh data-process --all
+./run_experiment.sh data-generate --instances 1000 --patients 50 --seed 42
+./run_experiment.sh data-process dataset/raw/gen_<timestamp> dataset/processed --all
 ```
 
-2. Two-stage baselines
+2. 运行两阶段基线
 
 ```bash
 ./run_experiment.sh 2stg-gnn
 ./run_experiment.sh 2stg-reg
 ```
 
-3. Decision-focused models
+3. 运行端到端 DFL
 
 ```bash
 ./run_experiment.sh dfl-gnn
 ./run_experiment.sh dfl-reg
 ```
 
-4. Oracle benchmark
+4. 运行 Oracle 基线
 
 ```bash
 ./run_experiment.sh oracle results/2stg_Gnn_<timestamp>/best_stage1_model_real.pth
 ```
 
-5. Unified comparison
+5. 统一评估
 
 ```bash
 ./run_experiment.sh evaluate
 ```
 
-6. Manual inspection
+6. 手工查看图和解
 
 ```bash
 ./run_experiment.sh app
 ```
 
-## 3. Output Map
+## 5. 输出目录约定
 
-### Processed Data
+处理后数据：
 - `dataset/processed/G-*.json`
 
-### Training Artifacts
+训练产物：
 - `results/2stg_Gnn_<timestamp>/best_stage1_model_real.pth`
 - `results/2stg_Reg_<timestamp>/best_stage1_model_real.pth`
 - `results/dfl_Gnn_<timestamp>/best_dfl_model.pth`
 - `results/dfl_Reg_<timestamp>/best_dfl_reg_model.pth`
 
-### Split Files
+测试集文件：
 - `results/<experiment>/test_files.txt`
 
-### Solver Outputs
+求解输出：
 - `solutions/<experiment>/G-*_sol.json`
 
-### Comparison Entry
-- `4-evaulation.py`
+评估入口：
+- [`4-evaulation.py`](/home/weikang/projects/UdeM-Intern/Exps/4-evaulation.py)
 
-## 4. Sanity Checks
+## 6. 建议的自检方式
 
-Preview commands without running them:
+如果你想先看命令会执行什么，而不真正运行：
 
 ```bash
 ./run_experiment.sh --dry-run 2stg-gnn
 ./run_experiment.sh --dry-run oracle
 ```
 
-If you want to reproduce a single exact experiment later, record:
-- the command you ran
-- the timestamped result directory name
-- the corresponding solution directory
-- the `test_files.txt` used for evaluation
+如果你想将来复现实验结果，建议至少记录：
+- 你执行的命令
+- 生成的 `results/<experiment>` 目录名
+- 对应的 `solutions/<experiment>` 目录名
+- 使用的 `test_files.txt`
