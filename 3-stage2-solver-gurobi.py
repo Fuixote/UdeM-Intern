@@ -7,6 +7,7 @@ from gurobipy import GRB
 import json
 import os
 import glob
+from experiment_config import PROCESSED_DATA_DIR, RESULTS_ROOT, SOLUTIONS_ROOT, resolve_path, solution_dir_for_experiment
 from model.graph_utils import find_all_cycles_and_chains, parse_json_to_graph_info
 from model.model_structure import KidneyEdgePredictor, MLPBaseline
 
@@ -78,17 +79,24 @@ if __name__ == "__main__":
                         help="Path to best_stage1_model_real.pth. In gt_mode: optional, used to copy test_files.txt for fair comparison")
     parser.add_argument("--max_chain", type=int, default=5,
                         help="Maximum number of transplant edges in a chain (excluding the initiating NDD node)")
-    parser.add_argument("--data_dir", type=str, default="dataset/processed")
+    parser.add_argument("--data_dir", type=str, default=str(PROCESSED_DATA_DIR))
+    parser.add_argument("--results_root", type=str, default=str(RESULTS_ROOT))
+    parser.add_argument("--solutions_root", type=str, default=str(SOLUTIONS_ROOT))
     parser.add_argument("--gt_mode", action="store_true", help="Oracle mode: use Ground Truth labels as weights")
     args = parser.parse_args()
+    data_dir = str(resolve_path(args.data_dir))
+    results_root = str(resolve_path(args.results_root))
+    solutions_root = str(resolve_path(args.solutions_root))
+    if args.model_path is not None:
+        args.model_path = str(resolve_path(args.model_path))
 
     if args.gt_mode:
         model_type, model = "GroundTruth", None
-        sol_out = os.path.join("solutions", "ground_truth")
+        sol_out = str(solution_dir_for_experiment("ground_truth", solutions_root=solutions_root))
         print("💡 Running in ORACLE mode (using Ground Truth labels)")
 
         # 创建 results/ground_truth/ 并复制 test_files.txt，使 4-evaluation 与预测模型使用相同测试集
-        results_gt_dir = os.path.join("results", "ground_truth")
+        results_gt_dir = os.path.join(results_root, "ground_truth")
         if args.model_path:
             model_dir = os.path.dirname(args.model_path)
             src_test_files = os.path.join(model_dir, "test_files.txt")
@@ -122,12 +130,12 @@ if __name__ == "__main__":
             model.load_state_dict(ckpt)
         model.eval()
         exp_id = os.path.basename(model_dir)
-        sol_out = os.path.join("solutions", exp_id)
+        sol_out = str(solution_dir_for_experiment(exp_id, solutions_root=solutions_root))
         print(f"🚀 Running in PREDICTION mode: {model_type}")
 
     os.makedirs(sol_out, exist_ok=True)
     print(f"📁 Solutions will be saved to: {sol_out}")
     
-    files = sorted(glob.glob(os.path.join(args.data_dir, "G-*.json")))
+    files = sorted(glob.glob(os.path.join(data_dir, "G-*.json")))
     for f in files:
         solve_kep(f, model, model_type, sol_out, args.max_chain)

@@ -4,7 +4,9 @@ import glob
 import argparse
 import numpy as np
 
-def evaluate_directory(sol_dir, data_dir, test_list_path=None, use_all_files=False):
+from experiment_config import PROCESSED_DATA_DIR, RESULTS_ROOT, SOLUTIONS_ROOT, resolve_path
+
+def evaluate_directory(sol_dir, data_dir, results_root, test_list_path=None, use_all_files=False):
     test_filter = None
     
     # 1. Try to find test list
@@ -15,7 +17,7 @@ def evaluate_directory(sol_dir, data_dir, test_list_path=None, use_all_files=Fal
         # Smart search: look for test_files.txt or all_files.txt in the corresponding results folder
         exp_id = os.path.basename(sol_dir)
         list_name = "all_files.txt" if use_all_files else "test_files.txt"
-        auto_test_path = os.path.join("results", exp_id, list_name)
+        auto_test_path = os.path.join(results_root, exp_id, list_name)
         if os.path.exists(auto_test_path):
             with open(auto_test_path, 'r') as f:
                 test_filter = set(line.strip() for line in f if line.strip())
@@ -45,7 +47,7 @@ def evaluate_directory(sol_dir, data_dir, test_list_path=None, use_all_files=Fal
         graph_name = sol_data.get('graph', os.path.basename(sol_path).replace('_sol.json', '.json'))
         graph_path = os.path.join(data_dir, graph_name)
         if not os.path.exists(graph_path):
-            alt_path = os.path.join("dataset/processed", graph_name)
+            alt_path = os.path.join(data_dir, graph_name)
             if os.path.exists(alt_path): graph_path = alt_path
             else: continue
 
@@ -92,11 +94,15 @@ def evaluate_directory(sol_dir, data_dir, test_list_path=None, use_all_files=Fal
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Multi-model Evaluation Comparison")
-    parser.add_argument("--sol_dir", type=str, default="solutions", help="Base directory containing model subfolders")
-    parser.add_argument("--data_dir", type=str, default="dataset/processed", help="Original data directory")
+    parser.add_argument("--sol_dir", type=str, default=str(SOLUTIONS_ROOT), help="Base directory containing model subfolders")
+    parser.add_argument("--data_dir", type=str, default=str(PROCESSED_DATA_DIR), help="Original data directory")
+    parser.add_argument("--results_root", type=str, default=str(RESULTS_ROOT), help="Results directory used for auto-discovering test_files.txt")
     parser.add_argument("--test_list", type=str, default=None, help="Path to text file containing filenames to evaluate")
     parser.add_argument("--full_eval", action="store_true", help="Use all_files.txt instead of test_files.txt (evaluate full dataset)")
     args = parser.parse_args()
+    args.sol_dir = str(resolve_path(args.sol_dir))
+    args.data_dir = str(resolve_path(args.data_dir))
+    args.results_root = str(resolve_path(args.results_root))
     
     comp_results = []
     if os.path.isdir(args.sol_dir):
@@ -109,7 +115,7 @@ if __name__ == "__main__":
             list_name = "all_files.txt" if args.full_eval else "test_files.txt"
             for sd in subdirs:
                 exp_id = os.path.basename(sd)
-                cand = os.path.join("results", exp_id, list_name)
+                cand = os.path.join(args.results_root, exp_id, list_name)
                 if os.path.exists(cand):
                     unified_test_list = cand
                     print(f"📌 Using unified test set for all experiments: {unified_test_list}")
@@ -119,11 +125,11 @@ if __name__ == "__main__":
         
         # If no subdirectories, try evaluating the dir itself
         if not subdirs:
-            res = evaluate_directory(args.sol_dir, args.data_dir, unified_test_list, args.full_eval)
+            res = evaluate_directory(args.sol_dir, args.data_dir, args.results_root, unified_test_list, args.full_eval)
             if res: comp_results.append(res)
         else:
             for sd in subdirs:
-                res = evaluate_directory(sd, args.data_dir, unified_test_list, args.full_eval)
+                res = evaluate_directory(sd, args.data_dir, args.results_root, unified_test_list, args.full_eval)
                 if res: comp_results.append(res)
 
     if not comp_results:

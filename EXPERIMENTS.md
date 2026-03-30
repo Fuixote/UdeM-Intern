@@ -18,6 +18,18 @@ If your environment moves, override it with:
 KEP_PYTHON=/path/to/python ./run_experiment.sh <command>
 ```
 
+Directory defaults are now centralized in [`experiment_config.py`](/home/weikang/projects/UdeM-Intern/Exps/experiment_config.py).
+You can override them without editing code by setting:
+
+```bash
+export KEP_DATA_DIR=/path/to/processed-data
+export KEP_RESULTS_DIR=/path/to/results
+export KEP_SOLUTIONS_DIR=/path/to/solutions
+```
+
+Most training / solving scripts also accept explicit CLI overrides such as
+`--data_dir`, `--results_root`, and `--solutions_root`.
+
 ## 1. Experiment Lines
 
 ### A. Data Pipeline
