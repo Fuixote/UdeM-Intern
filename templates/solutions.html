@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KEP Solution Viewer</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Vis.js Network -->
+    <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .path-list {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .path-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .path-card:hover {
+            border-color: var(--accent-color);
+            background: rgba(108, 92, 231, 0.1);
+        }
+        .path-card.active {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 10px rgba(108, 92, 231, 0.3);
+        }
+        .path-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .path-nodes {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            word-break: break-all;
+        }
+        .type-badge {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+        }
+        .badge-cycle { background: rgba(0, 184, 148, 0.2); color: #00b894; }
+        .badge-chain { background: rgba(255, 118, 117, 0.2); color: #ff7675; }
+        
+        .nav-link {
+            display: block;
+            margin-bottom: 15px;
+            color: var(--accent-color);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        .nav-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>Solution Viewer</h2>
+                <a href="/" class="nav-link">← Back to Explorer</a>
+            </div>
+            
+            <div class="control-group">
+                <label for="solSelect">Solution Instance</label>
+                <div class="select-wrapper">
+                    <select id="solSelect">
+                        {% for file in available_files %}
+                        <option value="{{ file }}" {% if file == default_file %}selected{% endif %}>{{ file }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            
+            <div class="stats-panel">
+                <h3>Solution Summary</h3>
+                <div class="stat-row">
+                    <span class="stat-label">Total Utility</span>
+                    <span class="stat-value" id="totalW">-</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Matches</span>
+                    <span class="stat-value" id="matchCount">-</span>
+                </div>
+            </div>
+
+            <div class="path-list-container">
+                <h3>Optimal Paths (Cycles/Chains)</h3>
+                <div class="path-list" id="pathList">
+                    <!-- Loaded dynamically -->
+                </div>
+            </div>
+            
+        </aside>
+
+        <main class="network-container">
+            <div id="loadingOverlay" class="loading-overlay">
+                <div class="spinner"></div>
+                <p>Loading Optimal Mapping...</p>
+            </div>
+            
+            <div id="mynetwork"></div>
+            
+            <div class="floating-tools">
+                <button class="tool-btn" id="btnFit" title="Fit to Screen">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M4 14v6h6M20 10V4h-6M10 20H4v-6M14 4h6v6"/></svg>
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <!-- Custom JS -->
+    <script src="{{ url_for('static', filename='solutions.js') }}"></script>
+</body>
+</html>

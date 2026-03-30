@@ -1,0 +1,8 @@
+textarea {
+  min-height: 90px;
+  font-family:Consolas,Monaco,Lucida Console,Liberation Mono,DejaVu Sans Mono,Bitstream Vera Sans Mono,Courier New, monospace;
+}
+
+table tr:nth-of-type(even) {
+    background-color: #ddd;
+}
