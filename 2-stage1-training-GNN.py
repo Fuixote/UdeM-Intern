@@ -1,12 +1,9 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch_geometric.data import Data
 from torch_geometric.loader import DataLoader
 import numpy as np
-import json
 import os
-import glob
 import random
 from datetime import datetime
 import matplotlib.pyplot as plt
@@ -16,7 +13,8 @@ import matplotlib
 matplotlib.use('Agg')
 
 # Import model definition
-from model.model_structure import KidneyEdgePredictor 
+from model.graph_utils import load_graph_dataset, parse_json_to_pyg_data
+from model.model_structure import EDGE_RAW_DIM, NODE_FEATURE_DIM, KidneyEdgePredictor
 
 # ==========================================
 # 0. Global Settings (Random SEED, etc.)
@@ -29,108 +27,18 @@ if torch.cuda.is_available():
     torch.cuda.manual_seed_all(SEED)
 
 # ==========================================
-# 1. Configuration Mapping (Categorical features)
-# ==========================================
-BT_MAP = {"O": 0, "A": 1, "B": 2, "AB": 3}
-
-def get_one_hot_bt(bt_str):
-    vec = [0.0, 0.0, 0.0, 0.0]
-    if bt_str in BT_MAP:
-        vec[BT_MAP[bt_str]] = 1.0
-    return vec
-
-def parse_json_to_pyg_data(json_path):
-    """
-    Parse G-X.json into a PyTorch Geometric Data object
-    """
-    with open(json_path, 'r') as f:
-        content = json.load(f)
-    
-    nodes_data = content['data']
-    num_nodes = content['metadata']['total_vertices']
-    node_ids = sorted(nodes_data.keys(), key=lambda x: int(x))
-    
-    # 1. Create mapping from ID to 0-base continuous indexing
-    id_map = {old_id: i for i, old_id in enumerate(node_ids)}
-    
-    # 2. Extract node features (x)
-    x_list = []
-    for nid in node_ids:
-        node = nodes_data[nid]
-        
-        if node['type'] == 'Pair':
-            p = node['patient']
-            d = node['donors'][0]
-            # Assemble One-Hot coding
-            p_bt_vec = get_one_hot_bt(p['bloodtype'])
-            d_bt_vec = get_one_hot_bt(d['bloodtype'])
-            
-            feat = [
-                p['age'] / 100.0,
-                p['cPRA'],
-                1.0 if p['hasBloodCompatibleDonor'] else 0.0,
-            ] + p_bt_vec + [      # Patient blood type (4-dim)
-                d['dage'] / 100.0,
-            ] + d_bt_vec +[      # Donor blood type (4-dim)
-                0.0               # NDD flag (0 for Pair)
-            ]
-        else: # NDD node
-            d = node['donor']
-            d_bt_vec = get_one_hot_bt(d['bloodtype'])
-            
-            feat =[
-                0.0, 0.0, 0.0,       # Patient feature padding
-                0.0, 0.0, 0.0, 0.0, # Patient blood type padding
-                d['dage'] / 100.0,
-            ] + d_bt_vec +[      # Donor blood type (4-dim)
-                1.0               # NDD flag (1 for NDD)
-            ]
-        x_list.append(feat)
-    
-    x = torch.tensor(x_list, dtype=torch.float)
-    
-    # 3. Extract edge info (Convert indices using id_map)
-    edge_indices = []
-    edge_attrs = []
-    y_labels = []
-    
-    for src_id, node in nodes_data.items():
-        for match in node['matches']:
-            dst_id = match['recipient']
-            
-            # Use mapped index to prevent index out of bounds
-            edge_indices.append([id_map[src_id], id_map[dst_id]])
-            edge_attrs.append([match['utility'] / 100.0])
-            y_labels.append(match['ground_truth_label'])
-            
-    edge_index = torch.tensor(edge_indices, dtype=torch.long).t().contiguous()
-    edge_attr = torch.tensor(edge_attrs, dtype=torch.float)
-    y = torch.tensor(y_labels, dtype=torch.float)
-    
-    # Return both the data and the filename
-    return Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y, filename=os.path.basename(json_path))
-
-# ==========================================
 # 2. Load Dataset
 # ==========================================
 def load_real_dataset(directory):
-    files = sorted(glob.glob(os.path.join(directory, "G-*.json")))
-    dataset = []
-    print(f"🔍 Loading {len(files)} graph files from {directory}...")
-    for f in files:
-        try:
-            dataset.append(parse_json_to_pyg_data(f))
-        except Exception as e:
-            print(f"⚠️ Skipping invalid file {f}: {e}")
-    return dataset
+    return load_graph_dataset(directory, parse_json_to_pyg_data, log_prefix="🔍 Loading")
 
 # ==========================================
 # 3. Training Loop
 # ==========================================
 def train_baseline():
     # --- Hyperparameters ---
-    NODE_DIM = 13
-    EDGE_RAW_DIM = 1
+    NODE_DIM = NODE_FEATURE_DIM
+    EDGE_RAW_DIM_LOCAL = EDGE_RAW_DIM
     HIDDEN_DIM = 64
     BATCH_SIZE = 8
     LEARNING_RATE = 1e-3
@@ -179,7 +87,7 @@ def train_baseline():
     test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
     # --- Initialization ---
-    model = KidneyEdgePredictor(NODE_DIM, EDGE_RAW_DIM, HIDDEN_DIM).to(DEVICE)
+    model = KidneyEdgePredictor(NODE_DIM, EDGE_RAW_DIM_LOCAL, HIDDEN_DIM).to(DEVICE)
     criterion = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
@@ -235,7 +143,7 @@ def train_baseline():
                 'best_val_loss': best_val_loss,
                 'config': {
                     'NODE_DIM': NODE_DIM,
-                    'EDGE_RAW_DIM': EDGE_RAW_DIM,
+                    'EDGE_RAW_DIM': EDGE_RAW_DIM_LOCAL,
                     'HIDDEN_DIM': HIDDEN_DIM,
                     'LEARNING_RATE': LEARNING_RATE,
                     'BATCH_SIZE': BATCH_SIZE,

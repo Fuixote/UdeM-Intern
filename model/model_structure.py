@@ -2,6 +2,11 @@ import torch
 import torch.nn as nn
 from torch_geometric.utils import scatter
 
+NODE_FEATURE_DIM = 13
+EDGE_RAW_DIM = 1
+DEFAULT_Y_SCALE = 25.0
+
+
 class DirectedEdgeConv(nn.Module):
     """
     Directed edge graph convolution layer based on DISTRICTNET paper eq(2).
@@ -109,3 +114,21 @@ class KidneyEdgePredictor(nn.Module):
         weight_pred = self.mlp(h_e)
         
         return weight_pred.squeeze(-1) # return shape [E]
+
+
+class MLPBaseline(nn.Module):
+    def __init__(self, node_dim=NODE_FEATURE_DIM, edge_dim=EDGE_RAW_DIM, hidden_dim=256):
+        super(MLPBaseline, self).__init__()
+        input_dim = node_dim * 2 + edge_dim
+        self.net = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim // 2),
+            nn.ReLU(),
+            nn.Linear(hidden_dim // 2, hidden_dim // 4),
+            nn.ReLU(),
+            nn.Linear(hidden_dim // 4, 1)
+        )
+
+    def forward(self, edge_features):
+        return self.net(edge_features).squeeze(-1)

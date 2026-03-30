@@ -1,21 +1,20 @@
 import argparse
 import torch
-import torch.nn as nn
 import torch.optim as optim
-from torch_geometric.data import Data
 from torch_geometric.loader import DataLoader
 import gurobipy as gp
 from gurobipy import GRB
 import numpy as np
-import json
 import os
-import glob
 import random
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 import threading
 import queue
-from model.model_structure import KidneyEdgePredictor
+import json
+
+from model.graph_utils import load_graph_dataset, parse_json_to_dfl_data
+from model.model_structure import DEFAULT_Y_SCALE, EDGE_RAW_DIM, NODE_FEATURE_DIM, KidneyEdgePredictor
 
 # ==========================================
 # Global Settings
@@ -77,26 +76,6 @@ class GurobiEnvPool:
 
 # 全局环境池实例
 gurobi_pool = GurobiEnvPool(pool_size=8)
-
-# ==========================================
-# 0. 模型定义
-# ==========================================
-class MLPBaseline(nn.Module):
-    def __init__(self, node_dim=13, edge_dim=1, hidden_dim=256):
-        super(MLPBaseline, self).__init__()
-        input_dim = node_dim * 2 + edge_dim
-        self.net = nn.Sequential(
-            nn.Linear(input_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim // 2),
-            nn.ReLU(),
-            nn.Linear(hidden_dim // 2, hidden_dim // 4),
-            nn.ReLU(),
-            nn.Linear(hidden_dim // 4, 1)
-        )
-
-    def forward(self, edge_features):
-        return self.net(edge_features)
 
 # ==========================================
 # 1. 核心求解器：带环境池的黑盒
@@ -268,139 +247,15 @@ def save_solutions(model, dataset, sol_dir, device, model_tag="GNN-FY"):
 
     print(f"Solutions saved: {saved} files → {sol_dir}")
 
-# ==========================================
-# 2. 数据处理辅助函数
-# ==========================================
-BT_MAP = {"O": 0, "A": 1, "B": 2, "AB": 3}
-
-def get_one_hot_bt(bt_str):
-    vec = [0.0, 0.0, 0.0, 0.0]
-    if bt_str in BT_MAP:
-        vec[BT_MAP[bt_str]] = 1.0
-    return vec
-
-
-def find_all_cycles_and_chains(adj, nodes_data, id_map_rev, max_cycle=3, max_chain=5):
-    """DFS 枚举所有合法的 cycles 和 chains，作为 Gurobi 的候选集。"""
-    cycles = []
-    chains = []
-    num_nodes = len(nodes_data)
-
-    ndd_indices  = [i for i in range(num_nodes) if nodes_data[id_map_rev[i]]['type'] != 'Pair']
-    pair_indices = [i for i in range(num_nodes) if nodes_data[id_map_rev[i]]['type'] == 'Pair']
-
-    def dfs_chain(u, current_path, current_edges):
-        if len(current_edges) >= max_chain:
-            return
-        for edge in adj[u]:
-            v = edge['dst']
-            if v not in current_path:
-                chains.append({'type': 'chain', 'nodes': current_path + [v], 'edges': current_edges + [edge['edge_idx']]})
-                dfs_chain(v, current_path + [v], current_edges + [edge['edge_idx']])
-
-    for ndd in ndd_indices:
-        dfs_chain(ndd, [ndd], [])
-
-    def dfs_cycle(start_node, u, current_path, current_edges):
-        if len(current_path) > max_cycle:
-            return
-        for edge in adj[u]:
-            v = edge['dst']
-            if v == start_node:
-                if start_node == min(current_path):
-                    cycles.append({'type': 'cycle', 'nodes': current_path, 'edges': current_edges + [edge['edge_idx']]})
-            elif v not in current_path and v > start_node:
-                if nodes_data[id_map_rev[v]]['type'] == 'Pair':
-                    dfs_cycle(start_node, v, current_path + [v], current_edges + [edge['edge_idx']])
-
-    for p_idx in pair_indices:
-        dfs_cycle(p_idx, p_idx, [p_idx], [])
-
-    return cycles + chains
-
-
 # w = ground_truth_label = success_prob × QALY × (1+ε)，上界 ≈ 25
 # Y_SCALE 用于归一化：batch.y = w / Y_SCALE ∈ [0, 1]
 # Stage-1 脚本使用原始 w（∈[0,25]），End2end 脚本使用归一化后的值
-Y_SCALE = 25.0
-
-def parse_json_to_pyg_data_dfl(json_path, max_cycle=3, max_chain=5):
-    with open(json_path, 'r') as f:
-        content = json.load(f)
-
-    nodes_data = content['data']
-    node_ids   = sorted(nodes_data.keys(), key=lambda x: int(x))
-    id_map     = {old_id: i for i, old_id in enumerate(node_ids)}
-    id_map_rev = {i: old_id for i, old_id in enumerate(node_ids)}
-    num_nodes  = len(node_ids)
-
-    x_list = []
-    adj    = {}
-
-    for nid in node_ids:
-        node = nodes_data[nid]
-        if node['type'] == 'Pair':
-            p = node['patient']
-            d = node['donors'][0]
-            feat = (
-                [p['age'] / 100.0, p['cPRA'], 1.0 if p['hasBloodCompatibleDonor'] else 0.0]
-                + get_one_hot_bt(p['bloodtype'])
-                + [d['dage'] / 100.0]
-                + get_one_hot_bt(d['bloodtype'])
-                + [0.0]
-            )
-        else:
-            d = node['donor']
-            feat = (
-                [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, d['dage'] / 100.0]
-                + get_one_hot_bt(d['bloodtype'])
-                + [1.0]
-            )
-        x_list.append(feat)
-        adj[id_map[nid]] = []
-
-    x = torch.tensor(x_list, dtype=torch.float)
-
-    edge_indices = []
-    edge_attrs   = []
-    y_labels     = []
-    edge_count   = 0
-
-    for src_id, node in nodes_data.items():
-        for match in node['matches']:
-            dst_id  = match['recipient']
-            src_idx = id_map[src_id]
-            dst_idx = id_map[dst_id]
-            edge_indices.append([src_idx, dst_idx])
-            edge_attrs.append([match['utility'] / 100.0])
-            y_labels.append(match.get('ground_truth_label', 0.0) / Y_SCALE)
-            adj[src_idx].append({'dst': dst_idx, 'edge_idx': edge_count})
-            edge_count += 1
-
-    edge_index = torch.tensor(edge_indices, dtype=torch.long).t().contiguous()
-    edge_attr  = torch.tensor(edge_attrs, dtype=torch.float)
-    y          = torch.tensor(y_labels, dtype=torch.float)
-
-    candidates = find_all_cycles_and_chains(adj, nodes_data, id_map_rev, max_cycle, max_chain)
-
-    data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y,
-                filename=os.path.basename(json_path))
-    data.candidates       = candidates
-    data.num_nodes_custom = torch.tensor([num_nodes], dtype=torch.long)
-    data.id_map_rev       = id_map_rev   # int_idx → original node id str，用于输出 solution
-    return data
+Y_SCALE = DEFAULT_Y_SCALE
 
 
 def load_real_dataset_dfl(directory, max_cycle=3, max_chain=5):
-    files   = sorted(glob.glob(os.path.join(directory, "G-*.json")))
-    dataset = []
-    print(f"Loading {len(files)} graph files from {directory}...")
-    for f in files:
-        try:
-            dataset.append(parse_json_to_pyg_data_dfl(f, max_cycle, max_chain))
-        except Exception as e:
-            print(f"Skipping {f}: {e}")
-    return dataset
+    parser = lambda path: parse_json_to_dfl_data(path, max_cycle=max_cycle, max_chain=max_chain, label_scale=Y_SCALE)
+    return load_graph_dataset(directory, parser, log_prefix="Loading")
 
 # ==========================================
 # 3. 训练主流程
@@ -442,7 +297,7 @@ def train_dfl(pretrain_path=None):
 
         # ---- 初始化 ----
         # GNN 能感知全图拓扑（每条边的更新同时聚合其源节点的入边和目标节点的出边）
-        model = KidneyEdgePredictor(node_feature_dim=13, edge_raw_dim=1).to(DEVICE)
+        model = KidneyEdgePredictor(node_feature_dim=NODE_FEATURE_DIM, edge_raw_dim=EDGE_RAW_DIM).to(DEVICE)
 
         if PRETRAIN_PATH is not None:
             ckpt = torch.load(PRETRAIN_PATH, map_location=DEVICE)

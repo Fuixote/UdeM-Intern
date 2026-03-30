@@ -1,12 +1,9 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch_geometric.data import Data
 from torch_geometric.loader import DataLoader
 import numpy as np
-import json
 import os
-import glob
 import random
 from datetime import datetime
 import matplotlib.pyplot as plt
@@ -15,31 +12,8 @@ import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use('Agg')
 
-# ==========================================
-# [NEW] 定义普通的 MLP 回归模型
-# 取代之前的 from model.model_structure import KidneyEdgePredictor 
-# ==========================================
-class MLPBaseline(nn.Module):
-    def __init__(self, node_dim, edge_dim, hidden_dim):
-        super(MLPBaseline, self).__init__()
-        # 输入维度 = 源节点特征(13) + 目标节点特征(13) + 边特征(1) = 27
-        input_dim = node_dim * 2 + edge_dim
-        
-        # 四层全连接网络（3 个隐藏层）
-        self.net = nn.Sequential(
-            nn.Linear(input_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim // 2),
-            nn.ReLU(),
-            nn.Linear(hidden_dim // 2, hidden_dim // 4),
-            nn.ReLU(),
-            nn.Linear(hidden_dim // 4, 1) # 输出标量：预测的权重
-        )
-
-    def forward(self, edge_features):
-        # edge_features shape: [num_edges, 27]
-        # output shape: [num_edges] (使用 squeeze 去掉最后的维度以匹配 y 的 shape)
-        return self.net(edge_features).squeeze(-1)
+from model.graph_utils import load_graph_dataset, parse_json_to_pyg_data
+from model.model_structure import EDGE_RAW_DIM, NODE_FEATURE_DIM, MLPBaseline
 
 # ==========================================
 # 0. Global Settings (Random SEED, etc.)
@@ -52,88 +26,18 @@ if torch.cuda.is_available():
     torch.cuda.manual_seed_all(SEED)
 
 # ==========================================
-# 1. Configuration Mapping (Categorical features)
-# ==========================================
-BT_MAP = {"O": 0, "A": 1, "B": 2, "AB": 3}
-
-def get_one_hot_bt(bt_str):
-    vec =[0.0, 0.0, 0.0, 0.0]
-    if bt_str in BT_MAP:
-        vec[BT_MAP[bt_str]] = 1.0
-    return vec
-
-def parse_json_to_pyg_data(json_path):
-    # [逻辑未变，直接复用]
-    with open(json_path, 'r') as f:
-        content = json.load(f)
-    
-    nodes_data = content['data']
-    num_nodes = content['metadata']['total_vertices']
-    node_ids = sorted(nodes_data.keys(), key=lambda x: int(x))
-    
-    id_map = {old_id: i for i, old_id in enumerate(node_ids)}
-    
-    x_list = []
-    for nid in node_ids:
-        node = nodes_data[nid]
-        if node['type'] == 'Pair':
-            p = node['patient']
-            d = node['donors'][0]
-            p_bt_vec = get_one_hot_bt(p['bloodtype'])
-            d_bt_vec = get_one_hot_bt(d['bloodtype'])
-            feat = [
-                p['age'] / 100.0, p['cPRA'], 1.0 if p['hasBloodCompatibleDonor'] else 0.0,
-            ] + p_bt_vec + [ d['dage'] / 100.0, ] + d_bt_vec +[ 0.0 ]
-        else:
-            d = node['donor']
-            d_bt_vec = get_one_hot_bt(d['bloodtype'])
-            feat =[
-                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                d['dage'] / 100.0,
-            ] + d_bt_vec +[ 1.0 ]
-        x_list.append(feat)
-    
-    x = torch.tensor(x_list, dtype=torch.float)
-    
-    edge_indices = []
-    edge_attrs = []
-    y_labels =[]
-    
-    for src_id, node in nodes_data.items():
-        for match in node['matches']:
-            dst_id = match['recipient']
-            edge_indices.append([id_map[src_id], id_map[dst_id]])
-            edge_attrs.append([match['utility'] / 100.0])
-            y_labels.append(match['ground_truth_label'])
-            
-    edge_index = torch.tensor(edge_indices, dtype=torch.long).t().contiguous()
-    edge_attr = torch.tensor(edge_attrs, dtype=torch.float)
-    y = torch.tensor(y_labels, dtype=torch.float)
-    
-    # Return both the data and the filename
-    return Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y, filename=os.path.basename(json_path))
-
-# ==========================================
 # 2. Load Dataset
 # ==========================================
 def load_real_dataset(directory):
-    files = sorted(glob.glob(os.path.join(directory, "G-*.json")))
-    dataset =[]
-    print(f"🔍 Loading {len(files)} graph files from {directory}...")
-    for f in files:
-        try:
-            dataset.append(parse_json_to_pyg_data(f))
-        except Exception as e:
-            print(f"⚠️ Skipping invalid file {f}: {e}")
-    return dataset
+    return load_graph_dataset(directory, parse_json_to_pyg_data, log_prefix="🔍 Loading")
 
 # ==========================================
 # 3. Training Loop
 # ==========================================
 def train_baseline():
     # --- Hyperparameters ---
-    NODE_DIM = 13
-    EDGE_RAW_DIM = 1
+    NODE_DIM = NODE_FEATURE_DIM
+    EDGE_RAW_DIM_LOCAL = EDGE_RAW_DIM
     HIDDEN_DIM = 256
     BATCH_SIZE = 8
     LEARNING_RATE = 1e-3
@@ -180,7 +84,7 @@ def train_baseline():
 
     # --- Initialization ---
     #[NEW] 使用我们刚刚定义的纯 MLP 模型
-    model = MLPBaseline(NODE_DIM, EDGE_RAW_DIM, HIDDEN_DIM).to(DEVICE)
+    model = MLPBaseline(NODE_DIM, EDGE_RAW_DIM_LOCAL, HIDDEN_DIM).to(DEVICE)
     criterion = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
@@ -248,7 +152,7 @@ def train_baseline():
                 'best_val_loss': best_val_loss,
                 'config': {
                     'NODE_DIM': NODE_DIM,
-                    'EDGE_RAW_DIM': EDGE_RAW_DIM,
+                    'EDGE_RAW_DIM': EDGE_RAW_DIM_LOCAL,
                     'HIDDEN_DIM': HIDDEN_DIM,
                     'LEARNING_RATE': LEARNING_RATE,
                     'BATCH_SIZE': BATCH_SIZE,
