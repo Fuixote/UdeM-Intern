@@ -34,37 +34,9 @@ def find_pair_donor_by_id(node, donor_id):
     return None
 
 
-def build_edge_feature(src_node, match):
+def build_edge_feature(_src_node, match):
     utility = float(match.get('utility', 0.0)) / 100.0
-
-    donor_age = 0.0
-    donor_bt = "Unknown"
-
-    if src_node['type'] == 'Pair':
-        donor = None
-        winning_donor_id = match.get('winning_donor_id')
-        if winning_donor_id is not None:
-            donor = find_pair_donor_by_id(src_node, winning_donor_id)
-        if donor is None:
-            donor = {
-                'dage': match.get('donor_age', 0.0),
-                'bloodtype': match.get('donor_bt', 'Unknown'),
-            }
-    else:
-        donor = src_node.get('donor', {})
-        if not donor:
-            donor = {
-                'dage': match.get('donor_age', 0.0),
-                'bloodtype': match.get('donor_bt', 'Unknown'),
-            }
-
-    try:
-        donor_age = float(donor.get('dage', 0.0)) / 100.0
-    except (TypeError, ValueError):
-        donor_age = 0.0
-    donor_bt = donor.get('bloodtype', 'Unknown')
-
-    return [utility, donor_age] + get_one_hot_bt(donor_bt)
+    return [utility]
 
 
 def build_node_feature(node):
@@ -153,7 +125,7 @@ def build_graph_components(json_path, label_scale=1.0):
     }
 
 
-def find_all_cycles_and_chains(adj, nodes_data, id_map_rev, max_cycle=3, max_chain=5):
+def find_all_cycles_and_chains(adj, nodes_data, id_map_rev, max_cycle=3, max_chain=4):
     cycles = []
     chains = []
     num_nodes = len(nodes_data)
@@ -191,7 +163,7 @@ def find_all_cycles_and_chains(adj, nodes_data, id_map_rev, max_cycle=3, max_cha
     return cycles, chains
 
 
-def enumerate_candidates(adj, nodes_data, id_map_rev, max_cycle=3, max_chain=5):
+def enumerate_candidates(adj, nodes_data, id_map_rev, max_cycle=3, max_chain=4):
     cycles, chains = find_all_cycles_and_chains(
         adj, nodes_data, id_map_rev, max_cycle=max_cycle, max_chain=max_chain
     )
@@ -226,7 +198,7 @@ def parse_json_to_graph_info(json_path):
     }
 
 
-def parse_json_to_dfl_data(json_path, max_cycle=3, max_chain=5, label_scale=DEFAULT_Y_SCALE):
+def parse_json_to_dfl_data(json_path, max_cycle=3, max_chain=4, label_scale=DEFAULT_Y_SCALE):
     graph = build_graph_components(json_path, label_scale=label_scale)
     candidates = enumerate_candidates(
         graph['adj'], graph['nodes_data'], graph['id_map_rev'],

@@ -8,14 +8,62 @@ import json
 import os
 import glob
 from experiment_config import PROCESSED_DATA_DIR, RESULTS_ROOT, SOLUTIONS_ROOT, resolve_path, solution_dir_for_experiment
-from model.graph_utils import find_all_cycles_and_chains, parse_json_to_graph_info
-from model.model_structure import KidneyEdgePredictor, MLPBaseline
+from model.graph_utils import find_all_cycles_and_chains, parse_json_to_graph_info, resolve_graph_data_dir
+from model.model_structure import EDGE_RAW_DIM, NODE_FEATURE_DIM, KidneyEdgePredictor, MLPBaseline
 
 # ==========================================
 # 3. Solver logic
 # ==========================================
 
-def solve_kep(json_path, model, model_type, output_dir, max_chain=5):
+def infer_model_type(summary_content, state_dict):
+    if "GNN" in summary_content:
+        return "GNN"
+    if "Regression" in summary_content or "MLP" in summary_content:
+        return "Regression"
+    if any(key.startswith("conv1.") or key.startswith("edge_encoder.") for key in state_dict):
+        return "GNN"
+    return "Regression"
+
+
+def build_model_from_checkpoint(model_type, config):
+    if model_type == "GNN":
+        return KidneyEdgePredictor(
+            node_feature_dim=config.get("NODE_DIM", NODE_FEATURE_DIM),
+            edge_raw_dim=config.get("EDGE_RAW_DIM", EDGE_RAW_DIM),
+            hidden_dim=config.get("HIDDEN_DIM", 64),
+        )
+    return MLPBaseline(
+        node_dim=config.get("NODE_DIM", NODE_FEATURE_DIM),
+        edge_dim=config.get("EDGE_RAW_DIM", EDGE_RAW_DIM),
+        hidden_dim=config.get("HIDDEN_DIM", 256),
+    )
+
+
+def load_prediction_model(model_path):
+    model_dir = os.path.dirname(model_path)
+    summary_path = os.path.join(model_dir, "summary.txt")
+    summary_content = ""
+    if os.path.exists(summary_path):
+        with open(summary_path, 'r') as f:
+            summary_content = f.read()
+
+    checkpoint = torch.load(model_path, map_location='cpu')
+    if isinstance(checkpoint, dict) and 'model_state_dict' in checkpoint:
+        state_dict = checkpoint['model_state_dict']
+        config = checkpoint.get('config', {})
+    else:
+        state_dict = checkpoint
+        config = {}
+
+    model_type = infer_model_type(summary_content, state_dict)
+    model = build_model_from_checkpoint(model_type, config)
+    model.load_state_dict(state_dict)
+    model.expected_node_dim = config.get("NODE_DIM", NODE_FEATURE_DIM)
+    model.expected_edge_raw_dim = config.get("EDGE_RAW_DIM", EDGE_RAW_DIM)
+    model.eval()
+    return model_type, model
+
+def solve_kep(json_path, model, model_type, output_dir, max_chain=4):
     f_name = os.path.basename(json_path)
     graph_data = parse_json_to_graph_info(json_path)
     
@@ -25,12 +73,27 @@ def solve_kep(json_path, model, model_type, output_dir, max_chain=5):
     edge_attr = graph_data['edge_attr']
     
     if model is not None:
+        expected_node_dim = getattr(model, "expected_node_dim", x.size(-1))
+        expected_edge_raw_dim = getattr(model, "expected_edge_raw_dim", edge_attr.size(-1))
+
+        if x.size(-1) != expected_node_dim:
+            raise ValueError(
+                f"Node feature dimension mismatch for {json_path}: "
+                f"graph has {x.size(-1)}, checkpoint expects {expected_node_dim}"
+            )
+        if edge_attr.size(-1) < expected_edge_raw_dim:
+            raise ValueError(
+                f"Edge feature dimension mismatch for {json_path}: "
+                f"graph has {edge_attr.size(-1)}, checkpoint expects at least {expected_edge_raw_dim}"
+            )
+
+        edge_attr_for_model = edge_attr[:, :expected_edge_raw_dim]
         with torch.no_grad():
             if model_type == "GNN":
-                w_preds = model(x, edge_index, edge_attr).numpy()
+                w_preds = model(x, edge_index, edge_attr_for_model).numpy()
             else:
                 src, dst = edge_index
-                edge_features = torch.cat([x[src], x[dst], edge_attr], dim=-1)
+                edge_features = torch.cat([x[src], x[dst], edge_attr_for_model], dim=-1)
                 w_preds = model(edge_features).numpy()
     else:
         # Ground Truth Mode (Oracle)
@@ -77,7 +140,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_path", type=str, default=None,
                         help="Path to best_stage1_model_real.pth. In gt_mode: optional, used to copy test_files.txt for fair comparison")
-    parser.add_argument("--max_chain", type=int, default=5,
+    parser.add_argument("--max_chain", type=int, default=4,
                         help="Maximum number of transplant edges in a chain (excluding the initiating NDD node)")
     parser.add_argument("--data_dir", type=str, default=str(PROCESSED_DATA_DIR))
     parser.add_argument("--results_root", type=str, default=str(RESULTS_ROOT))
@@ -113,29 +176,15 @@ if __name__ == "__main__":
         if not args.model_path:
             print("❌ Error: --model_path is required unless --gt_mode is used.")
             sys.exit(1)
+        model_type, model = load_prediction_model(args.model_path)
         model_dir = os.path.dirname(args.model_path)
-        summary_path = os.path.join(model_dir, "summary.txt")
-        with open(summary_path, 'r') as f:
-            summary_content = f.read()
-        
-        if "GNN" in summary_content:
-            model_type, model = "GNN", KidneyEdgePredictor()
-        else:
-            model_type, model = "Regression", MLPBaseline()
-        
-        ckpt = torch.load(args.model_path, map_location='cpu')
-        if isinstance(ckpt, dict) and 'model_state_dict' in ckpt:
-            model.load_state_dict(ckpt['model_state_dict'])
-        else:
-            model.load_state_dict(ckpt)
-        model.eval()
         exp_id = os.path.basename(model_dir)
         sol_out = str(solution_dir_for_experiment(exp_id, solutions_root=solutions_root))
         print(f"🚀 Running in PREDICTION mode: {model_type}")
 
     os.makedirs(sol_out, exist_ok=True)
     print(f"📁 Solutions will be saved to: {sol_out}")
-    
-    files = sorted(glob.glob(os.path.join(data_dir, "G-*.json")))
+
+    data_dir, files = resolve_graph_data_dir(data_dir, log_prefix="🔍 Solving")
     for f in files:
         solve_kep(f, model, model_type, sol_out, args.max_chain)

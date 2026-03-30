@@ -12,12 +12,12 @@ from datetime import datetime
 import threading
 import queue
 import json
+import re
 
 from experiment_config import (
     PROCESSED_DATA_DIR,
     RESULTS_ROOT,
     SOLUTIONS_ROOT,
-    latest_checkpoint,
     make_results_dir,
     resolve_path,
     solution_dir_for_result_dir,
@@ -262,9 +262,36 @@ def save_solutions(model, dataset, sol_dir, device, model_tag="GNN-FY"):
 Y_SCALE = DEFAULT_Y_SCALE
 
 
-def load_real_dataset_dfl(directory, max_cycle=3, max_chain=5):
+def load_real_dataset_dfl(directory, max_cycle=3, max_chain=4):
     parser = lambda path: parse_json_to_dfl_data(path, max_cycle=max_cycle, max_chain=max_chain, label_scale=Y_SCALE)
     return load_graph_dataset(directory, parser, log_prefix="Loading")
+
+
+def build_gnn_model_from_config(config):
+    return KidneyEdgePredictor(
+        node_feature_dim=config.get("NODE_DIM", NODE_FEATURE_DIM),
+        edge_raw_dim=config.get("EDGE_RAW_DIM", EDGE_RAW_DIM),
+        hidden_dim=config.get("HIDDEN_DIM", 64),
+    )
+
+
+def load_pretrained_gnn_model(pretrain_path, device):
+    ckpt = torch.load(pretrain_path, map_location=device)
+    state_dict = ckpt["model_state_dict"] if "model_state_dict" in ckpt else ckpt
+    config = ckpt.get("config", {}) if isinstance(ckpt, dict) else {}
+    model = build_gnn_model_from_config(config).to(device)
+    model.load_state_dict(state_dict)
+    return model, config
+
+
+def pretrain_timestamp_from_path(pretrain_path):
+    parent_name = os.path.basename(os.path.dirname(pretrain_path))
+    match = re.search(r"(\d{4}-\d{2}-\d{2}_\d{6})", parent_name)
+    if match:
+        return match.group(1)
+    raise ValueError(
+        f"Unable to extract timestamp from pretrain checkpoint parent directory: {parent_name}"
+    )
 
 # ==========================================
 # 3. 训练主流程
@@ -272,13 +299,22 @@ def load_real_dataset_dfl(directory, max_cycle=3, max_chain=5):
 def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_root=None):
     DEVICE        = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     LR            = 5e-4
-    EPOCHS        = 10
+    EPOCHS        = 3
     EPSILON_INIT  = 0.5
     M_SAMPLES     = 8       # 扰动采样次数，越高梯度估计越稳定但越慢；forward+backward 各需 M 次求解
     DATA_DIR      = str(resolve_path(data_dir or PROCESSED_DATA_DIR))
-    PRETRAIN_PATH = str(resolve_path(pretrain_path)) if pretrain_path is not None else None
+    if pretrain_path is None:
+        raise ValueError("--pretrain_PATH is required for dfl-gnn")
+    PRETRAIN_PATH = str(resolve_path(pretrain_path))
+    PRETRAIN_TIMESTAMP = pretrain_timestamp_from_path(PRETRAIN_PATH)
     TIMESTAMP   = datetime.now().strftime("%Y-%m-%d_%H%M%S")
-    RESULTS_DIR = str(make_results_dir("dfl_Gnn_", timestamp=TIMESTAMP, results_root=results_root or RESULTS_ROOT))
+    RESULTS_DIR = str(
+        make_results_dir(
+            "dfl_Gnn_",
+            timestamp=f"{TIMESTAMP}_from_{PRETRAIN_TIMESTAMP}",
+            results_root=results_root or RESULTS_ROOT,
+        )
+    )
     SAVE_PATH   = os.path.join(RESULTS_DIR, 'best_dfl_model.pth')
     print(f"Results will be saved at: {RESULTS_DIR}")
 
@@ -304,19 +340,22 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
         val_loader   = DataLoader(val_dataset,   batch_size=1, shuffle=False)
 
         # ---- 初始化 ----
-        # GNN 能感知全图拓扑（每条边的更新同时聚合其源节点的入边和目标节点的出边）
-        model = KidneyEdgePredictor(node_feature_dim=NODE_FEATURE_DIM, edge_raw_dim=EDGE_RAW_DIM).to(DEVICE)
-
         if PRETRAIN_PATH is not None:
-            ckpt = torch.load(PRETRAIN_PATH, map_location=DEVICE)
-            state_dict = ckpt['model_state_dict'] if 'model_state_dict' in ckpt else ckpt
-            model.load_state_dict(state_dict)
+            model, pretrain_config = load_pretrained_gnn_model(PRETRAIN_PATH, DEVICE)
             # Stage-1 GNN 输出范围 ~[0, Y_SCALE]，缩放到合理的 logit 范围
             with torch.no_grad():
                 model.mlp[-1].weight.data /= Y_SCALE
                 model.mlp[-1].bias.data   /= Y_SCALE
             print(f"Loaded pre-trained GNN weights from: {PRETRAIN_PATH}")
+            print(
+                "Pre-train config: "
+                f"NODE_DIM={pretrain_config.get('NODE_DIM', NODE_FEATURE_DIM)}, "
+                f"EDGE_RAW_DIM={pretrain_config.get('EDGE_RAW_DIM', EDGE_RAW_DIM)}, "
+                f"HIDDEN_DIM={pretrain_config.get('HIDDEN_DIM', 64)}"
+            )
         else:
+            # GNN 能感知全图拓扑（每条边的更新同时聚合其源节点的入边和目标节点的出边）
+            model = KidneyEdgePredictor(node_feature_dim=NODE_FEATURE_DIM, edge_raw_dim=EDGE_RAW_DIM).to(DEVICE)
             print("Training GNN from scratch with Fenchel-Young loss.")
 
         optimizer     = optim.Adam(model.parameters(), lr=LR)
@@ -438,7 +477,9 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
                     'config': {
                         'LR': LR, 'EPOCHS': EPOCHS,
                         'EPSILON_INIT': EPSILON_INIT,
-                        'M_SAMPLES': M_SAMPLES, 'SEED': SEED
+                        'M_SAMPLES': M_SAMPLES, 'SEED': SEED,
+                        'PRETRAIN_PATH': PRETRAIN_PATH,
+                        'PRETRAIN_TIMESTAMP': PRETRAIN_TIMESTAMP,
                     }
                 }, SAVE_PATH)
                 print(f"  --> [Saved] Epoch {epoch} | New Best Val Regret: {best_val_loss:.4f}")
@@ -507,6 +548,8 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
         test_result_path = os.path.join(RESULTS_DIR, "test_result.txt")
         with open(test_result_path, 'w') as f:
             f.write(f"Model: GNN (KidneyEdgePredictor) + FY Loss\n")
+            f.write(f"Pretrain Path     : {PRETRAIN_PATH}\n")
+            f.write(f"Pretrain Timestamp: {PRETRAIN_TIMESTAMP}\n")
             f.write(f"Test graphs      : {total_test_graphs}\n")
             f.write(f"Avg Optimal w    : {avg_optimal:.4f}\n")
             f.write(f"Avg Achieved w   : {avg_achieved:.4f}\n")
@@ -531,14 +574,9 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
         except Exception as cleanup_error:
             print(f"清理资源时发生错误: {cleanup_error}")
 
-
-def get_latest_pretrain_model(prefix="2stg_Gnn_", results_root=None):
-    checkpoint = latest_checkpoint(prefix, "best_stage1_model_real.pth", results_root=results_root or RESULTS_ROOT)
-    return str(checkpoint) if checkpoint is not None else None
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="End-to-end GNN training with Fenchel-Young loss")
-    parser.add_argument("--pretrain_PATH", type=str, required=False, default=None,
+    parser.add_argument("--pretrain_PATH", type=str, required=True,
                         help="Path to a pre-trained 2-stage model checkpoint (.pth) to initialize GNN weights")
     parser.add_argument("--data_dir", type=str, default=str(PROCESSED_DATA_DIR),
                         help="Directory containing processed G-*.json graphs")
@@ -548,16 +586,8 @@ if __name__ == "__main__":
                         help="Root directory where timestamped solution outputs will be created")
     args = parser.parse_args()
     
-    pretrain_path = args.pretrain_PATH
-    if pretrain_path is None:
-        pretrain_path = get_latest_pretrain_model("2stg_Gnn_", results_root=args.results_root)
-        if pretrain_path is not None:
-            print(f"Auto-detected pre-trained model: {pretrain_path}")
-        else:
-            print("No pre-trained model auto-detected, will train GNN from scratch.")
-            
     train_dfl(
-        pretrain_path=pretrain_path,
+        pretrain_path=args.pretrain_PATH,
         data_dir=args.data_dir,
         results_root=args.results_root,
         solutions_root=args.solutions_root,

@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch_geometric.utils import scatter
 
 NODE_FEATURE_DIM = 13
-EDGE_RAW_DIM = 6
+EDGE_RAW_DIM = 1
 DEFAULT_Y_SCALE = 25.0
 
 
@@ -62,7 +62,7 @@ class KidneyEdgePredictor(nn.Module):
         
         # ---------------------------------------------------------
         # Stage 1: Initial Edge Embedding
-        # Concatenate src node feats, dst node feats, and raw edge feats (e.g., utility)
+        # Concatenate src node feats, dst node feats, and raw edge feats (utility only)
         # ---------------------------------------------------------
         concat_dim = node_feature_dim * 2 + edge_raw_dim
         self.edge_encoder = nn.Sequential(
