@@ -34,11 +34,15 @@ Commands:
   2stg-reg
       Run stage-1 MLP regression training, then stage-2 Gurobi solving on the latest checkpoint.
 
-  dfl-gnn [dfl args...]
-      Run end-to-end GNN (Fenchel-Young / perturbed optimizer) training.
+  dfl-gnn --pretrain_PATH <2stg_gnn_checkpoint> [dfl args...]
+      Run end-to-end GNN (Fenchel-Young / perturbed optimizer) training with
+      an explicit warm-start checkpoint. The resulting dfl_Gnn_* folder names
+      will include the source 2stg_Gnn timestamp for easier comparison.
 
-  dfl-reg [dfl args...]
-      Run end-to-end MLP (Fenchel-Young / perturbed optimizer) training.
+  dfl-reg --pretrain_PATH <2stg_reg_checkpoint> [dfl args...]
+      Run end-to-end MLP (Fenchel-Young / perturbed optimizer) training with
+      an explicit warm-start checkpoint. The resulting dfl_Reg_* folder names
+      will include the source 2stg_Reg timestamp for easier comparison.
 
   oracle [optional_model_path] [solver args...]
       Run the ground-truth oracle solver. If a model checkpoint is supplied, its
@@ -198,9 +202,17 @@ case "$COMMAND" in
         run_python 3-stage2-solver-gurobi.py --model_path "$model_path" --data_dir "$resolved_processed_dir" --results_root "$RESULTS_ROOT" --solutions_root "$SOLUTIONS_ROOT"
         ;;
     dfl-gnn)
+        if [[ " $* " != *" --pretrain_PATH "* ]]; then
+            echo "Error: dfl-gnn requires --pretrain_PATH <results/2stg_Gnn_<timestamp>/best_stage1_model_real.pth>" >&2
+            exit 1
+        fi
         run_python 2-end2end-GNN.py --data_dir "$PROCESSED_DATA_DIR" --results_root "$RESULTS_ROOT" --solutions_root "$SOLUTIONS_ROOT" "$@"
         ;;
     dfl-reg)
+        if [[ " $* " != *" --pretrain_PATH "* ]]; then
+            echo "Error: dfl-reg requires --pretrain_PATH <results/2stg_Reg_<timestamp>/best_stage1_model_real.pth>" >&2
+            exit 1
+        fi
         run_python 2-end2end-Reg.py --data_dir "$PROCESSED_DATA_DIR" --results_root "$RESULTS_ROOT" --solutions_root "$SOLUTIONS_ROOT" "$@"
         ;;
     oracle)

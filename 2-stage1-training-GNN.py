@@ -1,10 +1,11 @@
 import argparse
+import os
+os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch_geometric.loader import DataLoader
 import numpy as np
-import os
 import random
 from datetime import datetime
 import matplotlib.pyplot as plt
@@ -22,11 +23,28 @@ from model.model_structure import EDGE_RAW_DIM, NODE_FEATURE_DIM, KidneyEdgePred
 # 0. Global Settings (Random SEED, etc.)
 # ==========================================
 SEED = 42
-torch.manual_seed(SEED)
-np.random.seed(SEED)
-random.seed(SEED)
-if torch.cuda.is_available():
-    torch.cuda.manual_seed_all(SEED)
+
+
+def enable_strict_reproducibility(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+    if hasattr(torch.backends, "cudnn"):
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+        torch.backends.cudnn.allow_tf32 = False
+    if hasattr(torch.backends, "cuda") and hasattr(torch.backends.cuda, "matmul"):
+        torch.backends.cuda.matmul.allow_tf32 = False
+    torch.use_deterministic_algorithms(True)
+    torch.set_num_threads(1)
+    if hasattr(torch, "set_num_interop_threads"):
+        torch.set_num_interop_threads(1)
+
+
+enable_strict_reproducibility(SEED)
 
 # ==========================================
 # 2. Load Dataset
@@ -76,6 +94,7 @@ def train_baseline(data_dir=None, results_root=None):
     DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     DATA_DIR = str(resolve_path(data_dir or PROCESSED_DATA_DIR))
     SEED = 42
+    STRICT_REPRODUCIBILITY = True
     DATA_DIR, _ = resolve_graph_data_dir(DATA_DIR, log_prefix="🔍 Loading")
 
     # --- Archiving Settings ---
@@ -117,9 +136,17 @@ def train_baseline(data_dir=None, results_root=None):
     if len(test_dataset) == 0:
         print("⚠️ Test split is empty; final test evaluation and diagnostic plots will be skipped.")
 
-    train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
-    test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
+    train_loader_generator = torch.Generator()
+    train_loader_generator.manual_seed(SEED)
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=BATCH_SIZE,
+        shuffle=True,
+        num_workers=0,
+        generator=train_loader_generator,
+    )
+    val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=0)
+    test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=0)
     train_num_edges = dataset_num_edges(train_dataset)
     val_num_edges = dataset_num_edges(val_dataset)
     test_num_edges = dataset_num_edges(test_dataset)
@@ -191,7 +218,9 @@ def train_baseline(data_dir=None, results_root=None):
                     'HIDDEN_DIM': HIDDEN_DIM,
                     'LEARNING_RATE': LEARNING_RATE,
                     'BATCH_SIZE': BATCH_SIZE,
-                    'SEED': SEED
+                    'SEED': SEED,
+                    'STRICT_REPRODUCIBILITY': STRICT_REPRODUCIBILITY,
+                    'CUBLAS_WORKSPACE_CONFIG': os.environ.get("CUBLAS_WORKSPACE_CONFIG", ""),
                 }
             }
             torch.save(checkpoint, SAVE_PATH)
@@ -292,6 +321,8 @@ def train_baseline(data_dir=None, results_root=None):
         f.write(f"LEARNING_RATE: {LEARNING_RATE}\n")
         f.write(f"NUM_EPOCHS: {NUM_EPOCHS}\n")
         f.write(f"SEED: {SEED}\n")
+        f.write(f"STRICT_REPRODUCIBILITY: {STRICT_REPRODUCIBILITY}\n")
+        f.write(f"CUBLAS_WORKSPACE_CONFIG: {os.environ.get('CUBLAS_WORKSPACE_CONFIG', '')}\n")
         f.write(f"--- Results ---\n")
         f.write(f"Best Val MSE: {best_val_loss:.4f}\n")
         if avg_test_loss is None:
