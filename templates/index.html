@@ -23,6 +23,19 @@
             </div>
             
             <div class="control-group">
+                <label for="batchSelect">Processed Batch</label>
+                <div class="select-wrapper">
+                    <select id="batchSelect">
+                        {% for batch in available_batches %}
+                        <option value="{{ batch.name }}" {% if batch.name == default_batch %}selected{% endif %}>
+                            {{ batch.name }} ({{ batch.file_count }} files)
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="control-group">
                 <label for="datasetSelect">Dataset Instance</label>
                 <div class="select-wrapper">
                     <select id="datasetSelect">
@@ -106,6 +119,9 @@
     </div>
 
     <!-- Custom JS -->
+    <script>
+        window.datasetConfig = {{ dataset_config|tojson }};
+    </script>
     <script src="{{ url_for('static', filename='main.js') }}"></script>
 </body>
 </html>

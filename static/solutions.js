@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
+    const batchSelect = document.getElementById('batchSelect');
     const solSelect = document.getElementById('solSelect');
     const container = document.getElementById('mynetwork');
     const totalWDisp = document.getElementById('totalW');
@@ -11,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let nodesDataset = new vis.DataSet();
     let edgesDataset = new vis.DataSet();
     let allMatches = [];
+    const datasetConfig = window.datasetConfig || { default_batch: null };
 
     const options = {
         nodes: {
@@ -52,10 +54,14 @@ document.addEventListener('DOMContentLoaded', () => {
         return { background: '#a29bfe', border: '#6c5ce7' }; 
     }
 
-    async function loadSolution(filename) {
+    async function loadSolution(filename, batchName) {
         try {
             loadingOverlay.classList.add('active');
-            const response = await fetch(`/api/solution_data?file=${encodeURIComponent(filename)}`);
+            const params = new URLSearchParams({ file: filename });
+            if (batchName) {
+                params.set('batch', batchName);
+            }
+            const response = await fetch(`/api/solution_data?${params.toString()}`);
             const data = await response.json();
             
             if (data.error) throw new Error(data.error);
@@ -158,8 +164,17 @@ document.addEventListener('DOMContentLoaded', () => {
         network.fit({ nodes: nodeIds, animation: true });
     }
 
-    solSelect.onchange = (e) => loadSolution(e.target.value);
-    btnFit.onclick = () => network.fit({ animation: true });
+    batchSelect.onchange = () => {
+        if (solSelect.value) {
+            loadSolution(solSelect.value, batchSelect.value);
+        }
+    };
+    solSelect.onchange = (e) => loadSolution(e.target.value, batchSelect.value);
+    btnFit.onclick = () => {
+        if (network) {
+            network.fit({ animation: true });
+        }
+    };
 
-    if (solSelect.value) loadSolution(solSelect.value);
+    if (solSelect.value) loadSolution(solSelect.value, batchSelect.value || datasetConfig.default_batch);
 });

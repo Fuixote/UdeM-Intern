@@ -1,13 +1,15 @@
 import glob
 import json
 import os
+import re
 
 import torch
 from torch_geometric.data import Data
 
-from model.model_structure import DEFAULT_Y_SCALE
+from model.model_structure import DEFAULT_Y_SCALE, EDGE_RAW_DIM
 
 BT_MAP = {"O": 0, "A": 1, "B": 2, "AB": 3}
+BATCH_NAME_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}_\d{6}(?:__.+)?$")
 
 
 def get_one_hot_bt(bt_str):
@@ -22,6 +24,47 @@ def get_pair_representative_donor(node):
     if not donors:
         raise ValueError(f"Pair node {node.get('id', '<unknown>')} has no donors")
     return donors[0]
+
+
+def find_pair_donor_by_id(node, donor_id):
+    donors = node.get('donors', [])
+    for donor in donors:
+        if str(donor.get('original_node_id')) == str(donor_id):
+            return donor
+    return None
+
+
+def build_edge_feature(src_node, match):
+    utility = float(match.get('utility', 0.0)) / 100.0
+
+    donor_age = 0.0
+    donor_bt = "Unknown"
+
+    if src_node['type'] == 'Pair':
+        donor = None
+        winning_donor_id = match.get('winning_donor_id')
+        if winning_donor_id is not None:
+            donor = find_pair_donor_by_id(src_node, winning_donor_id)
+        if donor is None:
+            donor = {
+                'dage': match.get('donor_age', 0.0),
+                'bloodtype': match.get('donor_bt', 'Unknown'),
+            }
+    else:
+        donor = src_node.get('donor', {})
+        if not donor:
+            donor = {
+                'dage': match.get('donor_age', 0.0),
+                'bloodtype': match.get('donor_bt', 'Unknown'),
+            }
+
+    try:
+        donor_age = float(donor.get('dage', 0.0)) / 100.0
+    except (TypeError, ValueError):
+        donor_age = 0.0
+    donor_bt = donor.get('bloodtype', 'Unknown')
+
+    return [utility, donor_age] + get_one_hot_bt(donor_bt)
 
 
 def build_node_feature(node):
@@ -77,7 +120,7 @@ def build_graph_components(json_path, label_scale=1.0):
             src_idx = id_map[src_id]
             dst_idx = id_map[dst_id]
             edge_indices.append([src_idx, dst_idx])
-            edge_attrs.append([match['utility'] / 100.0])
+            edge_attrs.append(build_edge_feature(node, match))
             gt_label = match.get('ground_truth_label', 0.0)
             gt_labels.append(gt_label)
             y_labels.append(gt_label / label_scale)
@@ -90,7 +133,7 @@ def build_graph_components(json_path, label_scale=1.0):
         y = torch.tensor(y_labels, dtype=torch.float)
     else:
         edge_index = torch.empty((2, 0), dtype=torch.long)
-        edge_attr = torch.empty((0, 1), dtype=torch.float)
+        edge_attr = torch.empty((0, EDGE_RAW_DIM), dtype=torch.float)
         y = torch.empty((0,), dtype=torch.float)
 
     return {
@@ -203,10 +246,36 @@ def parse_json_to_dfl_data(json_path, max_cycle=3, max_chain=5, label_scale=DEFA
     return data
 
 
+def resolve_graph_data_dir(directory, pattern="G-*.json", log_prefix="Loading"):
+    direct_files = sorted(glob.glob(os.path.join(directory, pattern)))
+    if direct_files:
+        return directory, direct_files
+
+    if not os.path.isdir(directory):
+        return directory, []
+
+    candidate_batches = []
+    for entry in os.listdir(directory):
+        batch_path = os.path.join(directory, entry)
+        if not os.path.isdir(batch_path) or not BATCH_NAME_PATTERN.match(entry):
+            continue
+        batch_files = sorted(glob.glob(os.path.join(batch_path, pattern)))
+        if batch_files:
+            candidate_batches.append((entry, batch_path, batch_files))
+
+    if not candidate_batches:
+        return directory, []
+
+    candidate_batches.sort(key=lambda item: item[0], reverse=True)
+    selected_name, selected_path, selected_files = candidate_batches[0]
+    print(f"{log_prefix} No top-level graph files in {directory}; using latest batch {selected_name}.")
+    return selected_path, selected_files
+
+
 def load_graph_dataset(directory, parser_fn, pattern="G-*.json", log_prefix="Loading"):
-    files = sorted(glob.glob(os.path.join(directory, pattern)))
+    resolved_dir, files = resolve_graph_data_dir(directory, pattern=pattern, log_prefix=log_prefix)
     dataset = []
-    print(f"{log_prefix} {len(files)} graph files from {directory}...")
+    print(f"{log_prefix} {len(files)} graph files from {resolved_dir}...")
     for graph_file in files:
         try:
             dataset.append(parser_fn(graph_file))

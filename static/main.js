@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     // DOM Elements
+    const batchSelect = document.getElementById('batchSelect');
     const datasetSelect = document.getElementById('datasetSelect');
     const container = document.getElementById('mynetwork');
     const statusBadge = document.getElementById('statusBadge');
@@ -14,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let nodesDataset = new vis.DataSet();
     let edgesDataset = new vis.DataSet();
     let physicsEnabled = false;
+    const datasetConfig = window.datasetConfig || { batch_files: {}, default_batch: null };
 
         // We use a custom function to transform the title strings into actual HTML elements before giving to Vis.js
         const createTooltipElement = (htmlString) => {
@@ -146,13 +148,29 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Load Data from Flask Backend
-    async function loadData(filename) {
+    function updateDatasetOptions(batchName) {
+        const files = datasetConfig.batch_files[batchName] || [];
+        datasetSelect.innerHTML = '';
+        files.forEach((file) => {
+            const option = document.createElement('option');
+            option.value = file;
+            option.textContent = file;
+            datasetSelect.appendChild(option);
+        });
+        return files;
+    }
+
+    async function loadData(filename, batchName) {
         try {
             loadingOverlay.classList.add('active');
             statusBadge.textContent = 'Fetching...';
             statusBadge.className = 'status-badge';
-            
-            const response = await fetch(`/api/data?file=${encodeURIComponent(filename)}`);
+
+            const params = new URLSearchParams({ file: filename });
+            if (batchName) {
+                params.set('batch', batchName);
+            }
+            const response = await fetch(`/api/data?${params.toString()}`);
             if (!response.ok) throw new Error('Data fetch failed');
             
             const data = await response.json();
@@ -211,17 +229,40 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // UI Event Listeners
+    batchSelect.addEventListener('change', (e) => {
+        const files = updateDatasetOptions(e.target.value);
+        if (files.length > 0) {
+            datasetSelect.value = files[0];
+            loadData(files[0], e.target.value);
+        } else {
+            nodeCountSpan.textContent = '-';
+            edgeCountSpan.textContent = '-';
+            nodesDataset.clear();
+            edgesDataset.clear();
+            if (network) {
+                network.destroy();
+                network = null;
+            }
+            statusBadge.textContent = 'No Files';
+        }
+    });
+
     datasetSelect.addEventListener('change', (e) => {
         if(e.target.value) {
-            loadData(e.target.value);
+            loadData(e.target.value, batchSelect.value);
         }
     });
 
     btnFit.addEventListener('click', () => {
-        network.fit({ animation: { duration: 800, easingFunction: 'easeInOutQuad' } });
+        if (network) {
+            network.fit({ animation: { duration: 800, easingFunction: 'easeInOutQuad' } });
+        }
     });
 
     btnPhysics.addEventListener('click', () => {
+        if (!network) {
+            return;
+        }
         physicsEnabled = !physicsEnabled;
         network.setOptions( { physics: { enabled: physicsEnabled } } );
         
@@ -237,7 +278,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- On Mount --- //
     // If a default file is selected in dropdown, load it
+    if (batchSelect.value) {
+        updateDatasetOptions(batchSelect.value);
+    }
     if(datasetSelect.value) {
-        loadData(datasetSelect.value);
+        loadData(datasetSelect.value, batchSelect.value || datasetConfig.default_batch);
     }
 });
