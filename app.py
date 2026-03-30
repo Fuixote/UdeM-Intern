@@ -1,12 +1,13 @@
 from flask import Flask, render_template, jsonify, request
 import json
 import os
+from experiment_config import PROCESSED_DATA_DIR, SOLUTIONS_ROOT
 
 app = Flask(__name__)
 
 # Basic Configuration
-DATASET_DIR = os.path.join(app.root_path, 'dataset', 'processed')
-SOLUTIONS_DIR = os.path.join(app.root_path, 'solutions')
+DATASET_DIR = str(PROCESSED_DATA_DIR)
+SOLUTIONS_DIR = str(SOLUTIONS_ROOT)
 
 
 def solution_sort_key(rel_path):

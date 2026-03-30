@@ -1,3 +1,4 @@
+import argparse
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -8,6 +9,7 @@ import random
 from datetime import datetime
 import matplotlib.pyplot as plt
 
+from experiment_config import PROCESSED_DATA_DIR, RESULTS_ROOT, make_results_dir, resolve_path
 # Set Matplotlib to Agg backend for running on headless servers
 import matplotlib
 matplotlib.use('Agg')
@@ -35,22 +37,21 @@ def load_real_dataset(directory):
 # ==========================================
 # 3. Training Loop
 # ==========================================
-def train_baseline():
+def train_baseline(data_dir=None, results_root=None):
     # --- Hyperparameters ---
     NODE_DIM = NODE_FEATURE_DIM
-    EDGE_RAW_DIM_LOCAL = EDGE_RAW_DIM
+    EDGE_RAW_DIM_VALUE = EDGE_RAW_DIM
     HIDDEN_DIM = 64
     BATCH_SIZE = 8
     LEARNING_RATE = 1e-3
     NUM_EPOCHS = 50
     DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    DATA_DIR = "/home/weikang/projects/UdeM-Intern/Exps/dataset/processed"
+    DATA_DIR = str(resolve_path(data_dir or PROCESSED_DATA_DIR))
     SEED = 42
 
     # --- Archiving Settings ---
     TIMESTAMP = datetime.now().strftime("%Y-%m-%d_%H%M%S")
-    RESULTS_DIR = os.path.join("results", f"2stg_Gnn_{TIMESTAMP}")
-    os.makedirs(RESULTS_DIR, exist_ok=True)
+    RESULTS_DIR = str(make_results_dir("2stg_Gnn_", timestamp=TIMESTAMP, results_root=results_root or RESULTS_ROOT))
     SAVE_PATH = os.path.join(RESULTS_DIR, 'best_stage1_model_real.pth')
     
     print(f"📁 Results will be saved at: {RESULTS_DIR}")
@@ -87,7 +88,7 @@ def train_baseline():
     test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
     # --- Initialization ---
-    model = KidneyEdgePredictor(NODE_DIM, EDGE_RAW_DIM_LOCAL, HIDDEN_DIM).to(DEVICE)
+    model = KidneyEdgePredictor(NODE_DIM, EDGE_RAW_DIM_VALUE, HIDDEN_DIM).to(DEVICE)
     criterion = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
@@ -143,7 +144,7 @@ def train_baseline():
                 'best_val_loss': best_val_loss,
                 'config': {
                     'NODE_DIM': NODE_DIM,
-                    'EDGE_RAW_DIM': EDGE_RAW_DIM_LOCAL,
+                    'EDGE_RAW_DIM': EDGE_RAW_DIM_VALUE,
                     'HIDDEN_DIM': HIDDEN_DIM,
                     'LEARNING_RATE': LEARNING_RATE,
                     'BATCH_SIZE': BATCH_SIZE,
@@ -232,7 +233,7 @@ def train_baseline():
         f.write(f"Dataset Path: {DATA_DIR}\n")
         f.write(f"--- Hyperparameters ---\n")
         f.write(f"NODE_DIM: {NODE_DIM}\n")
-        f.write(f"EDGE_RAW_DIM: {EDGE_RAW_DIM}\n")
+        f.write(f"EDGE_RAW_DIM: {EDGE_RAW_DIM_VALUE}\n")
         f.write(f"HIDDEN_DIM: {HIDDEN_DIM}\n")
         f.write(f"BATCH_SIZE: {BATCH_SIZE}\n")
         f.write(f"LEARNING_RATE: {LEARNING_RATE}\n")
@@ -244,4 +245,10 @@ def train_baseline():
     print(f"📝 Training summary saved at: {summary_path}")
 
 if __name__ == "__main__":
-    train_baseline()
+    parser = argparse.ArgumentParser(description="Stage-1 GNN training")
+    parser.add_argument("--data_dir", type=str, default=str(PROCESSED_DATA_DIR),
+                        help="Directory containing processed G-*.json graphs")
+    parser.add_argument("--results_root", type=str, default=str(RESULTS_ROOT),
+                        help="Root directory where timestamped training outputs will be created")
+    args = parser.parse_args()
+    train_baseline(data_dir=args.data_dir, results_root=args.results_root)

@@ -13,6 +13,15 @@ import threading
 import queue
 import json
 
+from experiment_config import (
+    PROCESSED_DATA_DIR,
+    RESULTS_ROOT,
+    SOLUTIONS_ROOT,
+    latest_checkpoint,
+    make_results_dir,
+    resolve_path,
+    solution_dir_for_result_dir,
+)
 from model.graph_utils import load_graph_dataset, parse_json_to_dfl_data
 from model.model_structure import DEFAULT_Y_SCALE, EDGE_RAW_DIM, NODE_FEATURE_DIM, KidneyEdgePredictor
 
@@ -260,17 +269,16 @@ def load_real_dataset_dfl(directory, max_cycle=3, max_chain=5):
 # ==========================================
 # 3. 训练主流程
 # ==========================================
-def train_dfl(pretrain_path=None):
+def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_root=None):
     DEVICE        = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     LR            = 5e-4
     EPOCHS        = 10
     EPSILON_INIT  = 0.5
     M_SAMPLES     = 8       # 扰动采样次数，越高梯度估计越稳定但越慢；forward+backward 各需 M 次求解
-    DATA_DIR      = "/home/weikang/projects/UdeM-Intern/Exps/dataset/processed"
-    PRETRAIN_PATH = pretrain_path
+    DATA_DIR      = str(resolve_path(data_dir or PROCESSED_DATA_DIR))
+    PRETRAIN_PATH = str(resolve_path(pretrain_path)) if pretrain_path is not None else None
     TIMESTAMP   = datetime.now().strftime("%Y-%m-%d_%H%M%S")
-    RESULTS_DIR = os.path.join("results", f"dfl_Gnn_{TIMESTAMP}")
-    os.makedirs(RESULTS_DIR, exist_ok=True)
+    RESULTS_DIR = str(make_results_dir("dfl_Gnn_", timestamp=TIMESTAMP, results_root=results_root or RESULTS_ROOT))
     SAVE_PATH   = os.path.join(RESULTS_DIR, 'best_dfl_model.pth')
     print(f"Results will be saved at: {RESULTS_DIR}")
 
@@ -507,7 +515,7 @@ def train_dfl(pretrain_path=None):
         print(f"Test results saved to: {test_result_path}")
 
         # ---- 输出 solution 文件，供 4-evaluation.py 横向对比 ----
-        sol_dir = os.path.join("solutions", os.path.basename(RESULTS_DIR))
+        sol_dir = str(solution_dir_for_result_dir(RESULTS_DIR, solutions_root=solutions_root or SOLUTIONS_ROOT))
         print(f"\nSaving solutions to: {sol_dir}")
         save_solutions(model, full_dataset, sol_dir, DEVICE, model_tag="GNN-FY")
 
@@ -524,31 +532,33 @@ def train_dfl(pretrain_path=None):
             print(f"清理资源时发生错误: {cleanup_error}")
 
 
-def get_latest_pretrain_model(prefix="2stg_Gnn_"):
-    if not os.path.exists("results"):
-        return None
-    dirs = [d for d in os.listdir("results") if d.startswith(prefix)]
-    if not dirs:
-        return None
-    dirs.sort(reverse=True)
-    latest_dir = dirs[0]
-    model_path = os.path.join("results", latest_dir, "best_stage1_model_real.pth")
-    if os.path.exists(model_path):
-        return model_path
-    return None
+def get_latest_pretrain_model(prefix="2stg_Gnn_", results_root=None):
+    checkpoint = latest_checkpoint(prefix, "best_stage1_model_real.pth", results_root=results_root or RESULTS_ROOT)
+    return str(checkpoint) if checkpoint is not None else None
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="End-to-end GNN training with Fenchel-Young loss")
     parser.add_argument("--pretrain_PATH", type=str, required=False, default=None,
                         help="Path to a pre-trained 2-stage model checkpoint (.pth) to initialize GNN weights")
+    parser.add_argument("--data_dir", type=str, default=str(PROCESSED_DATA_DIR),
+                        help="Directory containing processed G-*.json graphs")
+    parser.add_argument("--results_root", type=str, default=str(RESULTS_ROOT),
+                        help="Root directory where timestamped training outputs will be created")
+    parser.add_argument("--solutions_root", type=str, default=str(SOLUTIONS_ROOT),
+                        help="Root directory where timestamped solution outputs will be created")
     args = parser.parse_args()
     
     pretrain_path = args.pretrain_PATH
     if pretrain_path is None:
-        pretrain_path = get_latest_pretrain_model("2stg_Gnn_")
+        pretrain_path = get_latest_pretrain_model("2stg_Gnn_", results_root=args.results_root)
         if pretrain_path is not None:
             print(f"Auto-detected pre-trained model: {pretrain_path}")
         else:
             print("No pre-trained model auto-detected, will train GNN from scratch.")
             
-    train_dfl(pretrain_path=pretrain_path)
+    train_dfl(
+        pretrain_path=pretrain_path,
+        data_dir=args.data_dir,
+        results_root=args.results_root,
+        solutions_root=args.solutions_root,
+    )

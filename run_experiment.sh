@@ -7,6 +7,10 @@ cd "$ROOT_DIR"
 
 DEFAULT_PYTHON="/home/weikang/miniconda3/envs/KEPs/bin/python"
 PYTHON_BIN="${KEP_PYTHON:-$DEFAULT_PYTHON}"
+RAW_DATA_DIR="${KEP_RAW_DATA_DIR:-dataset/raw}"
+PROCESSED_DATA_DIR="${KEP_DATA_DIR:-dataset/processed}"
+RESULTS_ROOT="${KEP_RESULTS_DIR:-results}"
+SOLUTIONS_ROOT="${KEP_SOLUTIONS_DIR:-solutions}"
 DRY_RUN=0
 
 usage() {
@@ -72,7 +76,7 @@ run_python() {
 
 latest_result_dir() {
     local prefix="$1"
-    ls -td "results/${prefix}"* 2>/dev/null | head -n 1 || true
+    ls -td "${RESULTS_ROOT}/${prefix}"* 2>/dev/null | head -n 1 || true
 }
 
 latest_checkpoint() {
@@ -109,16 +113,6 @@ resolve_oracle_reference_model() {
     return 1
 }
 
-run_two_stage() {
-    local train_script="$1"
-    local prefix="$2"
-    run_python "$train_script"
-    local model_path
-    model_path="$(latest_checkpoint "$prefix" "best_stage1_model_real.pth")"
-    log "Using latest checkpoint: $model_path"
-    run_python 3-stage2-solver-gurobi.py --model_path "$model_path"
-}
-
 if [ "${1:-}" = "--dry-run" ]; then
     DRY_RUN=1
     shift
@@ -137,16 +131,22 @@ case "$COMMAND" in
         run_python 1-data-processing.py "$@"
         ;;
     2stg-gnn)
-        run_two_stage 2-stage1-training-GNN.py "2stg_Gnn_"
+        run_python 2-stage1-training-GNN.py --data_dir "$PROCESSED_DATA_DIR" --results_root "$RESULTS_ROOT"
+        model_path="$(latest_checkpoint "2stg_Gnn_" "best_stage1_model_real.pth")"
+        log "Using latest checkpoint: $model_path"
+        run_python 3-stage2-solver-gurobi.py --model_path "$model_path" --data_dir "$PROCESSED_DATA_DIR" --results_root "$RESULTS_ROOT" --solutions_root "$SOLUTIONS_ROOT"
         ;;
     2stg-reg)
-        run_two_stage 2-stage1-training-Reg.py "2stg_Reg_"
+        run_python 2-stage1-training-Reg.py --data_dir "$PROCESSED_DATA_DIR" --results_root "$RESULTS_ROOT"
+        model_path="$(latest_checkpoint "2stg_Reg_" "best_stage1_model_real.pth")"
+        log "Using latest checkpoint: $model_path"
+        run_python 3-stage2-solver-gurobi.py --model_path "$model_path" --data_dir "$PROCESSED_DATA_DIR" --results_root "$RESULTS_ROOT" --solutions_root "$SOLUTIONS_ROOT"
         ;;
     dfl-gnn)
-        run_python 2-end2end-GNN.py "$@"
+        run_python 2-end2end-GNN.py --data_dir "$PROCESSED_DATA_DIR" --results_root "$RESULTS_ROOT" --solutions_root "$SOLUTIONS_ROOT" "$@"
         ;;
     dfl-reg)
-        run_python 2-end2end-Reg.py "$@"
+        run_python 2-end2end-Reg.py --data_dir "$PROCESSED_DATA_DIR" --results_root "$RESULTS_ROOT" --solutions_root "$SOLUTIONS_ROOT" "$@"
         ;;
     oracle)
         oracle_args=(--gt_mode)
@@ -157,11 +157,12 @@ case "$COMMAND" in
             oracle_args+=(--model_path "$model_path")
             log "Oracle will reuse test split from: $model_path"
         fi
+        oracle_args+=(--data_dir "$PROCESSED_DATA_DIR" --results_root "$RESULTS_ROOT" --solutions_root "$SOLUTIONS_ROOT")
         oracle_args+=("$@")
         run_python 3-stage2-solver-gurobi.py "${oracle_args[@]}"
         ;;
     evaluate)
-        run_python 4-evaulation.py "$@"
+        run_python 4-evaulation.py --sol_dir "$SOLUTIONS_ROOT" --data_dir "$PROCESSED_DATA_DIR" --results_root "$RESULTS_ROOT" "$@"
         ;;
     app)
         run_python app.py
