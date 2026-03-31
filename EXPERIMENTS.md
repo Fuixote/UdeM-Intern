@@ -137,22 +137,22 @@ export KEP_SOLUTIONS_DIR=/path/to/solutions
 ### 3.3 两阶段基线：GNN
 
 ```bash
-KEP_DATA_DIR=dataset/processed/<batch_name> ./run_experiment.sh 2stg-gnn
+KEP_DATA_DIR=dataset/processed/<batch_name> ./run_experiment.sh 2stg-gnn-cf
 ```
 
 执行内容：
 1. 运行 `2-stage1-training-GNN.py`
 2. 自动寻找最新的 `results/2stg_Gnn_*/best_stage1_model_real.pth`
-3. 调用 `3-stage2-solver-gurobi.py` 进行第二阶段求解
+3. 调用 `formulations/cf/stage2_solver.py` 进行第二阶段求解
 
 输出：
 - `results/2stg_Gnn_<timestamp>/`
-- `solutions/2stg_Gnn_<timestamp>/`
+- `solutions/2stg_Gnn_<timestamp>__cf/`
 
 ### 3.4 两阶段基线：MLP 回归
 
 ```bash
-KEP_DATA_DIR=dataset/processed/<batch_name> ./run_experiment.sh 2stg-reg
+KEP_DATA_DIR=dataset/processed/<batch_name> ./run_experiment.sh 2stg-reg-cf
 ```
 
 输出：
@@ -162,34 +162,34 @@ KEP_DATA_DIR=dataset/processed/<batch_name> ./run_experiment.sh 2stg-reg
 ### 3.5 端到端 DFL：GNN
 
 ```bash
-KEP_DATA_DIR=dataset/processed/<batch_name> ./run_experiment.sh dfl-gnn
+KEP_DATA_DIR=dataset/processed/<batch_name> ./run_experiment.sh dfl-gnn-cf
 ```
 
 如果想显式指定预训练模型：
 
 ```bash
-KEP_DATA_DIR=dataset/processed/<batch_name> ./run_experiment.sh dfl-gnn --pretrain_PATH results/2stg_Gnn_<timestamp>/best_stage1_model_real.pth
+KEP_DATA_DIR=dataset/processed/<batch_name> ./run_experiment.sh dfl-gnn-cf --pretrain_PATH results/2stg_Gnn_<timestamp>/best_stage1_model_real.pth
 ```
 
 输出：
-- `results/dfl_Gnn_<timestamp>/`
-- `solutions/dfl_Gnn_<timestamp>/`
+- `results/dfl_Gnn_cf_<timestamp>/`
+- `solutions/dfl_Gnn_cf_<timestamp>/`
 
 ### 3.6 端到端 DFL：MLP
 
 ```bash
-KEP_DATA_DIR=dataset/processed/<batch_name> ./run_experiment.sh dfl-reg
+KEP_DATA_DIR=dataset/processed/<batch_name> ./run_experiment.sh dfl-reg-cf
 ```
 
 如果想显式指定预训练模型：
 
 ```bash
-KEP_DATA_DIR=dataset/processed/<batch_name> ./run_experiment.sh dfl-reg --pretrain_PATH results/2stg_Reg_<timestamp>/best_stage1_model_real.pth
+KEP_DATA_DIR=dataset/processed/<batch_name> ./run_experiment.sh dfl-reg-cf --pretrain_PATH results/2stg_Reg_<timestamp>/best_stage1_model_real.pth
 ```
 
 输出：
-- `results/dfl_Reg_<timestamp>/`
-- `solutions/dfl_Reg_<timestamp>/`
+- `results/dfl_Reg_cf_<timestamp>/`
+- `solutions/dfl_Reg_cf_<timestamp>/`
 
 ### 3.7 Oracle 基线
 
@@ -206,7 +206,7 @@ KEP_DATA_DIR=dataset/processed/<batch_name> ./run_experiment.sh oracle results/2
 ```
 
 原因：
-- `3-stage2-solver-gurobi.py --gt_mode --model_path ...` 会复制该实验的 `test_files.txt`
+- `formulations/cf/stage2_solver.py --gt_mode --model_path ...` 会复制该实验的 `test_files.txt`
 - 这样 `4-evaulation.py` 在横向比较时会使用同一个测试集
 
 输出：
@@ -259,15 +259,15 @@ KEP_DATA_DIR=dataset/processed/<batch_name> ./run_experiment.sh evaluate --test_
 2. 运行两阶段基线
 
 ```bash
-KEP_DATA_DIR=dataset/processed/<batch_name> ./run_experiment.sh 2stg-gnn
-KEP_DATA_DIR=dataset/processed/<batch_name> ./run_experiment.sh 2stg-reg
+KEP_DATA_DIR=dataset/processed/<batch_name> ./run_experiment.sh 2stg-gnn-cf
+KEP_DATA_DIR=dataset/processed/<batch_name> ./run_experiment.sh 2stg-reg-cf
 ```
 
 3. 运行端到端 DFL
 
 ```bash
-KEP_DATA_DIR=dataset/processed/<batch_name> ./run_experiment.sh dfl-gnn
-KEP_DATA_DIR=dataset/processed/<batch_name> ./run_experiment.sh dfl-reg
+KEP_DATA_DIR=dataset/processed/<batch_name> ./run_experiment.sh dfl-gnn-cf
+KEP_DATA_DIR=dataset/processed/<batch_name> ./run_experiment.sh dfl-reg-cf
 ```
 
 4. 运行 Oracle 基线
@@ -299,8 +299,8 @@ KEP_DATA_DIR=dataset/processed/<batch_name> ./run_experiment.sh evaluate
 训练产物：
 - `results/2stg_Gnn_<timestamp>/best_stage1_model_real.pth`
 - `results/2stg_Reg_<timestamp>/best_stage1_model_real.pth`
-- `results/dfl_Gnn_<timestamp>/best_dfl_model.pth`
-- `results/dfl_Reg_<timestamp>/best_dfl_reg_model.pth`
+- `results/dfl_Gnn_cf_<timestamp>/best_dfl_model.pth`
+- `results/dfl_Reg_cf_<timestamp>/best_dfl_reg_model.pth`
 
 测试集文件：
 - `results/<experiment>/test_files.txt`
@@ -316,7 +316,7 @@ KEP_DATA_DIR=dataset/processed/<batch_name> ./run_experiment.sh evaluate
 如果你想先看命令会执行什么，而不真正运行：
 
 ```bash
-./run_experiment.sh --dry-run 2stg-gnn
+./run_experiment.sh --dry-run 2stg-gnn-cf
 ./run_experiment.sh --dry-run oracle
 ```
 

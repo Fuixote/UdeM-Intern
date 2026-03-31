@@ -1,18 +1,24 @@
 import argparse
+import os
+os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
+import sys
+from pathlib import Path
 import torch
 import torch.optim as optim
 from torch_geometric.loader import DataLoader
 import gurobipy as gp
 from gurobipy import GRB
 import numpy as np
-import os
 import random
-from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 import threading
 import queue
 import json
 import re
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 from experiment_config import (
     PROCESSED_DATA_DIR,
@@ -22,6 +28,8 @@ from experiment_config import (
     resolve_path,
     solution_dir_for_result_dir,
 )
+from formulations.common.backend_utils import infer_ndd_mask
+from formulations.pief.backend import solve_pief
 from model.graph_utils import load_graph_dataset, parse_json_to_dfl_data
 from model.model_structure import DEFAULT_Y_SCALE, EDGE_RAW_DIM, NODE_FEATURE_DIM, KidneyEdgePredictor
 
@@ -29,11 +37,28 @@ from model.model_structure import DEFAULT_Y_SCALE, EDGE_RAW_DIM, NODE_FEATURE_DI
 # Global Settings
 # ==========================================
 SEED = 42
-torch.manual_seed(SEED)
-np.random.seed(SEED)
-random.seed(SEED)
-if torch.cuda.is_available():
-    torch.cuda.manual_seed_all(SEED)
+
+
+def enable_strict_reproducibility(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+    if hasattr(torch.backends, "cudnn"):
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+        torch.backends.cudnn.allow_tf32 = False
+    if hasattr(torch.backends, "cuda") and hasattr(torch.backends.cuda, "matmul"):
+        torch.backends.cuda.matmul.allow_tf32 = False
+    torch.use_deterministic_algorithms(True)
+    torch.set_num_threads(1)
+    if hasattr(torch, "set_num_interop_threads"):
+        torch.set_num_interop_threads(1)
+
+
+enable_strict_reproducibility(SEED)
 
 # ==========================================
 # Gurobi 环境池（避免频繁创建/销毁）
@@ -52,6 +77,7 @@ class GurobiEnvPool:
                 for _ in range(self.pool_size):
                     env = gp.Env(empty=True)
                     env.setParam('OutputFlag', 0)
+                    env.setParam('Seed', SEED)
                     env.start()
                     self.env_queue.put(env)
                 self._initialized = True
@@ -65,6 +91,7 @@ class GurobiEnvPool:
         except queue.Empty:
             env = gp.Env(empty=True)
             env.setParam('OutputFlag', 0)
+            env.setParam('Seed', SEED)
             env.start()
             return env
 
@@ -89,52 +116,27 @@ gurobi_pool = GurobiEnvPool(pool_size=8)
 # ==========================================
 # 1. 核心求解器：带环境池的黑盒
 # ==========================================
-def blackbox_kep_solver(w_preds_np, candidates, num_edges, num_nodes):
-    if not candidates:
-        return np.zeros(num_edges)
-
+def blackbox_kep_solver(w_preds_np, edge_index, node_is_ndd, num_edges, num_nodes, max_cycle=3, max_chain=4):
     env = gurobi_pool.get_env()
-    m = None
     try:
-        m = gp.Model("KEP_Blackbox", env=env)
-        m.setParam('Threads', 1)
-        m.setParam('TimeLimit', 10)
-
-        y_var = m.addVars(len(candidates), vtype=GRB.BINARY, name="y")
-        cand_weights = [sum(w_preds_np[e_idx] for e_idx in c['edges']) for c in candidates]
-
-        m.setObjective(
-            gp.quicksum(cand_weights[i] * y_var[i] for i in range(len(candidates))),
-            GRB.MAXIMIZE
+        result = solve_pief(
+            weights=w_preds_np,
+            edge_index=edge_index,
+            is_ndd_mask=node_is_ndd,
+            num_nodes=num_nodes,
+            max_cycle=max_cycle,
+            max_chain=max_chain,
+            env=env,
+            time_limit=10,
         )
-
-        for n_idx in range(num_nodes):
-            involved = [i for i, c in enumerate(candidates) if n_idx in c['nodes']]
-            if involved:
-                m.addConstr(gp.quicksum(y_var[i] for i in involved) <= 1)
-
-        m.optimize()
-
-        edge_selections = np.zeros(num_edges)
-        if m.status in (GRB.OPTIMAL, GRB.TIME_LIMIT) and m.SolCount > 0:
-            for i, c in enumerate(candidates):
-                if y_var[i].X > 0.5:
-                    for e_idx in c['edges']:
-                        edge_selections[e_idx] = 1.0
-        elif m.status not in (GRB.OPTIMAL, GRB.TIME_LIMIT):
-            print(f"警告: Gurobi 求解失败，状态码: {m.status}")
-
-        return edge_selections
+        if result["status"] not in (GRB.OPTIMAL, GRB.TIME_LIMIT):
+            print(f"警告: Gurobi 求解失败，状态码: {result['status']}")
+        return result["edge_selection"]
     finally:
-        if m is not None:
-            try:
-                m.dispose()
-            except Exception:
-                pass
         gurobi_pool.return_env(env)
 
 
-def get_expected_y(w_preds_tensor, candidates, num_nodes, num_edges, epsilon=0.1, M=8):
+def get_expected_y(w_preds_tensor, edge_index, node_is_ndd, num_nodes, num_edges, epsilon=0.1, M=8):
     """
     计算扰动优化器的期望决策分布（纯前向，不参与反向传播）。
 
@@ -145,18 +147,20 @@ def get_expected_y(w_preds_tensor, candidates, num_nodes, num_edges, epsilon=0.1
     """
     w_np = w_preds_tensor.detach().cpu().numpy().flatten()
 
-    def solve_single(_):
-        noise = np.random.normal(0, epsilon, size=w_np.shape) if epsilon > 0 else np.zeros_like(w_np)
-        return blackbox_kep_solver(w_np + noise, candidates, num_edges, num_nodes)
+    if epsilon > 0:
+        noise_list = [np.random.normal(0, epsilon, size=w_np.shape).astype(np.float32) for _ in range(M)]
+    else:
+        noise_list = [np.zeros_like(w_np, dtype=np.float32) for _ in range(M)]
 
-    with ThreadPoolExecutor(max_workers=max(1, M)) as executor:
-        results = list(executor.map(solve_single, range(M)))
+    def solve_single(noise):
+        return blackbox_kep_solver(w_np + noise, edge_index, node_is_ndd, num_edges, num_nodes)
 
+    results = [solve_single(noise) for noise in noise_list]
     y_soft = np.mean(results, axis=0)
     return torch.tensor(y_soft, device=w_preds_tensor.device, dtype=torch.float32).view(-1, 1)
 
 
-def sample_perturbed_solutions(w_preds_tensor, candidates, num_nodes, num_edges, epsilon=0.1, M=8):
+def sample_perturbed_solutions(w_preds_tensor, edge_index, node_is_ndd, num_nodes, num_edges, epsilon=0.1, M=8):
     """
     返回严格 FY 标量 surrogate 所需的 Monte Carlo 样本：
     - Y_samples[m] = y*(w + ε z^(m))
@@ -172,18 +176,16 @@ def sample_perturbed_solutions(w_preds_tensor, candidates, num_nodes, num_edges,
         noise_list = [np.zeros_like(w_np, dtype=np.float32) for _ in range(M)]
 
     def solve_single(noise):
-        return blackbox_kep_solver(w_np + noise, candidates, num_edges, num_nodes)
+        return blackbox_kep_solver(w_np + noise, edge_index, node_is_ndd, num_edges, num_nodes)
 
-    with ThreadPoolExecutor(max_workers=max(1, M)) as executor:
-        results = list(executor.map(solve_single, noise_list))
-
+    results = [solve_single(noise) for noise in noise_list]
     y_samples = torch.tensor(np.stack(results), device=w_preds_tensor.device, dtype=torch.float32)
     z_samples = torch.tensor(np.stack(noise_list), device=w_preds_tensor.device, dtype=torch.float32)
     return y_samples.detach(), z_samples.detach()
 
-def save_solutions(model, dataset, sol_dir, device, model_tag="GNN-FY"):
+def save_solutions(model, dataset, sol_dir, device, model_tag="GNN-PIEF-FY"):
     """
-    在给定数据集上用模型预测权重求解 KEP，输出与 3-stage2-solver-gurobi.py
+    在给定数据集上用模型预测权重求解 KEP，输出与 formulations/cf/stage2_solver.py
     完全相同格式的 *_sol.json 文件，供 4-evaluation.py 横向对比。
     """
     os.makedirs(sol_dir, exist_ok=True)
@@ -193,65 +195,39 @@ def save_solutions(model, dataset, sol_dir, device, model_tag="GNN-FY"):
     with torch.no_grad():
         for data in dataset:
             data = data.to(device)
-            candidates  = data.candidates
             id_map_rev  = data.id_map_rev
             num_nodes   = data.num_nodes_custom[0].item()
-            num_edges   = data.num_edges
             f_name      = data.filename
-
-            if not candidates:
-                continue
+            node_is_ndd = infer_ndd_mask(data.x)
 
             # 模型预测权重（GNN 前向）
             w_preds = model(data.x, data.edge_index, data.edge_attr).cpu().numpy().flatten()
 
-            # Gurobi 求解（无扰动，确定性）
             env = gurobi_pool.get_env()
-            m = None
             try:
-                m = gp.Model("KEP_Sol", env=env)
-                m.setParam('OutputFlag', 0)
-                y_var = m.addVars(len(candidates), vtype=GRB.BINARY, name="y")
-                cand_weights = [sum(w_preds[e_idx] for e_idx in c['edges']) for c in candidates]
-                m.setObjective(
-                    gp.quicksum(cand_weights[i] * y_var[i] for i in range(len(candidates))),
-                    GRB.MAXIMIZE
+                result = solve_pief(
+                    weights=w_preds,
+                    edge_index=data.edge_index,
+                    is_ndd_mask=node_is_ndd,
+                    num_nodes=num_nodes,
+                    env=env,
+                    time_limit=10,
+                    id_map_rev=id_map_rev,
                 )
-                for n_idx in range(num_nodes):
-                    involved = [i for i, c in enumerate(candidates) if n_idx in c['nodes']]
-                    if involved:
-                        m.addConstr(gp.quicksum(y_var[i] for i in involved) <= 1)
-                m.optimize()
-
-                if m.status in (GRB.OPTIMAL, GRB.TIME_LIMIT) and m.SolCount > 0:
-                    matches = []
-                    for i, c in enumerate(candidates):
-                        if y_var[i].X > 0.5:
-                            node_ids_str = [id_map_rev[n] for n in c['nodes']]
-                            matches.append({
-                                'type': c['type'],   # 'cycle' or 'chain'，由 find_all_cycles_and_chains 标注
-                                'node_ids': node_ids_str,
-                                'predicted_w': float(cand_weights[i]),
-                                'edge_weights': [float(w_preds[e_idx]) for e_idx in c['edges']]
-                            })
-
-                    sol = {
+                if result["matches"]:
+                    payload = {
                         'graph': f_name,
                         'model_used': model_tag,
-                        'total_predicted_w': float(m.ObjVal),
-                        'num_matches': len(matches),
-                        'matches': matches
+                        'formulation': 'pief',
+                        'total_predicted_w': float(result["objective"]),
+                        'num_matches': len(result["formatted_matches"]),
+                        'matches': result["formatted_matches"],
                     }
                     out_path = os.path.join(sol_dir, f_name.replace('.json', '_sol.json'))
-                    with open(out_path, 'w') as f:
-                        json.dump(sol, f, indent=4)
+                    with open(out_path, 'w', encoding='utf-8') as handle:
+                        json.dump(payload, handle, indent=4)
                     saved += 1
             finally:
-                if m is not None:
-                    try:
-                        m.dispose()
-                    except Exception:
-                        pass
                 gurobi_pool.return_env(env)
 
     print(f"Solutions saved: {saved} files → {sol_dir}")
@@ -303,6 +279,7 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
     EPSILON_INIT  = 0.5
     M_SAMPLES     = 8       # 扰动采样次数，越高梯度估计越稳定但越慢；forward+backward 各需 M 次求解
     DATA_DIR      = str(resolve_path(data_dir or PROCESSED_DATA_DIR))
+    STRICT_REPRODUCIBILITY = True
     if pretrain_path is None:
         raise ValueError("--pretrain_PATH is required for dfl-gnn")
     PRETRAIN_PATH = str(resolve_path(pretrain_path))
@@ -310,7 +287,7 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
     TIMESTAMP   = datetime.now().strftime("%Y-%m-%d_%H%M%S")
     RESULTS_DIR = str(
         make_results_dir(
-            "dfl_Gnn_",
+            "dfl_Gnn_pief_",
             timestamp=f"{TIMESTAMP}_from_{PRETRAIN_TIMESTAMP}",
             results_root=results_root or RESULTS_ROOT,
         )
@@ -336,8 +313,16 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
         print(f"Split: Train={len(train_dataset)}, Val={len(val_dataset)}, Test={len(test_dataset)}")
 
         # batch_size 必须为 1：求解器以单图为单位调用
-        train_loader = DataLoader(train_dataset, batch_size=1, shuffle=True)
-        val_loader   = DataLoader(val_dataset,   batch_size=1, shuffle=False)
+        train_loader_generator = torch.Generator()
+        train_loader_generator.manual_seed(SEED)
+        train_loader = DataLoader(
+            train_dataset,
+            batch_size=1,
+            shuffle=True,
+            num_workers=0,
+            generator=train_loader_generator,
+        )
+        val_loader = DataLoader(val_dataset, batch_size=1, shuffle=False, num_workers=0)
 
         # ---- 初始化 ----
         if PRETRAIN_PATH is not None:
@@ -371,13 +356,14 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
             for step, batch in enumerate(train_loader):
                 batch = batch.to(DEVICE)
                 optimizer.zero_grad()
+                node_is_ndd = infer_ndd_mask(batch.x)
 
                 # GNN 前向：直接输出 logits（不加 sigmoid），作为 Gurobi 的权重
                 w_preds = model(batch.x, batch.edge_index, batch.edge_attr).view(-1, 1)
 
                 # 1. Monte Carlo 采样：y^(m) = y*(w + ε z^(m))
                 y_samples, z_samples = sample_perturbed_solutions(
-                    w_preds, batch.candidates[0],
+                    w_preds, batch.edge_index, node_is_ndd,
                     batch.num_nodes_custom[0].item(),
                     batch.num_edges,
                     epsilon=current_epsilon, M=M_SAMPLES
@@ -387,7 +373,7 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
                 # 2. 真实权重下最优决策（无扰动，不参与反向传播）
                 with torch.no_grad():
                     y_optimal = get_expected_y(
-                        batch.y.view(-1, 1), batch.candidates[0],
+                        batch.y.view(-1, 1), batch.edge_index, node_is_ndd,
                         batch.num_nodes_custom[0].item(),
                         batch.num_edges,
                         epsilon=0.0, M=1
@@ -430,17 +416,18 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
             with torch.no_grad():
                 for batch in val_loader:
                     batch = batch.to(DEVICE)
+                    node_is_ndd = infer_ndd_mask(batch.x)
                     w_preds = model(batch.x, batch.edge_index, batch.edge_attr).view(-1, 1)
 
                     # 验证时用确定性求解（epsilon=0），衡量实际部署质量
                     y_pred = get_expected_y(
-                        w_preds, batch.candidates[0],
+                        w_preds, batch.edge_index, node_is_ndd,
                         batch.num_nodes_custom[0].item(),
                         batch.num_edges,
                         epsilon=0.0, M=1
                     )
                     y_optimal = get_expected_y(
-                        batch.y.view(-1, 1), batch.candidates[0],
+                        batch.y.view(-1, 1), batch.edge_index, node_is_ndd,
                         batch.num_nodes_custom[0].item(),
                         batch.num_edges,
                         epsilon=0.0, M=1
@@ -480,6 +467,8 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
                         'M_SAMPLES': M_SAMPLES, 'SEED': SEED,
                         'PRETRAIN_PATH': PRETRAIN_PATH,
                         'PRETRAIN_TIMESTAMP': PRETRAIN_TIMESTAMP,
+                        'STRICT_REPRODUCIBILITY': STRICT_REPRODUCIBILITY,
+                        'CUBLAS_WORKSPACE_CONFIG': os.environ.get("CUBLAS_WORKSPACE_CONFIG", ""),
                     }
                 }, SAVE_PATH)
                 print(f"  --> [Saved] Epoch {epoch} | New Best Val Regret: {best_val_loss:.4f}")
@@ -502,7 +491,7 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
         model.load_state_dict(ckpt['model_state_dict'])
         model.eval()
 
-        test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
+        test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False, num_workers=0)
         total_test_achieved = 0.0   # 模型决策获得的总 w
         total_test_optimal  = 0.0   # 理论最优总 w（oracle）
         total_test_graphs   = 0
@@ -510,17 +499,18 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
         with torch.no_grad():
             for batch in test_loader:
                 batch = batch.to(DEVICE)
+                node_is_ndd = infer_ndd_mask(batch.x)
                 w_preds = model(batch.x, batch.edge_index, batch.edge_attr).view(-1, 1)
 
                 # 用模型预测权重选边
                 y_pred = get_expected_y(
-                    w_preds, batch.candidates[0],
+                    w_preds, batch.edge_index, node_is_ndd,
                     batch.num_nodes_custom[0].item(),
                     batch.num_edges, epsilon=0.0, M=1
                 )
                 # 用真实 w 选边（Oracle 上界）
                 y_optimal = get_expected_y(
-                    batch.y.view(-1, 1), batch.candidates[0],
+                    batch.y.view(-1, 1), batch.edge_index, node_is_ndd,
                     batch.num_nodes_custom[0].item(),
                     batch.num_edges, epsilon=0.0, M=1
                 )
@@ -550,6 +540,8 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
             f.write(f"Model: GNN (KidneyEdgePredictor) + FY Loss\n")
             f.write(f"Pretrain Path     : {PRETRAIN_PATH}\n")
             f.write(f"Pretrain Timestamp: {PRETRAIN_TIMESTAMP}\n")
+            f.write(f"Strict Repro      : {STRICT_REPRODUCIBILITY}\n")
+            f.write(f"CUBLAS Workspace  : {os.environ.get('CUBLAS_WORKSPACE_CONFIG', '')}\n")
             f.write(f"Test graphs      : {total_test_graphs}\n")
             f.write(f"Avg Optimal w    : {avg_optimal:.4f}\n")
             f.write(f"Avg Achieved w   : {avg_achieved:.4f}\n")
@@ -560,7 +552,7 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
         # ---- 输出 solution 文件，供 4-evaluation.py 横向对比 ----
         sol_dir = str(solution_dir_for_result_dir(RESULTS_DIR, solutions_root=solutions_root or SOLUTIONS_ROOT))
         print(f"\nSaving solutions to: {sol_dir}")
-        save_solutions(model, full_dataset, sol_dir, DEVICE, model_tag="GNN-FY")
+        save_solutions(model, full_dataset, sol_dir, DEVICE, model_tag="GNN-PIEF-FY")
 
     except Exception as e:
         import traceback
