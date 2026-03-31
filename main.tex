@@ -460,6 +460,92 @@ Oracle & 6248 & 61595.48 & 307.98 & 9.8584 & 0.00 \\
 
 The main conclusions from this comparison are as follows. First, the oracle benchmark remains clearly above all learned methods, confirming that there is still a substantial gap between learned edge scoring and the best achievable exchange plans under the same optimization model. Second, the end-to-end GNN consistently improves over the corresponding two-stage GNN baseline across both runs, with modest but repeatable gains in total ground-truth score. This suggests that decision-focused learning can provide useful downstream improvements when combined with a graph-aware predictor. Third, the MLP-based end-to-end models do not outperform their corresponding two-stage MLP baselines, indicating that the benefit of decision-focused learning is architecture-dependent in the current setup. Finally, the learned methods often perform more transplants than the oracle while still achieving lower total ground-truth score, highlighting that maximizing transplant count and maximizing total exchange quality are not equivalent objectives in this setting.
 
+\subsection{A Sanity Check on the Current Synthetic Labels}
+The experiments above compare different learning-and-optimization pipelines under a common downstream KEP solver. However, an additional diagnostic on the current synthetic label construction reveals an important limitation of the present benchmark: our labels are strongly aligned with local edge-level information, which makes the benchmark naturally favourable to two-stage supervised learning.
+
+In the current data-processing pipeline, each edge label is generated from edge-local clinical proxies. In particular, the synthetic ground-truth edge score is computed from a success-probability term, a QALY-style term, and a small multiplicative perturbation:
+\[
+w_{\mathrm{true},e}
+\approx p_{\mathrm{succ},e}\cdot \mathrm{QALY}_e \cdot (1+\epsilon_e),
+\]
+where both \(p_{\mathrm{succ},e}\) and \(\mathrm{QALY}_e\) are themselves functions of donor-recipient information already available at the edge level, most notably the utility score, recipient cPRA, and donor age. Moreover, the raw edge utility is included directly in the model input. Hence, the stage-1 learning problem is already very close to directly regressing the quantity used by the stage-2 optimizer.
+
+To quantify this effect, we performed two simple sanity-check baselines on the same processed batch (\texttt{2026-03-31\_140543}) and on the same common train/validation/test split used by the main experiments. The first baseline regresses \(w_{\mathrm{true}}\) using only the single scalar edge utility. The second baseline uses a linear ridge regressor over purely local edge features, namely source-node features, target-node features, and the scalar edge utility, but still no graph message passing and no end-to-end optimization. Table~\ref{tab:label-sanity-a} reports the resulting edge-level diagnostics.
+
+\begin{table}[t]
+\centering
+\small
+\setlength{\tabcolsep}{5pt}
+\caption{Edge-level sanity checks for the current synthetic labels on batch \texttt{2026-03-31\_140543}. Correlation is the Pearson correlation between edge utility and the synthetic ground-truth label. The ``edge-only linear'' baseline uses only local donor-recipient and edge features, with no graph topology.}
+\label{tab:label-sanity-a}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+\textbf{Quantity} & \textbf{Train} & \textbf{Val} & \textbf{Test} \\
+\midrule
+\( \mathrm{corr}(\mathrm{utility}, w_{\mathrm{true}}) \) & 0.7738 & 0.7762 & 0.7663 \\
+Utility-only MSE & 9.6140 & 9.4672 & 10.2839 \\
+Edge-only linear MSE & 3.3251 & 3.2729 & 3.5897 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The utility--label correlation is already high (\(\approx 0.77\)) on every split. More importantly, a purely local linear predictor---without any graph-aware representation learning---already achieves a test MSE of 3.59, which is surprisingly competitive relative to the learned GNN and MLP models used in the main experiments.
+
+We next pushed these baselines through the same downstream hybrid KEP optimizer. Table~\ref{tab:label-sanity-b} compares their final decision quality against the main learned methods on the common 10-graph test split. The key observation is that even the utility-only baseline, which sees only one scalar feature per edge, is already close to the graph-aware end-to-end methods; and the edge-only linear baseline is competitive with, or better than, several DFL variants.
+
+\begin{table}[t]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\caption{Downstream decision quality on the common 10-graph test split of batch \texttt{2026-03-31\_140543}. ``Achieved'' denotes the average ground-truth objective value obtained by the selected exchange plan, and ``Regret'' is measured against the oracle. The last two rows are the sanity-check baselines described in the text.}
+\label{tab:label-sanity-b}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+\textbf{Method} & \textbf{Avg Achieved} & \textbf{Avg Regret} \\
+\midrule
+2-stage GNN & 308.1811 & 9.1698 \\
+2-stage MLP & 310.2835 & 7.0675 \\
+FY-DFL GNN & 307.0828 & 10.2681 \\
+FY-DFL MLP & 309.8360 & 7.5149 \\
+SPO+ GNN & 307.4284 & 9.9225 \\
+SPO+ MLP & 309.9184 & 7.4325 \\
+SPO+ + MSE anchor GNN & 307.6322 & 9.7188 \\
+SPO+ + MSE anchor MLP & 310.2409 & 7.1101 \\
+\midrule
+Edge-only linear baseline & 307.6529 & 9.6981 \\
+Utility-only baseline & 306.4726 & 10.8783 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+These numbers strongly suggest that the current synthetic label design does not yet provide a demanding test bed for decision-focused learning. The benchmark largely rewards accurate local edge regression, because the synthetic label is generated from edge-level quantities that are already exposed, or very nearly exposed, to the predictive model. As a result, a two-stage pipeline is naturally advantaged: once edge scores are regressed well, the subsequent optimization problem is already close to the true objective.
+
+Therefore, while the current experiments remain useful for validating implementations and for comparing solver formulations under a controlled synthetic setting, they should not be over-interpreted as evidence about the intrinsic value of decision-focused learning for real KEP objective design. In future work, the data-generation process should be revised so that final exchange quality depends less directly on a nearly observable edge-local score and more on medically meaningful program-level considerations, such as failure-aware utility, priority for hard-to-match recipients, or dynamic opportunity cost. Only under such a setting can we fairly test whether end-to-end KEP learning genuinely outperforms a strong two-stage baseline.
+
+\subsection{A Solver-Time Comparison Across Formulations}
+Besides solution quality, the optimization formulation also changes the practical computational cost of the pipeline. To isolate this effect from learning dynamics, we followed the timing procedure in \texttt{formulations/README.md} and compared only the stage-2 solver entry points. Concretely, we ran \texttt{formulations/cf/stage2\_solver.py}, \texttt{formulations/hybrid/stage2\_solver.py}, and \texttt{formulations/pief/stage2\_solver.py} with the same processed batch (\texttt{2026-03-31\_140543}), the same warm-start MLP checkpoint, and the same solver limits (\texttt{max\_cycle}=3, \texttt{max\_chain}=4). In all three cases, the solver processed the same 50 graphs and wrote a complete set of solutions. We measured runtime with \texttt{/usr/bin/time -p}, so the key quantity is the wall-clock time reported in the \texttt{real} field.
+
+Table~\ref{tab:solver-speed} shows a clear formulation-level efficiency gap. The hybrid formulation is the fastest in this experiment, requiring only 3.64 seconds for the full batch, compared with 11.05 seconds for the pure candidate-formulation baseline. The dual-PIEF formulation is also substantially faster than CF, but remains slower than the hybrid design. Put differently, under the same input weights and the same KEP instances, the hybrid solver is about \(3.04\times\) faster than CF, while PIEF is about \(2.28\times\) faster than CF.
+
+\begin{table}[t]
+\centering
+\small
+\setlength{\tabcolsep}{5pt}
+\caption{Solver-only runtime comparison across formulations on batch \texttt{2026-03-31\_140543}, using the exact stage-2 timing setup from \texttt{formulations/README.md}. Lower is better. Speedup is computed relative to CF using wall-clock time.}
+\label{tab:solver-speed}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+\textbf{Formulation} & \textbf{Real (s)} & \textbf{User (s)} & \textbf{Sys (s)} & \textbf{Speedup vs CF} \\
+\midrule
+CF (\texttt{CF-CYCLE + CF-CHAIN}) & 11.05 & 17.17 & 1.02 & \(1.00\times\) \\
+Hybrid (\texttt{CF-CYCLE + PIEF-CHAIN}) & 3.64 & 10.51 & 0.27 & \(3.04\times\) \\
+PIEF (\texttt{PIEF-CYCLE + PIEF-CHAIN}) & 4.85 & 12.66 & 0.39 & \(2.28\times\) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+This finding matters methodologically. It shows that formulation choice is not merely an implementation detail hidden behind a common black-box solver interface; it directly changes the runtime profile of KEP optimization. In the present setup, the hybrid formulation delivers the best efficiency among the three tested alternatives, suggesting that formulation engineering can produce large practical gains even before considering any changes in predictive accuracy or learning objective.
+
 \bibliographystyle{plainnat}
 \bibliography{ref}
 \end{document}
