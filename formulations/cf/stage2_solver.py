@@ -1,15 +1,23 @@
 import argparse
 import shutil
 import sys
+from pathlib import Path
 import torch
 import gurobipy as gp
 from gurobipy import GRB
 import json
 import os
 import glob
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 from experiment_config import PROCESSED_DATA_DIR, RESULTS_ROOT, SOLUTIONS_ROOT, resolve_path, solution_dir_for_experiment
 from model.graph_utils import find_all_cycles_and_chains, parse_json_to_graph_info, resolve_graph_data_dir
 from model.model_structure import EDGE_RAW_DIM, NODE_FEATURE_DIM, KidneyEdgePredictor, MLPBaseline
+
+FORMULATION_TAG = "cf"
 
 # ==========================================
 # 3. Solver logic
@@ -63,7 +71,11 @@ def load_prediction_model(model_path):
     model.eval()
     return model_type, model
 
-def solve_kep(json_path, model, model_type, output_dir, max_chain=4):
+
+def formulation_experiment_name(base_name):
+    return f"{base_name}__{FORMULATION_TAG}"
+
+def solve_kep(json_path, model, model_type, output_dir, max_cycle=3, max_chain=4):
     f_name = os.path.basename(json_path)
     graph_data = parse_json_to_graph_info(json_path)
     
@@ -99,7 +111,13 @@ def solve_kep(json_path, model, model_type, output_dir, max_chain=4):
         # Ground Truth Mode (Oracle)
         w_preds = graph_data['gt_labels']
 
-    cycles, chains = find_all_cycles_and_chains(graph_data['adj'], graph_data['nodes_data'], graph_data['id_map_rev'], max_chain=max_chain)
+    cycles, chains = find_all_cycles_and_chains(
+        graph_data['adj'],
+        graph_data['nodes_data'],
+        graph_data['id_map_rev'],
+        max_cycle=max_cycle,
+        max_chain=max_chain,
+    )
     candidates = cycles + chains
     if not candidates: return
 
@@ -128,7 +146,7 @@ def solve_kep(json_path, model, model_type, output_dir, max_chain=4):
             })
         
         res = {
-            'graph': f_name, 'model_used': model_type,
+            'graph': f_name, 'model_used': model_type, 'formulation': FORMULATION_TAG,
             'total_predicted_w': float(m.ObjVal),
             'num_matches': len(matches), 'matches': matches
         }
@@ -140,6 +158,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_path", type=str, default=None,
                         help="Path to best_stage1_model_real.pth. In gt_mode: optional, used to copy test_files.txt for fair comparison")
+    parser.add_argument("--max_cycle", type=int, default=3,
+                        help="Maximum number of vertices in a cycle")
     parser.add_argument("--max_chain", type=int, default=4,
                         help="Maximum number of transplant edges in a chain (excluding the initiating NDD node)")
     parser.add_argument("--data_dir", type=str, default=str(PROCESSED_DATA_DIR))
@@ -155,11 +175,12 @@ if __name__ == "__main__":
 
     if args.gt_mode:
         model_type, model = "GroundTruth", None
-        sol_out = str(solution_dir_for_experiment("ground_truth", solutions_root=solutions_root))
+        experiment_name = formulation_experiment_name("ground_truth")
+        sol_out = str(solution_dir_for_experiment(experiment_name, solutions_root=solutions_root))
         print("💡 Running in ORACLE mode (using Ground Truth labels)")
 
         # 创建 results/ground_truth/ 并复制 test_files.txt，使 4-evaluation 与预测模型使用相同测试集
-        results_gt_dir = os.path.join(results_root, "ground_truth")
+        results_gt_dir = os.path.join(results_root, experiment_name)
         if args.model_path:
             model_dir = os.path.dirname(args.model_path)
             src_test_files = os.path.join(model_dir, "test_files.txt")
@@ -178,13 +199,13 @@ if __name__ == "__main__":
             sys.exit(1)
         model_type, model = load_prediction_model(args.model_path)
         model_dir = os.path.dirname(args.model_path)
-        exp_id = os.path.basename(model_dir)
+        exp_id = formulation_experiment_name(os.path.basename(model_dir))
         sol_out = str(solution_dir_for_experiment(exp_id, solutions_root=solutions_root))
-        print(f"🚀 Running in PREDICTION mode: {model_type}")
+        print(f"🚀 Running in PREDICTION mode: {model_type} | formulation={FORMULATION_TAG}")
 
     os.makedirs(sol_out, exist_ok=True)
     print(f"📁 Solutions will be saved to: {sol_out}")
 
     data_dir, files = resolve_graph_data_dir(data_dir, log_prefix="🔍 Solving")
     for f in files:
-        solve_kep(f, model, model_type, sol_out, args.max_chain)
+        solve_kep(f, model, model_type, sol_out, max_cycle=args.max_cycle, max_chain=args.max_chain)

@@ -28,21 +28,47 @@ Commands:
       Example: ./run_experiment.sh data-process
       Example: ./run_experiment.sh data-process dataset/raw/<batch_name> dataset/processed --all
 
-  2stg-gnn
-      Run stage-1 GNN training, then stage-2 Gurobi solving on the latest checkpoint.
+  2stg-gnn-cf
+      Run stage-1 GNN training, then stage-2 CF Gurobi solving on the latest checkpoint.
 
-  2stg-reg
-      Run stage-1 MLP regression training, then stage-2 Gurobi solving on the latest checkpoint.
+  2stg-reg-cf
+      Run stage-1 MLP regression training, then stage-2 CF Gurobi solving on the latest checkpoint.
 
-  dfl-gnn --pretrain_PATH <2stg_gnn_checkpoint> [dfl args...]
+  2stg-gnn-pief
+      Run stage-1 GNN training, then stage-2 dual-PIEF solving on the latest checkpoint.
+
+  2stg-reg-pief
+      Run stage-1 MLP regression training, then stage-2 dual-PIEF solving on the latest checkpoint.
+
+  2stg-gnn-hybrid
+      Run stage-1 GNN training, then stage-2 CF-cycle + PIEF-chain solving.
+
+  2stg-reg-hybrid
+      Run stage-1 MLP regression training, then stage-2 CF-cycle + PIEF-chain solving.
+
+  dfl-gnn-cf --pretrain_PATH <2stg_gnn_checkpoint> [dfl args...]
       Run end-to-end GNN (Fenchel-Young / perturbed optimizer) training with
-      an explicit warm-start checkpoint. The resulting dfl_Gnn_* folder names
+      the CF formulation and an explicit warm-start checkpoint. The resulting
+      dfl_Gnn_cf_* folder names
       will include the source 2stg_Gnn timestamp for easier comparison.
 
-  dfl-reg --pretrain_PATH <2stg_reg_checkpoint> [dfl args...]
+  dfl-reg-cf --pretrain_PATH <2stg_reg_checkpoint> [dfl args...]
       Run end-to-end MLP (Fenchel-Young / perturbed optimizer) training with
-      an explicit warm-start checkpoint. The resulting dfl_Reg_* folder names
+      the CF formulation and an explicit warm-start checkpoint. The resulting
+      dfl_Reg_cf_* folder names
       will include the source 2stg_Reg timestamp for easier comparison.
+
+  dfl-gnn-pief --pretrain_PATH <2stg_gnn_checkpoint> [dfl args...]
+      Run end-to-end GNN training with the dual-PIEF formulation.
+
+  dfl-reg-pief --pretrain_PATH <2stg_reg_checkpoint> [dfl args...]
+      Run end-to-end MLP training with the dual-PIEF formulation.
+
+  dfl-gnn-hybrid --pretrain_PATH <2stg_gnn_checkpoint> [dfl args...]
+      Run end-to-end GNN training with CF-cycle + PIEF-chain.
+
+  dfl-reg-hybrid --pretrain_PATH <2stg_reg_checkpoint> [dfl args...]
+      Run end-to-end MLP training with CF-cycle + PIEF-chain.
 
   oracle [optional_model_path] [solver args...]
       Run the ground-truth oracle solver. If a model checkpoint is supplied, its
@@ -187,33 +213,89 @@ case "$COMMAND" in
         mapfile -d '' -t data_process_args < <(normalize_data_process_args "$@")
         run_python 1-data-processing.py "${data_process_args[@]}"
         ;;
-    2stg-gnn)
+    2stg-gnn|2stg-gnn-cf)
         resolved_processed_dir="$(resolve_processed_data_dir "$PROCESSED_DATA_DIR")"
         run_python 2-stage1-training-GNN.py --data_dir "$resolved_processed_dir" --results_root "$RESULTS_ROOT"
         model_path="$(latest_checkpoint "2stg_Gnn_" "best_stage1_model_real.pth")"
         log "Using latest checkpoint: $model_path"
-        run_python 3-stage2-solver-gurobi.py --model_path "$model_path" --data_dir "$resolved_processed_dir" --results_root "$RESULTS_ROOT" --solutions_root "$SOLUTIONS_ROOT"
+        run_python formulations/cf/stage2_solver.py --model_path "$model_path" --data_dir "$resolved_processed_dir" --results_root "$RESULTS_ROOT" --solutions_root "$SOLUTIONS_ROOT"
         ;;
-    2stg-reg)
+    2stg-reg|2stg-reg-cf)
         resolved_processed_dir="$(resolve_processed_data_dir "$PROCESSED_DATA_DIR")"
         run_python 2-stage1-training-Reg.py --data_dir "$resolved_processed_dir" --results_root "$RESULTS_ROOT"
         model_path="$(latest_checkpoint "2stg_Reg_" "best_stage1_model_real.pth")"
         log "Using latest checkpoint: $model_path"
-        run_python 3-stage2-solver-gurobi.py --model_path "$model_path" --data_dir "$resolved_processed_dir" --results_root "$RESULTS_ROOT" --solutions_root "$SOLUTIONS_ROOT"
+        run_python formulations/cf/stage2_solver.py --model_path "$model_path" --data_dir "$resolved_processed_dir" --results_root "$RESULTS_ROOT" --solutions_root "$SOLUTIONS_ROOT"
         ;;
-    dfl-gnn)
+    2stg-gnn-pief)
+        resolved_processed_dir="$(resolve_processed_data_dir "$PROCESSED_DATA_DIR")"
+        run_python 2-stage1-training-GNN.py --data_dir "$resolved_processed_dir" --results_root "$RESULTS_ROOT"
+        model_path="$(latest_checkpoint "2stg_Gnn_" "best_stage1_model_real.pth")"
+        log "Using latest checkpoint: $model_path"
+        run_python formulations/pief/stage2_solver.py --model_path "$model_path" --data_dir "$resolved_processed_dir" --results_root "$RESULTS_ROOT" --solutions_root "$SOLUTIONS_ROOT"
+        ;;
+    2stg-reg-pief)
+        resolved_processed_dir="$(resolve_processed_data_dir "$PROCESSED_DATA_DIR")"
+        run_python 2-stage1-training-Reg.py --data_dir "$resolved_processed_dir" --results_root "$RESULTS_ROOT"
+        model_path="$(latest_checkpoint "2stg_Reg_" "best_stage1_model_real.pth")"
+        log "Using latest checkpoint: $model_path"
+        run_python formulations/pief/stage2_solver.py --model_path "$model_path" --data_dir "$resolved_processed_dir" --results_root "$RESULTS_ROOT" --solutions_root "$SOLUTIONS_ROOT"
+        ;;
+    2stg-gnn-hybrid|2stg-gnn-cf-piefchain)
+        resolved_processed_dir="$(resolve_processed_data_dir "$PROCESSED_DATA_DIR")"
+        run_python 2-stage1-training-GNN.py --data_dir "$resolved_processed_dir" --results_root "$RESULTS_ROOT"
+        model_path="$(latest_checkpoint "2stg_Gnn_" "best_stage1_model_real.pth")"
+        log "Using latest checkpoint: $model_path"
+        run_python formulations/hybrid/stage2_solver.py --model_path "$model_path" --data_dir "$resolved_processed_dir" --results_root "$RESULTS_ROOT" --solutions_root "$SOLUTIONS_ROOT"
+        ;;
+    2stg-reg-hybrid|2stg-reg-cf-piefchain)
+        resolved_processed_dir="$(resolve_processed_data_dir "$PROCESSED_DATA_DIR")"
+        run_python 2-stage1-training-Reg.py --data_dir "$resolved_processed_dir" --results_root "$RESULTS_ROOT"
+        model_path="$(latest_checkpoint "2stg_Reg_" "best_stage1_model_real.pth")"
+        log "Using latest checkpoint: $model_path"
+        run_python formulations/hybrid/stage2_solver.py --model_path "$model_path" --data_dir "$resolved_processed_dir" --results_root "$RESULTS_ROOT" --solutions_root "$SOLUTIONS_ROOT"
+        ;;
+    dfl-gnn|dfl-gnn-cf)
         if [[ " $* " != *" --pretrain_PATH "* ]]; then
-            echo "Error: dfl-gnn requires --pretrain_PATH <results/2stg_Gnn_<timestamp>/best_stage1_model_real.pth>" >&2
+            echo "Error: dfl-gnn-cf requires --pretrain_PATH <results/2stg_Gnn_<timestamp>/best_stage1_model_real.pth>" >&2
             exit 1
         fi
-        run_python 2-end2end-GNN.py --data_dir "$PROCESSED_DATA_DIR" --results_root "$RESULTS_ROOT" --solutions_root "$SOLUTIONS_ROOT" "$@"
+        run_python formulations/cf/end2end_gnn.py --data_dir "$PROCESSED_DATA_DIR" --results_root "$RESULTS_ROOT" --solutions_root "$SOLUTIONS_ROOT" "$@"
         ;;
-    dfl-reg)
+    dfl-reg|dfl-reg-cf)
         if [[ " $* " != *" --pretrain_PATH "* ]]; then
-            echo "Error: dfl-reg requires --pretrain_PATH <results/2stg_Reg_<timestamp>/best_stage1_model_real.pth>" >&2
+            echo "Error: dfl-reg-cf requires --pretrain_PATH <results/2stg_Reg_<timestamp>/best_stage1_model_real.pth>" >&2
             exit 1
         fi
-        run_python 2-end2end-Reg.py --data_dir "$PROCESSED_DATA_DIR" --results_root "$RESULTS_ROOT" --solutions_root "$SOLUTIONS_ROOT" "$@"
+        run_python formulations/cf/end2end_reg.py --data_dir "$PROCESSED_DATA_DIR" --results_root "$RESULTS_ROOT" --solutions_root "$SOLUTIONS_ROOT" "$@"
+        ;;
+    dfl-gnn-pief)
+        if [[ " $* " != *" --pretrain_PATH "* ]]; then
+            echo "Error: dfl-gnn-pief requires --pretrain_PATH <results/2stg_Gnn_<timestamp>/best_stage1_model_real.pth>" >&2
+            exit 1
+        fi
+        run_python formulations/pief/end2end_gnn.py --data_dir "$PROCESSED_DATA_DIR" --results_root "$RESULTS_ROOT" --solutions_root "$SOLUTIONS_ROOT" "$@"
+        ;;
+    dfl-reg-pief)
+        if [[ " $* " != *" --pretrain_PATH "* ]]; then
+            echo "Error: dfl-reg-pief requires --pretrain_PATH <results/2stg_Reg_<timestamp>/best_stage1_model_real.pth>" >&2
+            exit 1
+        fi
+        run_python formulations/pief/end2end_reg.py --data_dir "$PROCESSED_DATA_DIR" --results_root "$RESULTS_ROOT" --solutions_root "$SOLUTIONS_ROOT" "$@"
+        ;;
+    dfl-gnn-hybrid|dfl-gnn-cf-piefchain)
+        if [[ " $* " != *" --pretrain_PATH "* ]]; then
+            echo "Error: dfl-gnn-hybrid requires --pretrain_PATH <results/2stg_Gnn_<timestamp>/best_stage1_model_real.pth>" >&2
+            exit 1
+        fi
+        run_python formulations/hybrid/end2end_gnn.py --data_dir "$PROCESSED_DATA_DIR" --results_root "$RESULTS_ROOT" --solutions_root "$SOLUTIONS_ROOT" "$@"
+        ;;
+    dfl-reg-hybrid|dfl-reg-cf-piefchain)
+        if [[ " $* " != *" --pretrain_PATH "* ]]; then
+            echo "Error: dfl-reg-hybrid requires --pretrain_PATH <results/2stg_Reg_<timestamp>/best_stage1_model_real.pth>" >&2
+            exit 1
+        fi
+        run_python formulations/hybrid/end2end_reg.py --data_dir "$PROCESSED_DATA_DIR" --results_root "$RESULTS_ROOT" --solutions_root "$SOLUTIONS_ROOT" "$@"
         ;;
     oracle)
         oracle_args=(--gt_mode)
@@ -226,7 +308,7 @@ case "$COMMAND" in
         fi
         oracle_args+=(--data_dir "$PROCESSED_DATA_DIR" --results_root "$RESULTS_ROOT" --solutions_root "$SOLUTIONS_ROOT")
         oracle_args+=("$@")
-        run_python 3-stage2-solver-gurobi.py "${oracle_args[@]}"
+        run_python formulations/cf/stage2_solver.py "${oracle_args[@]}"
         ;;
     evaluate)
         run_python 4-evaulation.py --sol_dir "$SOLUTIONS_ROOT" --data_dir "$PROCESSED_DATA_DIR" --results_root "$RESULTS_ROOT" "$@"
