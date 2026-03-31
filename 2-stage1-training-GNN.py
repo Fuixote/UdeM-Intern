@@ -11,6 +11,7 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 
 from experiment_config import PROCESSED_DATA_DIR, RESULTS_ROOT, make_results_dir, resolve_path
+from split_binding import save_split_files, split_dataset_counts
 # Set Matplotlib to Agg backend for running on headless servers
 import matplotlib
 matplotlib.use('Agg')
@@ -51,30 +52,6 @@ enable_strict_reproducibility(SEED)
 # ==========================================
 def load_real_dataset(directory):
     return load_graph_dataset(directory, parse_json_to_pyg_data, log_prefix="🔍 Loading")
-
-
-def split_dataset_counts(total_len):
-    if total_len <= 0:
-        return 0, 0, 0
-    if total_len == 1:
-        return 1, 0, 0
-    if total_len == 2:
-        return 1, 1, 0
-
-    train_count = max(1, int(0.6 * total_len))
-    val_count = max(1, int(0.2 * total_len))
-    test_count = total_len - train_count - val_count
-
-    if test_count <= 0:
-        if train_count > val_count and train_count > 1:
-            train_count -= 1
-        elif val_count > 1:
-            val_count -= 1
-        else:
-            train_count = max(1, train_count - 1)
-        test_count = total_len - train_count - val_count
-
-    return train_count, val_count, test_count
 
 
 def dataset_num_edges(dataset):
@@ -123,12 +100,10 @@ def train_baseline(data_dir=None, results_root=None):
     val_dataset = full_dataset[train_end:val_end]
     test_dataset = full_dataset[val_end:]
     
-    # Save the list of test files to the results directory
-    test_files_path = os.path.join(RESULTS_DIR, "test_files.txt")
-    with open(test_files_path, 'w') as f:
-        for data in test_dataset:
-            f.write(data.filename + "\n")
-    print(f"📄 Test set file list saved to: {test_files_path}")
+    split_paths = save_split_files(RESULTS_DIR, train_dataset, val_dataset, test_dataset)
+    print(f"📄 Train split file list saved to: {split_paths['train']}")
+    print(f"📄 Validation split file list saved to: {split_paths['val']}")
+    print(f"📄 Test split file list saved to: {split_paths['test']}")
     
     print(f"📊 Split result: Train={len(train_dataset)}, Val={len(val_dataset)}, Test={len(test_dataset)}")
     if len(val_dataset) == 0:

@@ -32,6 +32,7 @@ from formulations.hybrid.backend import solve_cf_cycle_pief_chain
 from formulations.common.backend_utils import infer_ndd_mask
 from model.graph_utils import load_graph_dataset, parse_json_to_dfl_data
 from model.model_structure import DEFAULT_Y_SCALE, EDGE_RAW_DIM, NODE_FEATURE_DIM, KidneyEdgePredictor
+from split_binding import bind_dataset_to_split_files, deterministic_split_dataset, save_split_files
 
 # ==========================================
 # Global Settings
@@ -127,7 +128,6 @@ def blackbox_kep_solver(w_preds_np, cycle_candidates, edge_index, node_is_ndd, n
             cycle_candidates=cycle_candidates,
             max_chain=max_chain,
             env=env,
-            time_limit=10,
         )
         if result["status"] not in (GRB.OPTIMAL, GRB.TIME_LIMIT):
             print(f"警告: Gurobi 求解失败，状态码: {result['status']}")
@@ -214,7 +214,6 @@ def save_solutions(model, dataset, sol_dir, device, model_tag="GNN-Hybrid-FY"):
                     num_nodes=num_nodes,
                     cycle_candidates=cycle_candidates,
                     env=env,
-                    time_limit=10,
                     id_map_rev=id_map_rev,
                 )
                 if result["matches"]:
@@ -234,6 +233,62 @@ def save_solutions(model, dataset, sol_dir, device, model_tag="GNN-Hybrid-FY"):
                 gurobi_pool.return_env(env)
 
     print(f"Solutions saved: {saved} files → {sol_dir}")
+
+
+def evaluate_gnn_regret(model, dataset, device):
+    model.eval()
+    loader = DataLoader(dataset, batch_size=1, shuffle=False, num_workers=0)
+    total_achieved = 0.0
+    total_optimal = 0.0
+    total_graphs = 0
+
+    with torch.no_grad():
+        for batch in loader:
+            batch = batch.to(device)
+            node_is_ndd = infer_ndd_mask(batch.x)
+            cycle_candidates = [candidate for candidate in batch.candidates[0] if candidate["type"] == "cycle"]
+            w_preds = model(batch.x, batch.edge_index, batch.edge_attr).view(-1, 1)
+
+            y_pred = get_expected_y(
+                w_preds,
+                cycle_candidates,
+                batch.edge_index,
+                node_is_ndd,
+                batch.num_nodes_custom[0].item(),
+                batch.num_edges,
+                epsilon=0.0,
+                M=1,
+            )
+            y_optimal = get_expected_y(
+                batch.y.view(-1, 1),
+                cycle_candidates,
+                batch.edge_index,
+                node_is_ndd,
+                batch.num_nodes_custom[0].item(),
+                batch.num_edges,
+                epsilon=0.0,
+                M=1,
+            )
+
+            true_w = batch.y.view(-1, 1)
+            achieved = torch.sum(true_w * Y_SCALE * y_pred).item()
+            optimal = torch.sum(true_w * Y_SCALE * y_optimal).item()
+            total_achieved += achieved
+            total_optimal += optimal
+            total_graphs += 1
+
+    avg_achieved = total_achieved / total_graphs if total_graphs > 0 else 0.0
+    avg_optimal = total_optimal / total_graphs if total_graphs > 0 else 0.0
+    avg_regret = avg_optimal - avg_achieved
+    rel_regret_pct = 100.0 * avg_regret / avg_optimal if avg_optimal > 0 else float("inf")
+
+    return {
+        "graphs": total_graphs,
+        "avg_achieved": avg_achieved,
+        "avg_optimal": avg_optimal,
+        "avg_regret": avg_regret,
+        "rel_regret_pct": rel_regret_pct,
+    }
 
 # w = ground_truth_label = success_prob × QALY × (1+ε)，上界 ≈ 25
 # Y_SCALE 用于归一化：batch.y = w / Y_SCALE ∈ [0, 1]
@@ -272,26 +327,26 @@ def pretrain_timestamp_from_path(pretrain_path):
         f"Unable to extract timestamp from pretrain checkpoint parent directory: {parent_name}"
     )
 
+
 # ==========================================
 # 3. 训练主流程
 # ==========================================
 def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_root=None):
     DEVICE        = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    LR            = 5e-4
-    EPOCHS        = 3
-    EPSILON_INIT  = 0.5
-    M_SAMPLES     = 8       # 扰动采样次数，越高梯度估计越稳定但越慢；forward+backward 各需 M 次求解
+    LR            = 1e-4
+    EPOCHS        = 10
+    EPSILON_INIT  = 0.2
+    M_SAMPLES     = 16      # 扰动采样次数，越高梯度估计越稳定但越慢；forward+backward 各需 M 次求解
     DATA_DIR      = str(resolve_path(data_dir or PROCESSED_DATA_DIR))
     STRICT_REPRODUCIBILITY = True
-    if pretrain_path is None:
-        raise ValueError("--pretrain_PATH is required for dfl-gnn")
-    PRETRAIN_PATH = str(resolve_path(pretrain_path))
-    PRETRAIN_TIMESTAMP = pretrain_timestamp_from_path(PRETRAIN_PATH)
+    PRETRAIN_PATH = str(resolve_path(pretrain_path)) if pretrain_path is not None else None
+    PRETRAIN_TIMESTAMP = pretrain_timestamp_from_path(PRETRAIN_PATH) if PRETRAIN_PATH is not None else "scratch"
     TIMESTAMP   = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+    result_suffix = f"{TIMESTAMP}_from_{PRETRAIN_TIMESTAMP}" if PRETRAIN_PATH is not None else f"{TIMESTAMP}_scratch"
     RESULTS_DIR = str(
         make_results_dir(
             "dfl_Gnn_hybrid_",
-            timestamp=f"{TIMESTAMP}_from_{PRETRAIN_TIMESTAMP}",
+            timestamp=result_suffix,
             results_root=results_root or RESULTS_ROOT,
         )
     )
@@ -305,15 +360,23 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
             print("Error: Processed JSON data not found!")
             return
 
-        random.shuffle(full_dataset)
-        total_len = len(full_dataset)
-        train_end = int(0.6 * total_len)
-        val_end   = int(0.8 * total_len)
-
-        train_dataset = full_dataset[:train_end]
-        val_dataset   = full_dataset[train_end:val_end]
-        test_dataset  = full_dataset[val_end:]
+        if PRETRAIN_PATH is not None:
+            split_datasets, bound_split_paths = bind_dataset_to_split_files(full_dataset, PRETRAIN_PATH)
+            split_binding_mode = "warm_start_bound"
+        else:
+            split_datasets = deterministic_split_dataset(full_dataset, seed=SEED)
+            bound_split_paths = {}
+            split_binding_mode = "scratch_deterministic"
+        train_dataset = split_datasets["train"]
+        val_dataset = split_datasets["val"]
+        test_dataset = split_datasets["test"]
         print(f"Split: Train={len(train_dataset)}, Val={len(val_dataset)}, Test={len(test_dataset)}")
+        if PRETRAIN_PATH is not None:
+            print(f"Bound train split from: {bound_split_paths['train']}")
+            print(f"Bound validation split from: {bound_split_paths['val']}")
+            print(f"Bound test split from: {bound_split_paths['test']}")
+        else:
+            print(f"Using deterministic scratch split with seed {SEED}.")
 
         # batch_size 必须为 1：求解器以单图为单位调用
         train_loader_generator = torch.Generator()
@@ -348,6 +411,44 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
 
         optimizer     = optim.Adam(model.parameters(), lr=LR)
         best_val_loss = float('inf')
+
+        epoch0_val = evaluate_gnn_regret(model, val_dataset, DEVICE)
+        epoch0_test = evaluate_gnn_regret(model, test_dataset, DEVICE)
+        epoch0_eval_path = os.path.join(RESULTS_DIR, "epoch0_warmstart_eval.txt")
+        with open(epoch0_eval_path, "w", encoding="utf-8") as f:
+            f.write("Epoch 0 warm-start evaluation (before DFL updates)\n")
+            f.write(f"Pretrain Path     : {PRETRAIN_PATH}\n")
+            f.write(f"Pretrain Timestamp: {PRETRAIN_TIMESTAMP}\n")
+            f.write(
+                f"Validation        : graphs={epoch0_val['graphs']}, "
+                f"avg_optimal={epoch0_val['avg_optimal']:.4f}, "
+                f"avg_achieved={epoch0_val['avg_achieved']:.4f}, "
+                f"avg_regret={epoch0_val['avg_regret']:.4f}, "
+                f"relative_regret={epoch0_val['rel_regret_pct']:.2f}%\n"
+            )
+            f.write(
+                f"Test              : graphs={epoch0_test['graphs']}, "
+                f"avg_optimal={epoch0_test['avg_optimal']:.4f}, "
+                f"avg_achieved={epoch0_test['avg_achieved']:.4f}, "
+                f"avg_regret={epoch0_test['avg_regret']:.4f}, "
+                f"relative_regret={epoch0_test['rel_regret_pct']:.2f}%\n"
+            )
+        print("\n" + "=" * 60)
+        print("EPOCH 0 WARM-START EVALUATION")
+        print("=" * 60)
+        print(
+            f"Val  : Avg Optimal w = {epoch0_val['avg_optimal']:.4f} | "
+            f"Avg Achieved w = {epoch0_val['avg_achieved']:.4f} | "
+            f"Avg Regret = {epoch0_val['avg_regret']:.4f} "
+            f"({epoch0_val['rel_regret_pct']:.2f}% of optimal)"
+        )
+        print(
+            f"Test : Avg Optimal w = {epoch0_test['avg_optimal']:.4f} | "
+            f"Avg Achieved w = {epoch0_test['avg_achieved']:.4f} | "
+            f"Avg Regret = {epoch0_test['avg_regret']:.4f} "
+            f"({epoch0_test['rel_regret_pct']:.2f}% of optimal)"
+        )
+        print(f"Epoch 0 evaluation saved to: {epoch0_eval_path}")
 
         for epoch in range(1, EPOCHS + 1):
             # epsilon 衰减：训练前期探索性强，后期收敛
@@ -472,6 +573,8 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
                         'M_SAMPLES': M_SAMPLES, 'SEED': SEED,
                         'PRETRAIN_PATH': PRETRAIN_PATH,
                         'PRETRAIN_TIMESTAMP': PRETRAIN_TIMESTAMP,
+                        'SPLIT_BINDING_MODE': split_binding_mode,
+                        'BOUND_SPLIT_FILES': dict(bound_split_paths),
                         'STRICT_REPRODUCIBILITY': STRICT_REPRODUCIBILITY,
                         'CUBLAS_WORKSPACE_CONFIG': os.environ.get("CUBLAS_WORKSPACE_CONFIG", ""),
                     }
@@ -481,12 +584,10 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
         print(f"\nTraining complete! Best Val Regret: {best_val_loss:.4f}")
         print(f"Model saved to: {SAVE_PATH}")
 
-        # 保存测试集文件列表，供 4-evaluation.py 自动过滤
-        test_files_path = os.path.join(RESULTS_DIR, "test_files.txt")
-        with open(test_files_path, 'w') as f:
-            for data in test_dataset:
-                f.write(data.filename + '\n')
-        print(f"Test file list saved to: {test_files_path}")
+        split_paths = save_split_files(RESULTS_DIR, train_dataset, val_dataset, test_dataset)
+        print(f"Train split file list saved to: {split_paths['train']}")
+        print(f"Validation split file list saved to: {split_paths['val']}")
+        print(f"Test split file list saved to: {split_paths['test']}")
 
         # ---- 测试集评估：加载最优模型，在测试集上选边并计算总 w ----
         print("\n" + "="*60)
@@ -574,8 +675,8 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="End-to-end GNN training with Fenchel-Young loss")
-    parser.add_argument("--pretrain_PATH", type=str, required=True,
-                        help="Path to a pre-trained 2-stage model checkpoint (.pth) to initialize GNN weights")
+    parser.add_argument("--pretrain_PATH", type=str, default=None,
+                        help="Optional path to a pre-trained 2-stage model checkpoint (.pth); if omitted, train from scratch")
     parser.add_argument("--data_dir", type=str, default=str(PROCESSED_DATA_DIR),
                         help="Directory containing processed G-*.json graphs")
     parser.add_argument("--results_root", type=str, default=str(RESULTS_ROOT),
