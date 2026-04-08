@@ -132,3 +132,55 @@ class MLPBaseline(nn.Module):
 
     def forward(self, edge_features):
         return self.net(edge_features).squeeze(-1)
+
+
+class LinearRegressionBaseline(nn.Module):
+    def __init__(self, node_dim=NODE_FEATURE_DIM, edge_dim=EDGE_RAW_DIM):
+        super(LinearRegressionBaseline, self).__init__()
+        input_dim = node_dim * 2 + edge_dim
+        self.net = nn.Sequential(
+            nn.Linear(input_dim, 1)
+        )
+
+    def forward(self, edge_features):
+        return self.net(edge_features).squeeze(-1)
+
+
+def normalize_tabular_model_family(model_family):
+    family = (model_family or "mlp").strip().lower()
+    if family not in {"mlp", "lr"}:
+        raise ValueError(f"Unsupported tabular model family: {model_family}")
+    return family
+
+
+def build_tabular_regression_model(model_family="mlp", node_dim=NODE_FEATURE_DIM, edge_dim=EDGE_RAW_DIM, hidden_dim=256):
+    family = normalize_tabular_model_family(model_family)
+    if family == "lr":
+        return LinearRegressionBaseline(node_dim=node_dim, edge_dim=edge_dim)
+    return MLPBaseline(node_dim=node_dim, edge_dim=edge_dim, hidden_dim=hidden_dim)
+
+
+def infer_tabular_model_family_from_state_dict(state_dict):
+    if any(key.startswith("net.2.") or key.startswith("net.4.") or key.startswith("net.6.") for key in state_dict):
+        return "mlp"
+    return "lr"
+
+
+def tabular_model_result_token(model_family):
+    family = normalize_tabular_model_family(model_family)
+    return "LR" if family == "lr" else "Reg"
+
+
+def tabular_model_label(model_family):
+    family = normalize_tabular_model_family(model_family)
+    return "LR" if family == "lr" else "MLP"
+
+
+def tabular_model_summary_label(model_family):
+    family = normalize_tabular_model_family(model_family)
+    return "Linear Regression" if family == "lr" else "Regression"
+
+
+def tabular_model_class_name(model_family):
+    family = normalize_tabular_model_family(model_family)
+    return "LinearRegressionBaseline" if family == "lr" else "MLPBaseline"

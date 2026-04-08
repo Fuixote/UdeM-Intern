@@ -7,69 +7,20 @@ import gurobipy as gp
 from gurobipy import GRB
 import json
 import os
-import glob
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from experiment_config import PROCESSED_DATA_DIR, RESULTS_ROOT, SOLUTIONS_ROOT, resolve_path, solution_dir_for_experiment
+from formulations.common.model_io import load_prediction_model
 from model.graph_utils import find_all_cycles_and_chains, parse_json_to_graph_info, resolve_graph_data_dir
-from model.model_structure import EDGE_RAW_DIM, NODE_FEATURE_DIM, KidneyEdgePredictor, MLPBaseline
 
 FORMULATION_TAG = "cf"
 
 # ==========================================
 # 3. Solver logic
 # ==========================================
-
-def infer_model_type(summary_content, state_dict):
-    if "GNN" in summary_content:
-        return "GNN"
-    if "Regression" in summary_content or "MLP" in summary_content:
-        return "Regression"
-    if any(key.startswith("conv1.") or key.startswith("edge_encoder.") for key in state_dict):
-        return "GNN"
-    return "Regression"
-
-
-def build_model_from_checkpoint(model_type, config):
-    if model_type == "GNN":
-        return KidneyEdgePredictor(
-            node_feature_dim=config.get("NODE_DIM", NODE_FEATURE_DIM),
-            edge_raw_dim=config.get("EDGE_RAW_DIM", EDGE_RAW_DIM),
-            hidden_dim=config.get("HIDDEN_DIM", 64),
-        )
-    return MLPBaseline(
-        node_dim=config.get("NODE_DIM", NODE_FEATURE_DIM),
-        edge_dim=config.get("EDGE_RAW_DIM", EDGE_RAW_DIM),
-        hidden_dim=config.get("HIDDEN_DIM", 256),
-    )
-
-
-def load_prediction_model(model_path):
-    model_dir = os.path.dirname(model_path)
-    summary_path = os.path.join(model_dir, "summary.txt")
-    summary_content = ""
-    if os.path.exists(summary_path):
-        with open(summary_path, 'r') as f:
-            summary_content = f.read()
-
-    checkpoint = torch.load(model_path, map_location='cpu')
-    if isinstance(checkpoint, dict) and 'model_state_dict' in checkpoint:
-        state_dict = checkpoint['model_state_dict']
-        config = checkpoint.get('config', {})
-    else:
-        state_dict = checkpoint
-        config = {}
-
-    model_type = infer_model_type(summary_content, state_dict)
-    model = build_model_from_checkpoint(model_type, config)
-    model.load_state_dict(state_dict)
-    model.expected_node_dim = config.get("NODE_DIM", NODE_FEATURE_DIM)
-    model.expected_edge_raw_dim = config.get("EDGE_RAW_DIM", EDGE_RAW_DIM)
-    model.eval()
-    return model_type, model
 
 
 def formulation_experiment_name(base_name):
