@@ -158,7 +158,7 @@ u_{ij}^{\star}=\max_{e\in\mathcal{E}_{ij}} u_e .
 \paragraph{Node Features.}
 Each node is represented by a 13-dimensional feature vector summarized in Table~\ref{tab:node-features}.
 
-\begin{table}[t]
+\begin{table}[H]
 \centering
 \caption{Node feature construction for pair and altruistic-donor vertices.}
 \label{tab:node-features}
@@ -315,37 +315,71 @@ For a graph instance with edge set \(\mA\), let \(\hat w_e\) denote the predicte
 \]
 This loss is purely edge-wise: it improves prediction accuracy for individual transplant edges, but it does not explicitly account for how these predictions alter the final cycle/chain selection after combinatorial optimization.
 
-\paragraph{Decision-focused loss}
-For end-to-end DFL, let \(\hat{\mathbf w}=(\hat w_e)_{e\in\mA}\) denote the vector of predicted edge weights, and let \(\mathcal{S}(\cdot)\) denote the black-box KEP solver that returns the binary edge-incidence vector of the optimal exchange plan under a given weight vector. During training, we form a perturbed expected decision by averaging \(M\) solver calls:
+\paragraph{What end-to-end DFL actually optimizes}
+Let \(\hat{\mathbf w}_\theta\) denote the vector of predicted edge weights produced by a model with parameters \(\theta\), and let \(\mathcal{S}(\cdot)\) denote the black-box KEP solver returning the binary edge-incidence vector of the optimal exchange plan under a given weight vector. The downstream decision induced by the model is therefore
+\[
+\hat{\mathbf y}_\theta = \mathcal{S}(\hat{\mathbf w}_\theta).
+\]
+The ideal end-to-end objective is to maximize the true value of the selected plan under the ground-truth edge weights \(\mathbf w_{\mathrm{true}}\):
+\[
+\max_\theta \; \mathbf w_{\mathrm{true}}^\top \mathcal{S}(\hat{\mathbf w}_\theta).
+\]
+Equivalently, one may minimize the regret relative to the oracle plan
+\[
+\mathbf y^\star = \mathcal{S}(\mathbf w_{\mathrm{true}}),
+\]
+namely
+\[
+\mathcal{R}(\theta)
+= \mathbf w_{\mathrm{true}}^\top \mathbf y^\star
+- \mathbf w_{\mathrm{true}}^\top \mathcal{S}(\hat{\mathbf w}_\theta).
+\]
+This is the quantity we truly care about at test time. However, it is not directly suitable for gradient-based learning because \(\mathcal{S}(\cdot)\) is a discrete combinatorial optimizer: the map from \(\hat{\mathbf w}_\theta\) to the selected plan is piecewise constant, non-smooth, and effectively non-differentiable almost everywhere. We therefore train with surrogate losses whose gradients encourage lower downstream regret even though they do not optimize \(\mathcal{R}(\theta)\) exactly.
+
+\paragraph{Fenchel--Young surrogate (FY Loss)}
+For the Fenchel--Young approach, we smooth the decision map by perturbing the predicted weights and averaging the resulting solver outputs:
 \[
 \bar{\mathbf y}_{\epsilon_t}(\hat{\mathbf w})
 = \frac{1}{M}\sum_{m=1}^{M} \mathcal{S}\bigl(\hat{\mathbf w}+\epsilon_t \mathbf z^{(m)}\bigr),
 \qquad \mathbf z^{(m)}\sim \mathcal N(\mathbf 0, I).
 \]
-We also compute an optimization-aware target decision under the ground-truth edge weights:
-\[
-\mathbf y^{\star} = \mathcal{S}(\mathbf w_{\mathrm{true}}).
-\]
-For each perturbation sample, define the corresponding discrete optimal decision
+For each perturbation sample, define
 \[
 \mathbf y^{(m)} = \mathcal{S}(\hat{\mathbf w}+\epsilon_t \mathbf z^{(m)}).
 \]
-The end-to-end surrogate used in our implementation is a Monte Carlo estimate of the perturbed Fenchel-Young objective up to an additive constant independent of the model parameters:
+The resulting Monte Carlo Fenchel--Young surrogate used in our implementation is
 \[
-\mathcal{L}_{\mathrm{DFL}}(\theta)
+\mathcal{L}_{\mathrm{FY}}(\theta)
 = \frac{1}{M}\sum_{m=1}^{M}
 \left\langle
 \hat{\mathbf w}+\epsilon_t \mathbf z^{(m)},\; \operatorname{sg}(\mathbf y^{(m)})
 \right\rangle
-- \left\langle \hat{\mathbf w},\; \operatorname{sg}(\mathbf y^{\star}) \right\rangle,
+- \left\langle \hat{\mathbf w},\; \operatorname{sg}(\mathbf y^\star) \right\rangle,
 \]
-where \(\operatorname{sg}(\cdot)\) denotes a stop-gradient operator. Therefore, its gradient with respect to the predicted edge weights is
+where \(\operatorname{sg}(\cdot)\) denotes a stop-gradient operator. Its gradient with respect to the predicted edge weights is
 \[
-\nabla_{\hat{\mathbf w}} \mathcal{L}_{\mathrm{DFL}}
-= \bar{\mathbf y}_{\epsilon_t}(\hat{\mathbf w}) - \mathbf y^{\star}.
+\nabla_{\hat{\mathbf w}} \mathcal{L}_{\mathrm{FY}}
+= \bar{\mathbf y}_{\epsilon_t}(\hat{\mathbf w}) - \mathbf y^\star.
 \]
+Thus, FY training pushes the model so that the perturbed average decision induced by \(\hat{\mathbf w}\) moves closer to the oracle decision under \(\mathbf w_{\mathrm{true}}\). This follows the differentiable perturbed-optimizer framework of~\citet{berthet2020learning}.
 
-The key idea is decision correction rather than pure regression. The first term estimates the perturbed maximum \(F_{\epsilon_t}(\hat{\mathbf w})\), while the second term rewards agreement with the optimization-aware target decision \(\mathbf y^{\star}\). If an edge is selected too often under perturbed predicted weights but does not belong to the target oracle plan, then the corresponding gradient entry is positive, so gradient descent decreases its predicted score. Conversely, if an edge appears in the oracle plan but is under-selected by the perturbed model decisions, then the corresponding gradient entry is negative, so gradient descent increases its predicted score. In this sense, the learning signal directly pushes predictions toward weights that induce better downstream exchange plans. This loss is inspired by the Fenchel-Young framework for differentiable perturbed optimizers introduced by~\citet{berthet2020learning}: the perturbed averaging step supplies a smooth decision map, while the resulting gradient direction aligns with the discrepancy between predicted and optimization-aware target decisions.
+\paragraph{SPO\(^+\) surrogate}
+The SPO route starts from the same regret objective, but replaces it with a loss-augmented optimization surrogate. Define the loss-augmented decision
+\[
+\tilde{\mathbf y}
+= \arg\max_{\mathbf y\in\mathcal Y} (2\hat{\mathbf w}-\mathbf w_{\mathrm{true}})^\top \mathbf y.
+\]
+The SPO\(^+\) surrogate used in our implementation is equivalent, up to additive constants independent of \(\theta\), to
+\[
+\mathcal{L}_{\mathrm{SPO}^+}(\theta)
+= 2\,\hat{\mathbf w}^\top \bigl(\tilde{\mathbf y}-\mathbf y^\star\bigr).
+\]
+Its gradient with respect to \(\hat{\mathbf w}\) is proportional to
+\[
+\nabla_{\hat{\mathbf w}} \mathcal{L}_{\mathrm{SPO}^+}
+\propto \tilde{\mathbf y}-\mathbf y^\star.
+\]
+So unlike FY, which compares the oracle decision with a perturbed average of model-induced decisions, SPO\(^+\) compares the oracle decision with a loss-augmented adversarial decision. Intuitively, SPO\(^+\) penalizes prediction errors mainly when they are large enough to change the selected exchange plan and thereby hurt the final downstream objective.
 
 \paragraph{Oracle reference}
 The oracle upper bound is not trained and therefore has no learning loss. Instead, it solves each instance directly with \(\mathbf w_{\mathrm{true}}\), providing the best achievable benchmark under the same optimization model.
@@ -414,7 +448,7 @@ The vertex-disjointness constraints ensure that each donor or pair participates 
 \subsubsection{Overall comparison table}
 Our primary quantitative comparison uses the current complete group of runs under a common test split, including two-stage and end-to-end models for both the GNN and MLP predictors, together with the oracle benchmark. For each run, we report the total number of selected transplants, total ground-truth score, average ground-truth score per graph, average ground-truth score per transplant, and regret with respect to the oracle. Table~\ref{tab:main-results} summarizes the full comparison using separate upper and lower panels for Run 1 and Run 2, while Figure~\ref{fig:main-results-bars} provides a complementary visual summary.
 
-\begin{table}[t]
+\begin{table}[H]
 \centering
 \small
 \setlength{\tabcolsep}{4pt}
@@ -461,22 +495,13 @@ Oracle & 6248 & 61595.48 & 307.98 & 9.8584 & 0.00 \\
 The main conclusions from this comparison are as follows. First, the oracle benchmark remains clearly above all learned methods, confirming that there is still a substantial gap between learned edge scoring and the best achievable exchange plans under the same optimization model. Second, the end-to-end GNN consistently improves over the corresponding two-stage GNN baseline across both runs, with modest but repeatable gains in total ground-truth score. This suggests that decision-focused learning can provide useful downstream improvements when combined with a graph-aware predictor. Third, the MLP-based end-to-end models do not outperform their corresponding two-stage MLP baselines, indicating that the benefit of decision-focused learning is architecture-dependent in the current setup. Finally, the learned methods often perform more transplants than the oracle while still achieving lower total ground-truth score, highlighting that maximizing transplant count and maximizing total exchange quality are not equivalent objectives in this setting.
 
 \subsection{A Sanity Check on the Current Synthetic Labels}
-The experiments above compare different learning-and-optimization pipelines under a common downstream KEP solver. However, an additional diagnostic on the current synthetic label construction reveals an important limitation of the present benchmark: our labels are strongly aligned with local edge-level information, which makes the benchmark naturally favourable to two-stage supervised learning.
+This sanity check asks a simple question: how much of the synthetic label can already be explained by the raw edge utility alone? We therefore compare a utility-only baseline on the same split used by the main experiments.
 
-In the current data-processing pipeline, each edge label is generated from edge-local clinical proxies. In particular, the synthetic ground-truth edge score is computed from a success-probability term, a QALY-style term, and a small multiplicative perturbation:
-\[
-w_{\mathrm{true},e}
-\approx p_{\mathrm{succ},e}\cdot \mathrm{QALY}_e \cdot (1+\epsilon_e),
-\]
-where both \(p_{\mathrm{succ},e}\) and \(\mathrm{QALY}_e\) are themselves functions of donor-recipient information already available at the edge level, most notably the utility score, recipient cPRA, and donor age. Moreover, the raw edge utility is included directly in the model input. Hence, the stage-1 learning problem is already very close to directly regressing the quantity used by the stage-2 optimizer.
-
-To quantify this effect, we performed two simple sanity-check baselines on the same processed batch (\texttt{2026-03-31\_140543}) and on the same common train/validation/test split used by the main experiments. The first baseline regresses \(w_{\mathrm{true}}\) using only the single scalar edge utility. The second baseline uses a linear ridge regressor over purely local edge features, namely source-node features, target-node features, and the scalar edge utility, but still no graph message passing and no end-to-end optimization. Table~\ref{tab:label-sanity-a} reports the resulting edge-level diagnostics.
-
-\begin{table}[t]
+\begin{table}[htbp]
 \centering
 \small
 \setlength{\tabcolsep}{5pt}
-\caption{Edge-level sanity checks for the current synthetic labels on batch \texttt{2026-03-31\_140543}. Correlation is the Pearson correlation between edge utility and the synthetic ground-truth label. The ``edge-only linear'' baseline uses only local donor-recipient and edge features, with no graph topology.}
+\caption{Edge-level sanity checks for the current synthetic labels on batch \texttt{2026-03-31\_140543}. Correlation is the Pearson correlation between edge utility and the synthetic ground-truth label.}
 \label{tab:label-sanity-a}
 \begin{tabular}{@{}lrrr@{}}
 \toprule
@@ -484,48 +509,60 @@ To quantify this effect, we performed two simple sanity-check baselines on the s
 \midrule
 \( \mathrm{corr}(\mathrm{utility}, w_{\mathrm{true}}) \) & 0.7738 & 0.7762 & 0.7663 \\
 Utility-only MSE & 9.6140 & 9.4672 & 10.2839 \\
-Edge-only linear MSE & 3.3251 & 3.2729 & 3.5897 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The utility--label correlation is already high (\(\approx 0.77\)) on every split. More importantly, a purely local linear predictor---without any graph-aware representation learning---already achieves a test MSE of 3.59, which is surprisingly competitive relative to the learned GNN and MLP models used in the main experiments.
-
-We next pushed these baselines through the same downstream hybrid KEP optimizer. Table~\ref{tab:label-sanity-b} compares their final decision quality against the main learned methods on the common 10-graph test split. The key observation is that even the utility-only baseline, which sees only one scalar feature per edge, is already close to the graph-aware end-to-end methods; and the edge-only linear baseline is competitive with, or better than, several DFL variants.
-
-\begin{table}[t]
+\begin{table}[htbp]
 \centering
 \small
 \setlength{\tabcolsep}{4pt}
-\caption{Downstream decision quality on the common 10-graph test split of batch \texttt{2026-03-31\_140543}. ``Achieved'' denotes the average ground-truth objective value obtained by the selected exchange plan, and ``Regret'' is measured against the oracle. The last two rows are the sanity-check baselines described in the text.}
+\caption{Downstream decision quality on the common 10-graph test split of batch \texttt{2026-03-31\_140543}. ``Achieved'' denotes the average ground-truth objective value obtained by the selected exchange plan, and ``Regret'' is measured against the oracle. Methods are grouped by backbone for easier comparison, and the last row is the sanity-check baseline described in the text.}
 \label{tab:label-sanity-b}
 \begin{tabular}{@{}lrr@{}}
 \toprule
 \textbf{Method} & \textbf{Avg Achieved} & \textbf{Avg Regret} \\
 \midrule
+\multicolumn{3}{@{}l}{\textbf{GNN}} \\
 2-stage GNN & 308.1811 & 9.1698 \\
-2-stage MLP & 310.2835 & 7.0675 \\
 FY-DFL GNN & 307.0828 & 10.2681 \\
-FY-DFL MLP & 309.8360 & 7.5149 \\
-SPO+ GNN & 307.4284 & 9.9225 \\
-SPO+ MLP & 309.9184 & 7.4325 \\
-SPO+ + MSE anchor GNN & 307.6322 & 9.7188 \\
-SPO+ + MSE anchor MLP & 310.2409 & 7.1101 \\
+SPO-DFL GNN & 307.4284 & 9.9225 \\
+SPO-DFL + MSE GNN & 307.6322 & 9.7188 \\
 \midrule
-Edge-only linear baseline & 307.6529 & 9.6981 \\
+\multicolumn{3}{@{}l}{\textbf{MLP}} \\
+2-stage MLP & 310.2835 & 7.0675 \\
+FY-DFL MLP & 309.8360 & 7.5149 \\
+SPO-DFL MLP & 309.9184 & 7.4325 \\
+SPO-DFL + MSE MLP & 310.2409 & 7.1101 \\
+\midrule
+\multicolumn{3}{@{}l}{\textbf{Baseline}} \\
 Utility-only baseline & 306.4726 & 10.8783 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-These numbers strongly suggest that the current synthetic label design does not yet provide a demanding test bed for decision-focused learning. The benchmark largely rewards accurate local edge regression, because the synthetic label is generated from edge-level quantities that are already exposed, or very nearly exposed, to the predictive model. As a result, a two-stage pipeline is naturally advantaged: once edge scores are regressed well, the subsequent optimization problem is already close to the true objective.
+The utility--label correlation is already high (\(\approx 0.77\)) on every split, so the label is strongly tied to a single local feature. In Table~\ref{tab:label-sanity-b}, the method named \emph{SPO-DFL} refers to \emph{Smart Predict-and-Optimize}-based decision-focused learning. Unlike a two-stage model, which first fits edge weights by a predictive loss such as MSE and only then runs the optimizer, SPO-DFL trains the predictor against downstream decision quality. Let
+\[
+y^*(w)=\arg\max_{y\in\mathcal{Y}} w^\top y
+\]
+denote the optimal exchange plan under true edge weights \(w\). The resulting decision regret of a prediction \(\hat w\) is
+\[
+R(\hat w,w)=w^\top y^*(w)-w^\top y^*(\hat w).
+\]
+Directly minimizing this regret is difficult, so the implementation uses the standard SPO\(^+\) surrogate: it solves a loss-augmented optimization problem
+\[
+\tilde y=\arg\max_{y\in\mathcal{Y}} (2\hat w-w)^\top y,
+\]
+and updates the model using an equivalent training objective proportional to
+\[
+L_{\mathrm{SPO}^+}(\hat w,w)\propto 2\hat w^\top\bigl(\tilde y-y^*(w)\bigr).
+\]
+Intuitively, SPO-DFL does not penalize every prediction error equally; it penalizes prediction errors mainly when they change the selected exchange plan and therefore hurt the final optimization objective. We then compare these learned methods and the utility-only baseline under the same downstream hybrid KEP optimizer.
 
-Therefore, while the current experiments remain useful for validating implementations and for comparing solver formulations under a controlled synthetic setting, they should not be over-interpreted as evidence about the intrinsic value of decision-focused learning for real KEP objective design. In future work, the data-generation process should be revised so that final exchange quality depends less directly on a nearly observable edge-local score and more on medically meaningful program-level considerations, such as failure-aware utility, priority for hard-to-match recipients, or dynamic opportunity cost. Only under such a setting can we fairly test whether end-to-end KEP learning genuinely outperforms a strong two-stage baseline.
+Takeaway: the current synthetic labels are still too easy from an edge-local prediction viewpoint. Since utility alone is already informative and its downstream performance is not far from the learned models, this benchmark currently favors strong two-stage regression over a difficult decision-focused setting.
 
 \subsection{A Solver-Time Comparison Across Formulations}
-Besides solution quality, the optimization formulation also changes the practical computational cost of the pipeline. To isolate this effect from learning dynamics, we followed the timing procedure in \texttt{formulations/README.md} and compared only the stage-2 solver entry points. Concretely, we ran \texttt{formulations/cf/stage2\_solver.py}, \texttt{formulations/hybrid/stage2\_solver.py}, and \texttt{formulations/pief/stage2\_solver.py} with the same processed batch (\texttt{2026-03-31\_140543}), the same warm-start MLP checkpoint, and the same solver limits (\texttt{max\_cycle}=3, \texttt{max\_chain}=4). In all three cases, the solver processed the same 50 graphs and wrote a complete set of solutions. We measured runtime with \texttt{/usr/bin/time -p}, so the key quantity is the wall-clock time reported in the \texttt{real} field.
-
-Table~\ref{tab:solver-speed} shows a clear formulation-level efficiency gap. The hybrid formulation is the fastest in this experiment, requiring only 3.64 seconds for the full batch, compared with 11.05 seconds for the pure candidate-formulation baseline. The dual-PIEF formulation is also substantially faster than CF, but remains slower than the hybrid design. Put differently, under the same input weights and the same KEP instances, the hybrid solver is about \(3.04\times\) faster than CF, while PIEF is about \(2.28\times\) faster than CF.
+We also compare solver-only runtime across formulations under the same batch, checkpoint, and solver limits. The goal here is purely computational: how much does formulation choice change stage-2 runtime?
 
 \begin{table}[t]
 \centering
@@ -544,7 +581,7 @@ PIEF (\texttt{PIEF-CYCLE + PIEF-CHAIN}) & 4.85 & 12.66 & 0.39 & \(2.28\times\) \
 \end{tabular}
 \end{table}
 
-This finding matters methodologically. It shows that formulation choice is not merely an implementation detail hidden behind a common black-box solver interface; it directly changes the runtime profile of KEP optimization. In the present setup, the hybrid formulation delivers the best efficiency among the three tested alternatives, suggesting that formulation engineering can produce large practical gains even before considering any changes in predictive accuracy or learning objective.
+Takeaway: formulation choice matters in practice. In this setup, the hybrid solver is the fastest at 3.64\,s, giving a \(3.04\times\) speedup over CF and a clear runtime advantage over PIEF.
 
 \bibliographystyle{plainnat}
 \bibliography{ref}

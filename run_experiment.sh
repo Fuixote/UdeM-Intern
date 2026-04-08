@@ -59,6 +59,10 @@ Commands:
       Run stage-1 MLP regression training, then stage-2 hybrid (CF-cycle +
       PIEF-chain) solving on the latest checkpoint.
 
+  2stg-lr
+      Run stage-1 linear regression training, then stage-2 hybrid (CF-cycle +
+      PIEF-chain) solving on the latest checkpoint.
+
   dfl-gnn [--pretrain_PATH <2stg_gnn_checkpoint>] [dfl args...]
       Run end-to-end GNN training with the hybrid formulation by default.
       If --pretrain_PATH is omitted, train from scratch with a deterministic 60/20/20 split.
@@ -71,11 +75,20 @@ Commands:
       Example: ./run_experiment.sh dfl-reg --data_dir dataset/processed/<batch_name> --pretrain_PATH results/2stg_Reg_<timestamp>/best_stage1_model_real.pth
       Example: ./run_experiment.sh dfl-reg --data_dir dataset/processed/<batch_name>
 
+  dfl-lr [--pretrain_PATH <2stg_lr_checkpoint>] [dfl args...]
+      Run end-to-end linear regression training with the hybrid formulation by
+      default. If --pretrain_PATH is omitted, train from scratch with a
+      deterministic 60/20/20 split.
+
   2stg-gnn-cf
       Run stage-1 GNN training, then stage-2 CF Gurobi solving on the latest checkpoint.
 
   2stg-reg-cf
       Run stage-1 MLP regression training, then stage-2 CF Gurobi solving on the latest checkpoint.
+
+  2stg-lr-cf
+      Run stage-1 linear regression training, then stage-2 CF Gurobi solving on
+      the latest checkpoint.
 
   2stg-gnn-pief
       Run stage-1 GNN training, then stage-2 dual-PIEF solving on the latest checkpoint.
@@ -83,11 +96,18 @@ Commands:
   2stg-reg-pief
       Run stage-1 MLP regression training, then stage-2 dual-PIEF solving on the latest checkpoint.
 
+  2stg-lr-pief
+      Run stage-1 linear regression training, then stage-2 dual-PIEF solving on
+      the latest checkpoint.
+
   2stg-gnn-hybrid
       Run stage-1 GNN training, then stage-2 CF-cycle + PIEF-chain solving.
 
   2stg-reg-hybrid
       Run stage-1 MLP regression training, then stage-2 CF-cycle + PIEF-chain solving.
+
+  2stg-lr-hybrid
+      Run stage-1 linear regression training, then stage-2 CF-cycle + PIEF-chain solving.
 
   dfl-gnn-cf [--pretrain_PATH <2stg_gnn_checkpoint>] [dfl args...]
       Run end-to-end GNN (Fenchel-Young / perturbed optimizer) training with
@@ -101,17 +121,27 @@ Commands:
       dfl_Reg_cf_* folder names
       will include the source 2stg_Reg timestamp for easier comparison.
 
+  dfl-lr-cf [--pretrain_PATH <2stg_lr_checkpoint>] [dfl args...]
+      Run end-to-end linear regression training with the CF formulation and an
+      explicit warm-start checkpoint.
+
   dfl-gnn-pief [--pretrain_PATH <2stg_gnn_checkpoint>] [dfl args...]
       Run end-to-end GNN training with the dual-PIEF formulation.
 
   dfl-reg-pief [--pretrain_PATH <2stg_reg_checkpoint>] [dfl args...]
       Run end-to-end MLP training with the dual-PIEF formulation.
 
+  dfl-lr-pief [--pretrain_PATH <2stg_lr_checkpoint>] [dfl args...]
+      Run end-to-end linear regression training with the dual-PIEF formulation.
+
   dfl-gnn-hybrid [--pretrain_PATH <2stg_gnn_checkpoint>] [dfl args...]
       Run end-to-end GNN training with CF-cycle + PIEF-chain.
 
   dfl-reg-hybrid [--pretrain_PATH <2stg_reg_checkpoint>] [dfl args...]
       Run end-to-end MLP training with CF-cycle + PIEF-chain.
+
+  dfl-lr-hybrid [--pretrain_PATH <2stg_lr_checkpoint>] [dfl args...]
+      Run end-to-end linear regression training with CF-cycle + PIEF-chain.
 
   oracle [optional_model_path] [solver args...]
       Run the ground-truth oracle solver. If a model checkpoint is supplied, its
@@ -228,7 +258,7 @@ latest_checkpoint() {
 
 resolve_oracle_reference_model() {
     local checkpoint
-    for prefix in "2stg_Gnn_" "2stg_Reg_" "dfl_Gnn_" "dfl_Reg_"; do
+    for prefix in "2stg_Gnn_" "2stg_Reg_" "2stg_LR_" "dfl_Gnn_" "dfl_Reg_" "dfl_LR_"; do
         if checkpoint="$(latest_checkpoint "$prefix" "best_stage1_model_real.pth" 2>/dev/null)"; then
             printf '%s\n' "$checkpoint"
             return 0
@@ -378,15 +408,15 @@ REQUESTED_SOLVER=""
 ALIAS_SOLVER=""
 
 case "$COMMAND" in
-    2stg-gnn-cf|2stg-reg-cf|dfl-gnn-cf|dfl-reg-cf)
+    2stg-gnn-cf|2stg-reg-cf|2stg-lr-cf|dfl-gnn-cf|dfl-reg-cf|dfl-lr-cf)
         ALIAS_SOLVER="cf"
         COMMAND="${COMMAND%-cf}"
         ;;
-    2stg-gnn-pief|2stg-reg-pief|dfl-gnn-pief|dfl-reg-pief)
+    2stg-gnn-pief|2stg-reg-pief|2stg-lr-pief|dfl-gnn-pief|dfl-reg-pief|dfl-lr-pief)
         ALIAS_SOLVER="pief"
         COMMAND="${COMMAND%-pief}"
         ;;
-    2stg-gnn-hybrid|2stg-reg-hybrid|dfl-gnn-hybrid|dfl-reg-hybrid)
+    2stg-gnn-hybrid|2stg-reg-hybrid|2stg-lr-hybrid|dfl-gnn-hybrid|dfl-reg-hybrid|dfl-lr-hybrid)
         ALIAS_SOLVER="hybrid"
         COMMAND="${COMMAND%-hybrid}"
         ;;
@@ -398,6 +428,10 @@ case "$COMMAND" in
         ALIAS_SOLVER="hybrid"
         COMMAND="2stg-reg"
         ;;
+    2stg-lr-cf-piefchain)
+        ALIAS_SOLVER="hybrid"
+        COMMAND="2stg-lr"
+        ;;
     dfl-gnn-cf-piefchain)
         ALIAS_SOLVER="hybrid"
         COMMAND="dfl-gnn"
@@ -405,6 +439,10 @@ case "$COMMAND" in
     dfl-reg-cf-piefchain)
         ALIAS_SOLVER="hybrid"
         COMMAND="dfl-reg"
+        ;;
+    dfl-lr-cf-piefchain)
+        ALIAS_SOLVER="hybrid"
+        COMMAND="dfl-lr"
         ;;
 esac
 
@@ -438,6 +476,15 @@ case "$COMMAND" in
         log "Using latest checkpoint: $model_path"
         run_python "$stage2_script" --model_path "$model_path" --data_dir "$resolved_processed_dir" --results_root "$RESULTS_ROOT" --solutions_root "$SOLUTIONS_ROOT"
         ;;
+    2stg-lr)
+        solver_name="$(resolve_command_solver "hybrid" "$ALIAS_SOLVER")"
+        stage2_script="$(stage2_solver_entrypoint "$solver_name")"
+        resolved_processed_dir="$(resolve_processed_data_dir "$PROCESSED_DATA_DIR")"
+        run_python 2-stage1-training-LR.py --data_dir "$resolved_processed_dir" --results_root "$RESULTS_ROOT"
+        model_path="$(latest_checkpoint "2stg_LR_" "best_stage1_model_real.pth")"
+        log "Using latest checkpoint: $model_path"
+        run_python "$stage2_script" --model_path "$model_path" --data_dir "$resolved_processed_dir" --results_root "$RESULTS_ROOT" --solutions_root "$SOLUTIONS_ROOT"
+        ;;
     dfl-gnn)
         solver_name="$(resolve_command_solver "hybrid" "$ALIAS_SOLVER")"
         dfl_script="$(dfl_gnn_entrypoint "$solver_name")"
@@ -447,6 +494,11 @@ case "$COMMAND" in
         solver_name="$(resolve_command_solver "hybrid" "$ALIAS_SOLVER")"
         dfl_script="$(dfl_reg_entrypoint "$solver_name")"
         run_python "$dfl_script" --data_dir "$PROCESSED_DATA_DIR" --results_root "$RESULTS_ROOT" --solutions_root "$SOLUTIONS_ROOT" "$@"
+        ;;
+    dfl-lr)
+        solver_name="$(resolve_command_solver "hybrid" "$ALIAS_SOLVER")"
+        dfl_script="$(dfl_reg_entrypoint "$solver_name")"
+        run_python "$dfl_script" --model_family lr --data_dir "$PROCESSED_DATA_DIR" --results_root "$RESULTS_ROOT" --solutions_root "$SOLUTIONS_ROOT" "$@"
         ;;
     oracle)
         solver_name="$(resolve_command_solver "hybrid" "$ALIAS_SOLVER")"

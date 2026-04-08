@@ -1,17 +1,26 @@
 import os
 import torch
 
-from model.model_structure import EDGE_RAW_DIM, NODE_FEATURE_DIM, KidneyEdgePredictor, MLPBaseline
+from model.model_structure import (
+    EDGE_RAW_DIM,
+    NODE_FEATURE_DIM,
+    KidneyEdgePredictor,
+    build_tabular_regression_model,
+    infer_tabular_model_family_from_state_dict,
+)
 
 
 def infer_model_type(summary_content, state_dict):
+    lowered_summary = summary_content.lower()
     if "GNN" in summary_content:
         return "GNN"
+    if "linear regression" in lowered_summary or "linearregressionbaseline" in lowered_summary:
+        return "LinearRegression"
     if "Regression" in summary_content or "MLP" in summary_content:
         return "Regression"
     if any(key.startswith("conv1.") or key.startswith("edge_encoder.") for key in state_dict):
         return "GNN"
-    return "Regression"
+    return "LinearRegression" if infer_tabular_model_family_from_state_dict(state_dict) == "lr" else "Regression"
 
 
 def build_model_from_checkpoint(model_type, config):
@@ -21,7 +30,11 @@ def build_model_from_checkpoint(model_type, config):
             edge_raw_dim=config.get("EDGE_RAW_DIM", EDGE_RAW_DIM),
             hidden_dim=config.get("HIDDEN_DIM", 64),
         )
-    return MLPBaseline(
+    model_family = config.get("MODEL_FAMILY")
+    if model_family is None:
+        model_family = "lr" if model_type == "LinearRegression" else "mlp"
+    return build_tabular_regression_model(
+        model_family=model_family,
         node_dim=config.get("NODE_DIM", NODE_FEATURE_DIM),
         edge_dim=config.get("EDGE_RAW_DIM", EDGE_RAW_DIM),
         hidden_dim=config.get("HIDDEN_DIM", 256),

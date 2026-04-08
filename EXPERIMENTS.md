@@ -161,7 +161,17 @@ export KEP_SOLUTIONS_DIR=/path/to/solutions
 - `results/2stg_Reg_<timestamp>/`
 - `solutions/2stg_Reg_<timestamp>__hybrid/`
 
-### 3.5 端到端 DFL：GNN
+### 3.5 两阶段基线：线性回归
+
+```bash
+./run_experiment.sh 2stg-lr --data_dir dataset/processed/<batch_name>
+```
+
+输出：
+- `results/2stg_LR_<timestamp>/`
+- `solutions/2stg_LR_<timestamp>__hybrid/`
+
+### 3.6 端到端 DFL：GNN
 
 ```bash
 ./run_experiment.sh dfl-gnn --data_dir dataset/processed/<batch_name> --pretrain_PATH results/2stg_Gnn_<timestamp>/best_stage1_model_real.pth
@@ -171,7 +181,7 @@ export KEP_SOLUTIONS_DIR=/path/to/solutions
 - `results/dfl_Gnn_hybrid_<timestamp>/`
 - `solutions/dfl_Gnn_hybrid_<timestamp>/`
 
-### 3.6 端到端 DFL：MLP
+### 3.7 端到端 DFL：MLP
 
 ```bash
 ./run_experiment.sh dfl-reg --data_dir dataset/processed/<batch_name> --pretrain_PATH results/2stg_Reg_<timestamp>/best_stage1_model_real.pth
@@ -181,7 +191,17 @@ export KEP_SOLUTIONS_DIR=/path/to/solutions
 - `results/dfl_Reg_hybrid_<timestamp>/`
 - `solutions/dfl_Reg_hybrid_<timestamp>/`
 
-### 3.7 Oracle 基线
+### 3.8 端到端 DFL：LR
+
+```bash
+./run_experiment.sh dfl-lr --data_dir dataset/processed/<batch_name> --pretrain_PATH results/2stg_LR_<timestamp>/best_stage1_model_real.pth
+```
+
+输出：
+- `results/dfl_LR_hybrid_<timestamp>/`
+- `solutions/dfl_LR_hybrid_<timestamp>/`
+
+### 3.9 Oracle 基线
 
 使用真实 `ground_truth_label` 直接求解：
 
@@ -205,7 +225,7 @@ export KEP_SOLUTIONS_DIR=/path/to/solutions
 - `solutions/ground_truth/`
 - `results/ground_truth/test_files.txt`
 
-### 3.8 评估
+### 3.10 评估
 
 对 `solutions/` 下所有实验目录做统一比较：
 
@@ -225,7 +245,7 @@ export KEP_SOLUTIONS_DIR=/path/to/solutions
 ./run_experiment.sh evaluate --data_dir dataset/processed/<batch_name> --test_list results/2stg_Gnn_<timestamp>/test_files.txt
 ```
 
-### 3.9 可视化
+### 3.11 可视化
 
 启动 Flask 可视化服务：
 

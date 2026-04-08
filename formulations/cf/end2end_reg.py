@@ -29,7 +29,16 @@ from experiment_config import (
     solution_dir_for_result_dir,
 )
 from model.graph_utils import load_graph_dataset, parse_json_to_dfl_data
-from model.model_structure import DEFAULT_Y_SCALE, EDGE_RAW_DIM, NODE_FEATURE_DIM, MLPBaseline
+from model.model_structure import (
+    DEFAULT_Y_SCALE,
+    EDGE_RAW_DIM,
+    NODE_FEATURE_DIM,
+    build_tabular_regression_model,
+    normalize_tabular_model_family,
+    tabular_model_class_name,
+    tabular_model_label,
+    tabular_model_result_token,
+)
 from split_binding import bind_dataset_to_split_files, deterministic_split_dataset, save_split_files
 
 # ==========================================
@@ -298,21 +307,34 @@ def load_real_dataset_dfl(directory, max_cycle=3, max_chain=4):
     return load_graph_dataset(directory, parser, log_prefix="Loading")
 
 
-def build_reg_model_from_config(config):
-    return MLPBaseline(
+def build_reg_model_from_config(config, model_family="mlp"):
+    return build_tabular_regression_model(
+        model_family=config.get("MODEL_FAMILY", model_family),
         node_dim=config.get("NODE_DIM", NODE_FEATURE_DIM),
         edge_dim=config.get("EDGE_RAW_DIM", EDGE_RAW_DIM),
         hidden_dim=config.get("HIDDEN_DIM", 256),
     )
 
 
-def load_pretrained_reg_model(pretrain_path, device):
+def load_pretrained_reg_model(pretrain_path, device, model_family="mlp"):
     ckpt = torch.load(pretrain_path, map_location=device)
     state_dict = ckpt["model_state_dict"] if "model_state_dict" in ckpt else ckpt
     config = ckpt.get("config", {}) if isinstance(ckpt, dict) else {}
-    model = build_reg_model_from_config(config).to(device)
+    model = build_reg_model_from_config(config, model_family=model_family).to(device)
     model.load_state_dict(state_dict)
     return model, config
+
+
+def result_prefix(model_family):
+    return f"dfl_{tabular_model_result_token(model_family)}_cf_"
+
+
+def solution_model_tag(model_family):
+    return "LR-CF-FY" if model_family == "lr" else "Reg-CF-FY"
+
+
+def checkpoint_model_label(model_family):
+    return f"{tabular_model_label(model_family)} ({tabular_model_class_name(model_family)})"
 
 
 def pretrain_timestamp_from_path(pretrain_path):
@@ -327,7 +349,8 @@ def pretrain_timestamp_from_path(pretrain_path):
 # ==========================================
 # 3. 训练主流程
 # ==========================================
-def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_root=None):
+def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_root=None, model_family="mlp"):
+    model_family = normalize_tabular_model_family(model_family)
     DEVICE        = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     LR            = 5e-4
     EPOCHS        = 10
@@ -341,7 +364,7 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
     result_suffix = f"{TIMESTAMP}_from_{PRETRAIN_TIMESTAMP}" if PRETRAIN_PATH is not None else f"{TIMESTAMP}_scratch"
     RESULTS_DIR = str(
         make_results_dir(
-            "dfl_Reg_cf_",
+            result_prefix(model_family),
             timestamp=result_suffix,
             results_root=results_root or RESULTS_ROOT,
         )
@@ -388,22 +411,24 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
 
         # ---- 初始化 ----
         if PRETRAIN_PATH is not None:
-            model, pretrain_config = load_pretrained_reg_model(PRETRAIN_PATH, DEVICE)
-            # Stage-1 MLP 输出范围 ~[0, Y_SCALE]，缩放到合理的 logit 范围
+            model, pretrain_config = load_pretrained_reg_model(PRETRAIN_PATH, DEVICE, model_family=model_family)
             with torch.no_grad():
                 model.net[-1].weight.data /= Y_SCALE
                 model.net[-1].bias.data   /= Y_SCALE
-            print(f"Loaded pre-trained MLP weights from: {PRETRAIN_PATH}")
-            print(
+            config_family = pretrain_config.get("MODEL_FAMILY", model_family)
+            print(f"Loaded pre-trained {tabular_model_label(config_family)} weights from: {PRETRAIN_PATH}")
+            config_msg = (
                 "Pre-train config: "
+                f"MODEL_FAMILY={config_family}, "
                 f"NODE_DIM={pretrain_config.get('NODE_DIM', NODE_FEATURE_DIM)}, "
-                f"EDGE_RAW_DIM={pretrain_config.get('EDGE_RAW_DIM', EDGE_RAW_DIM)}, "
-                f"HIDDEN_DIM={pretrain_config.get('HIDDEN_DIM', 256)}"
+                f"EDGE_RAW_DIM={pretrain_config.get('EDGE_RAW_DIM', EDGE_RAW_DIM)}"
             )
+            if config_family == "mlp":
+                config_msg += f", HIDDEN_DIM={pretrain_config.get('HIDDEN_DIM', 256)}"
+            print(config_msg)
         else:
-            # MLP 仅拼接 src/dst 节点特征和边特征，不感知全图拓扑
-            model = MLPBaseline().to(DEVICE)
-            print("Training MLP from scratch with Fenchel-Young loss.")
+            model = build_tabular_regression_model(model_family=model_family).to(DEVICE)
+            print(f"Training {tabular_model_label(model_family)} from scratch with Fenchel-Young loss.")
 
         optimizer     = optim.Adam(model.parameters(), lr=LR)
         best_val_loss = float('inf')
@@ -520,12 +545,15 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
 
             if avg_val_regret < best_val_loss:
                 best_val_loss = avg_val_regret
-                torch.save({
+                checkpoint = {
                     'epoch': epoch,
                     'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict(),
                     'best_val_regret': best_val_loss,
                     'config': {
+                        'MODEL_FAMILY': model_family,
+                        'NODE_DIM': NODE_FEATURE_DIM,
+                        'EDGE_RAW_DIM': EDGE_RAW_DIM,
                         'LR': LR, 'EPOCHS': EPOCHS,
                         'EPSILON_INIT': EPSILON_INIT,
                         'M_SAMPLES': M_SAMPLES, 'SEED': SEED,
@@ -536,7 +564,10 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
                         'STRICT_REPRODUCIBILITY': STRICT_REPRODUCIBILITY,
                         'CUBLAS_WORKSPACE_CONFIG': os.environ.get("CUBLAS_WORKSPACE_CONFIG", ""),
                     }
-                }, SAVE_PATH)
+                }
+                if model_family == "mlp":
+                    checkpoint["config"]["HIDDEN_DIM"] = 256
+                torch.save(checkpoint, SAVE_PATH)
                 print(f"  --> [Saved] Epoch {epoch} | New Best Val Regret: {best_val_loss:.4f}")
 
         print(f"\nTraining complete! Best Val Regret: {best_val_loss:.4f}")
@@ -602,7 +633,7 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
         # 保存测试结果
         test_result_path = os.path.join(RESULTS_DIR, "test_result.txt")
         with open(test_result_path, 'w') as f:
-            f.write(f"Model: MLP (MLPBaseline) + FY Loss\n")
+            f.write(f"Model: {checkpoint_model_label(model_family)} + FY Loss\n")
             f.write(f"Pretrain Path     : {PRETRAIN_PATH}\n")
             f.write(f"Pretrain Timestamp: {PRETRAIN_TIMESTAMP}\n")
             f.write(f"Strict Repro      : {STRICT_REPRODUCIBILITY}\n")
@@ -617,7 +648,7 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
         # ---- 输出 solution 文件，供 4-evaluation.py 横向对比 ----
         sol_dir = str(solution_dir_for_result_dir(RESULTS_DIR, solutions_root=solutions_root or SOLUTIONS_ROOT))
         print(f"\nSaving solutions to: {sol_dir}")
-        save_solutions(model, full_dataset, sol_dir, DEVICE, model_tag="Reg-CF-FY")
+        save_solutions(model, full_dataset, sol_dir, DEVICE, model_tag=solution_model_tag(model_family))
 
     except Exception as e:
         import traceback
@@ -633,7 +664,7 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="End-to-end Reg (MLP) training with Fenchel-Young loss")
+    parser = argparse.ArgumentParser(description="End-to-end tabular training with Fenchel-Young loss")
     parser.add_argument("--pretrain_PATH", type=str, default=None,
                         help="Optional path to a pre-trained 2-stage model checkpoint (.pth); if omitted, train from scratch")
     parser.add_argument("--data_dir", type=str, default=str(PROCESSED_DATA_DIR),
@@ -642,6 +673,8 @@ if __name__ == "__main__":
                         help="Root directory where timestamped training outputs will be created")
     parser.add_argument("--solutions_root", type=str, default=str(SOLUTIONS_ROOT),
                         help="Root directory where timestamped solution outputs will be created")
+    parser.add_argument("--model_family", type=str, default="mlp", choices=["mlp", "lr"],
+                        help="Tabular prediction model used in the end-to-end pipeline")
     args = parser.parse_args()
     
     train_dfl(
@@ -649,4 +682,5 @@ if __name__ == "__main__":
         data_dir=args.data_dir,
         results_root=args.results_root,
         solutions_root=args.solutions_root,
+        model_family=args.model_family,
     )
