@@ -30,6 +30,14 @@ main.pdf
 *.fdb_latexmk
 *.synctex.gz
 
+# Large binary files (papers, images)
+*.pdf
+*.jpg
+*.png
+
+# Third-party dependencies
+generator_webapp/bower_components/
+
 # Generated scripts / temporary files
 combined-kidney.js
 *.tmp
