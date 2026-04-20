@@ -117,9 +117,9 @@ class KidneyEdgePredictor(nn.Module):
 
 
 class MLPBaseline(nn.Module):
-    def __init__(self, node_dim=NODE_FEATURE_DIM, edge_dim=EDGE_RAW_DIM, hidden_dim=256):
+    def __init__(self, node_dim=NODE_FEATURE_DIM, edge_dim=EDGE_RAW_DIM, hidden_dim=256, input_dim=None):
         super(MLPBaseline, self).__init__()
-        input_dim = node_dim * 2 + edge_dim
+        input_dim = input_dim if input_dim is not None else node_dim * 2 + edge_dim
         self.net = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
             nn.ReLU(),
@@ -135,9 +135,9 @@ class MLPBaseline(nn.Module):
 
 
 class LinearRegressionBaseline(nn.Module):
-    def __init__(self, node_dim=NODE_FEATURE_DIM, edge_dim=EDGE_RAW_DIM):
+    def __init__(self, node_dim=NODE_FEATURE_DIM, edge_dim=EDGE_RAW_DIM, input_dim=None):
         super(LinearRegressionBaseline, self).__init__()
-        input_dim = node_dim * 2 + edge_dim
+        input_dim = input_dim if input_dim is not None else node_dim * 2 + edge_dim
         self.net = nn.Sequential(
             nn.Linear(input_dim, 1)
         )
@@ -153,11 +153,17 @@ def normalize_tabular_model_family(model_family):
     return family
 
 
-def build_tabular_regression_model(model_family="mlp", node_dim=NODE_FEATURE_DIM, edge_dim=EDGE_RAW_DIM, hidden_dim=256):
+def build_tabular_regression_model(
+    model_family="mlp",
+    node_dim=NODE_FEATURE_DIM,
+    edge_dim=EDGE_RAW_DIM,
+    hidden_dim=256,
+    input_dim=None,
+):
     family = normalize_tabular_model_family(model_family)
     if family == "lr":
-        return LinearRegressionBaseline(node_dim=node_dim, edge_dim=edge_dim)
-    return MLPBaseline(node_dim=node_dim, edge_dim=edge_dim, hidden_dim=hidden_dim)
+        return LinearRegressionBaseline(node_dim=node_dim, edge_dim=edge_dim, input_dim=input_dim)
+    return MLPBaseline(node_dim=node_dim, edge_dim=edge_dim, hidden_dim=hidden_dim, input_dim=input_dim)
 
 
 def infer_tabular_model_family_from_state_dict(state_dict):

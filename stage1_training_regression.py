@@ -63,20 +63,45 @@ def dataset_num_edges(dataset):
     return sum(data.num_edges for data in dataset)
 
 
-def tabular_edge_features(batch):
+def normalize_feature_mode(feature_mode):
+    mode = (feature_mode or "full").strip().lower()
+    if mode not in {"full", "utility_cpra"}:
+        raise ValueError(f"Unsupported tabular feature mode: {feature_mode}")
+    return mode
+
+
+def tabular_input_dim(feature_mode):
+    mode = normalize_feature_mode(feature_mode)
+    if mode == "utility_cpra":
+        return 2
+    return NODE_FEATURE_DIM * 2 + EDGE_RAW_DIM
+
+
+def tabular_edge_features(batch, feature_mode="full"):
+    mode = normalize_feature_mode(feature_mode)
+    if mode == "utility_cpra":
+        _, dst = batch.edge_index
+        utility = batch.edge_attr[:, :1]
+        recipient_cpra = batch.x[dst, 1:2]
+        return torch.cat([utility, recipient_cpra], dim=-1)
+
     src, dst = batch.edge_index
     return torch.cat([batch.x[src], batch.x[dst], batch.edge_attr], dim=-1)
 
 
-def train_baseline(model_family="mlp", data_dir=None, results_root=None):
+def train_baseline(model_family="mlp", data_dir=None, results_root=None, feature_mode="full", epochs=50):
     model_family = normalize_tabular_model_family(model_family)
+    feature_mode = normalize_feature_mode(feature_mode)
 
     node_dim = NODE_FEATURE_DIM
     edge_raw_dim_value = EDGE_RAW_DIM
+    input_dim = tabular_input_dim(feature_mode)
     hidden_dim = 256
     batch_size = 8
     learning_rate = 1e-3
-    num_epochs = 50
+    num_epochs = int(epochs)
+    if num_epochs <= 0:
+        raise ValueError(f"epochs must be positive, got {epochs}")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     data_dir = str(resolve_path(data_dir or PROCESSED_DATA_DIR))
     strict_reproducibility = True
@@ -139,6 +164,7 @@ def train_baseline(model_family="mlp", data_dir=None, results_root=None):
         node_dim=node_dim,
         edge_dim=edge_raw_dim_value,
         hidden_dim=hidden_dim,
+        input_dim=input_dim,
     ).to(device)
     criterion = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
@@ -153,7 +179,7 @@ def train_baseline(model_family="mlp", data_dir=None, results_root=None):
         for batch in train_loader:
             batch = batch.to(device)
             optimizer.zero_grad()
-            edge_features = tabular_edge_features(batch)
+            edge_features = tabular_edge_features(batch, feature_mode=feature_mode)
             w_pred = model(edge_features)
             loss = criterion(w_pred, batch.y)
             loss.backward()
@@ -168,7 +194,7 @@ def train_baseline(model_family="mlp", data_dir=None, results_root=None):
             with torch.no_grad():
                 for batch in val_loader:
                     batch = batch.to(device)
-                    edge_features = tabular_edge_features(batch)
+                    edge_features = tabular_edge_features(batch, feature_mode=feature_mode)
                     w_pred = model(edge_features)
                     loss = criterion(w_pred, batch.y)
                     total_val_loss += loss.item() * batch.num_edges
@@ -191,6 +217,8 @@ def train_baseline(model_family="mlp", data_dir=None, results_root=None):
                 "best_val_loss": best_val_loss,
                 "config": {
                     "MODEL_FAMILY": model_family,
+                    "FEATURE_MODE": feature_mode,
+                    "INPUT_DIM": input_dim,
                     "NODE_DIM": node_dim,
                     "EDGE_RAW_DIM": edge_raw_dim_value,
                     "LEARNING_RATE": learning_rate,
@@ -222,7 +250,7 @@ def train_baseline(model_family="mlp", data_dir=None, results_root=None):
         with torch.no_grad():
             for batch in test_loader:
                 batch = batch.to(device)
-                edge_features = tabular_edge_features(batch)
+                edge_features = tabular_edge_features(batch, feature_mode=feature_mode)
                 w_pred = model(edge_features)
                 loss = criterion(w_pred, batch.y)
                 total_test_loss += loss.item() * batch.num_edges
@@ -276,6 +304,8 @@ def train_baseline(model_family="mlp", data_dir=None, results_root=None):
         handle.write(f"Dataset Path: {data_dir}\n")
         handle.write("--- Hyperparameters ---\n")
         handle.write(f"MODEL_FAMILY: {model_family}\n")
+        handle.write(f"FEATURE_MODE: {feature_mode}\n")
+        handle.write(f"INPUT_DIM: {input_dim}\n")
         handle.write(f"NODE_DIM: {node_dim}\n")
         handle.write(f"EDGE_RAW_DIM: {edge_raw_dim_value}\n")
         if model_family == "mlp":
@@ -295,10 +325,24 @@ def train_baseline(model_family="mlp", data_dir=None, results_root=None):
     print(f"📝 Training summary saved at: {summary_path}")
 
 
-def main(default_model_family="mlp", description="Stage-1 regression training"):
+def main(default_model_family="mlp", default_feature_mode="full", description="Stage-1 regression training"):
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument("--data_dir", type=str, default=str(PROCESSED_DATA_DIR), help="Directory containing processed G-*.json graphs")
     parser.add_argument("--results_root", type=str, default=str(RESULTS_ROOT), help="Root directory where timestamped training outputs will be created")
     parser.add_argument("--model_family", type=str, default=default_model_family, choices=["mlp", "lr"], help="Tabular regression baseline to train")
+    parser.add_argument(
+        "--feature_mode",
+        type=str,
+        default=default_feature_mode,
+        choices=["full", "utility_cpra"],
+        help="Tabular feature set: full graph-derived features or the 2D utility+recipient-cPRA sanity-check setup",
+    )
+    parser.add_argument("--epochs", type=int, default=50, help="Number of training epochs")
     args = parser.parse_args()
-    train_baseline(model_family=args.model_family, data_dir=args.data_dir, results_root=args.results_root)
+    train_baseline(
+        model_family=args.model_family,
+        data_dir=args.data_dir,
+        results_root=args.results_root,
+        feature_mode=args.feature_mode,
+        epochs=args.epochs,
+    )
