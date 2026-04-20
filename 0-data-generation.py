@@ -6,6 +6,7 @@ import re
 import shutil
 import statistics
 import subprocess
+import sys
 import tempfile
 from collections import Counter, defaultdict
 from datetime import datetime
@@ -21,6 +22,159 @@ WORKSPACE = Path(__file__).resolve().parent
 WEBAPP_DIR = WORKSPACE / "generator_webapp"
 TIMESTAMP_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}_\d{6}(?:__.+)?$")
 
+DEFAULT_TUNE_ITERS = 100
+DEFAULT_TUNE_SIZE = 1000
+DEFAULT_TUNE_ERROR = 0.05
+DEFAULT_RECIPIENT_AGE_MIN = 18
+DEFAULT_RECIPIENT_AGE_MAX = 68
+DEFAULT_DONOR_AGE_MIN = 18
+DEFAULT_DONOR_AGE_MAX = 68
+DEFAULT_UTILITY_MIN = 1
+DEFAULT_UTILITY_MAX = 90
+DEFAULT_SPLIT_DONOR_BLOOD = {
+    "O": (0.3721, 0.4899, 0.1219, 0.0161),
+    "A": (0.2783, 0.6039, 0.0907, 0.0271),
+    "B": (0.2910, 0.2719, 0.3689, 0.0682),
+    "AB": (0.3166, 0.4271, 0.1910, 0.0653),
+    "NDD": (0.4930, 0.3990, 0.0939, 0.0141),
+}
+PRESET_SPLIT_PRA_COMPAT = (
+    "0.0434637245068539 0\n"
+    "0.00635239050484788 0.01 0.1\n"
+    "0.00267469073888332 0.1 0.2\n"
+    "0.00601805416248746 0.2 0.3\n"
+    "0.00835840855901037 0.3 0.4\n"
+    "0.0106987629555333 0.4 0.5\n"
+    "0.0217318622534269 0.5 0.6\n"
+    "0.0290872617853561 0.6 0.7\n"
+    "0.0391173520561685 0.7 0.8\n"
+    "0.0257438983617519 0.8 0.85\n"
+    "0.0307589434971581 0.85 0.9\n"
+    "0.0113674356402541 0.9\n"
+    "0.0106987629555333 0.91\n"
+    "0.0157138080909395 0.92\n"
+    "0.0317619525242394 0.93\n"
+    "0.0190571715145436 0.94\n"
+    "0.0197258441992645 0.95\n"
+    "0.0240722166499498 0.96\n"
+    "0.0534938147776663 0.97\n"
+    "0.0929455031761953 0.98\n"
+    "0.180207288532263 0.99\n"
+    "0.316950852557673 1\n"
+)
+PRESET_SPLIT_PRA_INCOMPAT = (
+    "0.356760886172651 0\n"
+    "0.038961038961039 0.01 0.1\n"
+    "0.0133689839572193 0.1 0.2\n"
+    "0.0106951871657754 0.2 0.3\n"
+    "0.0210084033613445 0.3 0.4\n"
+    "0.0244461420932009 0.4 0.5\n"
+    "0.0336134453781513 0.5 0.6\n"
+    "0.0305576776165011 0.6 0.7\n"
+    "0.0427807486631016 0.7 0.8\n"
+    "0.0355233002291826 0.8 0.85\n"
+    "0.0458365164247517 0.85 0.9\n"
+    "0.00649350649350649 0.9\n"
+    "0.0126050420168067 0.91\n"
+    "0.0286478227654698 0.92\n"
+    "0.00649350649350649 0.93\n"
+    "0.00763941940412529 0.94\n"
+    "0.0156608097784568 0.95\n"
+    "0.0236822001527884 0.96\n"
+    "0.0152788388082506 0.97\n"
+    "0.0252100840336134 0.98\n"
+    "0.0966386554621849 0.99\n"
+    "0.108097784568373 1\n"
+)
+PRESET_BANDED_XMATCH = (
+    "0.0 0.50 0.4349 0.33012\n"
+    "0.50 0.95 0.342 0.64194\n"
+    "0.95 0.96 0.942\n"
+    "0.96 0.97 0.947\n"
+    "0.97 0.98 0.975\n"
+    "0.98 0.99 0.985\n"
+    "0.99 1 0.985\n"
+    "1 1.01 0.988"
+)
+PRESET_BANDED_XMATCH_PRA0 = (
+    "0.0 0.01 SPLIT "
+    "0.259681093394077-0.75-1,0.14123006833713-0.5-0.75,0.0911161731207289-0.25-0.5,"
+    "0.0592255125284738-0.1-0.25,0.0546697038724375-0.04-0.1,0.020501138952164-0.03-0.04,"
+    "0.0387243735763098-0.02-0.03,0.0774487471526196-0.01-0.02,0.0683371298405467-0-0.01,"
+    "0.18906605922551-0\n"
+    "0.01 0.50 0.4349 0.33012\n"
+    "0.50 0.95 0.342 0.64194\n"
+    "0.95 0.96 0.942\n"
+    "0.96 0.97 0.947\n"
+    "0.97 0.98 0.975\n"
+    "0.98 0.99 0.985\n"
+    "0.99 1 0.985\n"
+    "1 1.01 0.988"
+)
+PRESET_TWEAK_XMATCH_PRA0 = (
+    "0.0 0.01 SPLIT "
+    "0.259681093394077-0.75-1,0.14123006833713-0.5-0.75,0.0911161731207289-0.25-0.5,"
+    "0.0592255125284738-0.1-0.25,0.0546697038724375-0.04-0.1,0.020501138952164-0.03-0.04,"
+    "0.0387243735763098-0.02-0.03,0.0774487471526196-0.01-0.02,0.0683371298405467-0-0.01,"
+    "0.18906605922551-0\n"
+    "0.01 1.01 0.45 0.55"
+)
+DEFAULT_PRA_BANDS_STRING = "0.2 0.11\n0.8 0.89"
+DEFAULT_COMPAT_BANDS_STRING = "0 101 0 1"
+PROJECT_DEFAULT_COMPAT_PRA_BANDS_STRING = PRESET_SPLIT_PRA_COMPAT
+PROJECT_DEFAULT_INCOMPAT_PRA_BANDS_STRING = PRESET_SPLIT_PRA_INCOMPAT
+PROJECT_DEFAULT_COMPAT_BANDS_STRING = PRESET_BANDED_XMATCH
+PRESET_CONFIGS = {
+    "saidman": {
+        "prob_female": 0.4090,
+        "prob_spousal": 0.4897,
+        "prob_spousal_pra_compat": 0.75,
+        "pra_bands_string": "0.7019 0.05\n0.2 0.1\n0.0981 0.9",
+        "donor_prob_o": 0.4814,
+        "donor_prob_a": 0.3373,
+        "donor_prob_b": 0.1428,
+        "prob_o": 0.4814,
+        "prob_a": 0.3373,
+        "prob_b": 0.1428,
+        "donors1": 1.0,
+        "donors2": 0.0,
+        "donors3": 0.0,
+        "prob_ndd": 0.0,
+    },
+    "paper-recip-blood": {
+        "prob_o": 0.6293,
+        "prob_a": 0.2325,
+        "prob_b": 0.1119,
+    },
+    "paper-split-donor-blood": {
+        "split_donor_blood": True,
+        "donor_probs_by_patient_o": DEFAULT_SPLIT_DONOR_BLOOD["O"],
+        "donor_probs_by_patient_a": DEFAULT_SPLIT_DONOR_BLOOD["A"],
+        "donor_probs_by_patient_b": DEFAULT_SPLIT_DONOR_BLOOD["B"],
+        "donor_probs_by_patient_ab": DEFAULT_SPLIT_DONOR_BLOOD["AB"],
+        "donor_probs_by_patient_ndd": DEFAULT_SPLIT_DONOR_BLOOD["NDD"],
+    },
+    "split-pra": {
+        "compat_pra_bands_string": PRESET_SPLIT_PRA_COMPAT,
+        "incompat_pra_bands_string": PRESET_SPLIT_PRA_INCOMPAT,
+    },
+    "calc-xmatch": {
+        "compat_bands_string": "0 1 0.45 0.51",
+    },
+    "tweak-xmatch": {
+        "compat_bands_string": "0 1 0.45 0.55",
+    },
+    "tweak-xmatch-pra0": {
+        "compat_bands_string": PRESET_TWEAK_XMATCH_PRA0,
+    },
+    "banded-xmatch": {
+        "compat_bands_string": PRESET_BANDED_XMATCH,
+    },
+    "banded-xmatch-pra0": {
+        "compat_bands_string": PRESET_BANDED_XMATCH_PRA0,
+    },
+}
+
 JS_FILES = [
     "js/kidney/blood-type.js",
     "js/kidney/donor-patient.js",
@@ -30,6 +184,104 @@ JS_FILES = [
     "js/kidney/tuning.js",
     "js/kidney/compat-band.js",
 ]
+
+
+def parse_probability_vector(value, name):
+    parts = [part.strip() for part in value.split(",")]
+    if len(parts) != 4:
+        raise argparse.ArgumentTypeError(
+            f"{name} must contain exactly 4 comma-separated probabilities, got: {value!r}"
+        )
+    try:
+        values = [float(part) for part in parts]
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(
+            f"{name} must contain only numeric probabilities, got: {value!r}"
+        ) from exc
+
+    for item in values:
+        if not 0.0 <= item <= 1.0:
+            raise argparse.ArgumentTypeError(
+                f"{name} probabilities must be between 0 and 1, got: {value!r}"
+            )
+
+    total = sum(values)
+    if abs(total - 1.0) > 1e-6:
+        raise argparse.ArgumentTypeError(
+            f"{name} probabilities must sum to 1, got {total:.6f} from {value!r}"
+        )
+    return tuple(values)
+
+
+def collect_explicit_dests(parser, argv):
+    option_to_dest = {}
+    for action in parser._actions:
+        for option_string in action.option_strings:
+            if option_string.startswith("--"):
+                option_to_dest[option_string] = action.dest
+
+    explicit_dests = set()
+    for token in argv:
+        if not token.startswith("--"):
+            continue
+        option = token.split("=", 1)[0]
+        dest = option_to_dest.get(option)
+        if dest:
+            explicit_dests.add(dest)
+    return explicit_dests
+
+
+def apply_preset_overrides(args, explicit_dests):
+    if not args.preset:
+        return args
+
+    for dest, value in PRESET_CONFIGS[args.preset].items():
+        if dest not in explicit_dests:
+            setattr(args, dest, value)
+
+    # Allow an explicit single-band PRA override to replace a preset split-PRA setup.
+    if "pra_bands_string" in explicit_dests:
+        if "compat_pra_bands_string" not in explicit_dests:
+            args.compat_pra_bands_string = None
+        if "incompat_pra_bands_string" not in explicit_dests:
+            args.incompat_pra_bands_string = None
+
+    # Keep the derived convenience flag consistent after overrides.
+    args.tune = not args.no_tune
+    return args
+
+
+def use_split_pra_defaults(args):
+    explicit_dests = getattr(args, "_explicit_dests", set())
+    single_pra_explicit = (
+        "pra_bands_string" in explicit_dests
+        and "compat_pra_bands_string" not in explicit_dests
+        and "incompat_pra_bands_string" not in explicit_dests
+    )
+    if single_pra_explicit:
+        return False
+    return (
+        args.compat_pra_bands_string is not None
+        and args.incompat_pra_bands_string is not None
+    )
+
+
+def use_project_default_split_pra(args):
+    explicit_dests = getattr(args, "_explicit_dests", set())
+    if args.preset is not None:
+        return False
+    if "compat_pra_bands_string" in explicit_dests or "incompat_pra_bands_string" in explicit_dests:
+        return False
+    if "pra_bands_string" in explicit_dests:
+        return False
+    return True
+
+
+def effective_compat_bands_string(args):
+    explicit_dests = getattr(args, "_explicit_dests", set())
+    if args.preset is None and "compat_bands_string" not in explicit_dests:
+        return PROJECT_DEFAULT_COMPAT_BANDS_STRING
+    return args.compat_bands_string
 
 
 def timestamp_now(now=None):
@@ -83,6 +335,23 @@ def validate_args(args):
         "donor blood type probabilities",
         [args.donor_prob_o, args.donor_prob_a, args.donor_prob_b],
     )
+
+    if args.tune:
+        if args.tune_iters <= 0:
+            raise ValueError(f"--tune_iters must be > 0, got {args.tune_iters}")
+        if args.tune_size <= 0:
+            raise ValueError(f"--tune_size must be > 0, got {args.tune_size}")
+        if args.tune_error < 0:
+            raise ValueError(f"--tune_error must be >= 0, got {args.tune_error}")
+
+    range_checks = [
+        ("recipient_age", args.recipient_age_min, args.recipient_age_max),
+        ("donor_age", args.donor_age_min, args.donor_age_max),
+        ("utility", args.utility_min, args.utility_max),
+    ]
+    for label, low, high in range_checks:
+        if low > high:
+            raise ValueError(f"--{label}_min must be <= --{label}_max, got {low} > {high}")
 
 
 def sanitize_run_name(run_name):
@@ -583,6 +852,7 @@ def render_batch_report(summary):
         f"| Duration | `{format_value(batch['duration_seconds'], 3)} s` |",
         f"| Raw files generated | `{batch['generated_file_count']}` |",
         f"| Seed | `{params['cli_args']['seed']}` |",
+        f"| Preset | `{params['cli_args'].get('preset') or 'none'}` |",
         f"| Tuning enabled | `{not params['cli_args']['no_tune']}` |",
         f"| Split donor blood | `{params['cli_args']['split_donor_blood']}` |",
         "",
@@ -757,8 +1027,14 @@ config.outputFormat = "json";
 config.outputName = path.join(outputDir, "genjson");
 config.testing = false;
 
-// Helper to draw a random age (consistent with drawDage: 18-68)
-const drawAge = () => 18 + Math.floor(Math.random() * 51);
+function drawInclusiveInt(rangeConfig, fallbackMin, fallbackMax) {
+  var range = rangeConfig || {};
+  var min = Number.isFinite(range.min) ? Math.floor(range.min) : fallbackMin;
+  var max = Number.isFinite(range.max) ? Math.floor(range.max) : fallbackMax;
+  return min + Math.floor(Math.random() * (max - min + 1));
+}
+
+const drawRecipientAge = () => drawInclusiveInt(config.recipientAgeRange, 18, 68);
 
 // Monkey-patch toJsonString to include recipient age and utility naming
 const originalToJsonString = GeneratedDataset.prototype.toJsonString;
@@ -853,12 +1129,18 @@ if (effectiveConfigPath) {
   fs.writeFileSync(effectiveConfigPath, JSON.stringify(config, null, 2));
 }
 var gen = new KidneyGenerator(config);
+gen.drawDage = function() {
+  return drawInclusiveInt(config.donorAgeRange, 18, 68);
+};
+gen.drawScore = function() {
+  return drawInclusiveInt(config.utilityRange, 1, 90);
+};
 
 console.log(`Generating ${config.numberOfInstances} JSON instances with seed ${seed}...`);
 for (var i = 0; i < config.numberOfInstances; i++) {
   var generatedDataset = gen.generateDataset(config.patientsPerInstance, config.proportionAltruistic);
   generatedDataset.recipients.forEach(r => {
-    r.age = drawAge();
+    r.age = drawRecipientAge();
   });
   var filename = config.outputName + "-" + i + "." + config.outputFormat;
   fs.writeFileSync(filename, generatedDataset.toJsonString(true));
@@ -899,23 +1181,52 @@ def create_config(args):
         "patientsPerInstance": args.patients,
         "proportionAltruistic": args.prob_ndd,
         "fileFormat": "json",
-        "praBandsString": "0.2 0.11\n0.8 0.89",
-        "compatBandsString": "0 101 0 1",
+        "compatBandsString": effective_compat_bands_string(args),
+        "recipientAgeRange": {
+            "min": args.recipient_age_min,
+            "max": args.recipient_age_max,
+        },
+        "donorAgeRange": {
+            "min": args.donor_age_min,
+            "max": args.donor_age_max,
+        },
+        "utilityRange": {
+            "min": args.utility_min,
+            "max": args.utility_max,
+        },
     }
+
+    if use_project_default_split_pra(args):
+        config["compatPraBandsString"] = PROJECT_DEFAULT_COMPAT_PRA_BANDS_STRING
+        config["incompatPraBandsString"] = PROJECT_DEFAULT_INCOMPAT_PRA_BANDS_STRING
+    elif use_split_pra_defaults(args):
+        config["compatPraBandsString"] = args.compat_pra_bands_string
+        config["incompatPraBandsString"] = args.incompat_pra_bands_string
+    else:
+        config["praBandsString"] = args.pra_bands_string
 
     if args.tune:
         config["tune"] = {
-            "iters": 100,
-            "size": 1000,
-            "error": 0.05,
+            "iters": args.tune_iters,
+            "size": args.tune_size,
+            "error": args.tune_error,
         }
 
     if args.split_donor_blood:
-        config["donorBtDistributionByPatientO"] = {"probO": 0.3721, "probA": 0.4899, "probB": 0.1219, "probAB": 0.0161}
-        config["donorBtDistributionByPatientA"] = {"probO": 0.2783, "probA": 0.6039, "probB": 0.0907, "probAB": 0.0271}
-        config["donorBtDistributionByPatientB"] = {"probO": 0.2910, "probA": 0.2719, "probB": 0.3689, "probAB": 0.0682}
-        config["donorBtDistributionByPatientAB"] = {"probO": 0.3166, "probA": 0.4271, "probB": 0.1910, "probAB": 0.0653}
-        config["donorBtDistributionByPatientNDD"] = {"probO": 0.4930, "probA": 0.3990, "probB": 0.0939, "probAB": 0.0141}
+        split_distributions = {
+            "O": args.donor_probs_by_patient_o,
+            "A": args.donor_probs_by_patient_a,
+            "B": args.donor_probs_by_patient_b,
+            "AB": args.donor_probs_by_patient_ab,
+            "NDD": args.donor_probs_by_patient_ndd,
+        }
+        for patient_group, probs in split_distributions.items():
+            config[f"donorBtDistributionByPatient{patient_group}"] = {
+                "probO": probs[0],
+                "probA": probs[1],
+                "probB": probs[2],
+                "probAB": probs[3],
+            }
 
     return config
 
@@ -935,8 +1246,17 @@ def build_run_metadata(args, output_dir, config_dict, batch_timestamp, started_a
     }
 
 
-def parse_args():
+def parse_args(argv=None):
+    if argv is None:
+        argv = sys.argv[1:]
     parser = argparse.ArgumentParser(description="Headless KEP Instance Generator")
+    parser.add_argument(
+        "--preset",
+        type=str,
+        choices=sorted(PRESET_CONFIGS.keys()),
+        default=None,
+        help="Load a named parameter preset based on the kidney-webapp presets before applying explicit CLI overrides",
+    )
     parser.add_argument("--instances", type=int, default=1000, help="Number of graph instances to generate")
     parser.add_argument("--patients", type=int, default=50, help="Number of patients (pairs) per instance")
     parser.add_argument("--prob_ndd", type=float, default=0.05, help="Proportion of Non-Directed Donors (Altruistic)")
@@ -954,6 +1274,114 @@ def parse_args():
     parser.add_argument("--prob_spousal", type=float, default=0.0, help="Probability of spousal donor")
     parser.add_argument("--prob_female", type=float, default=0.0, help="Probability of female donor")
     parser.add_argument("--prob_spousal_pra_compat", type=float, default=0.0, help="Probability of spousal PRA compatibility")
+    parser.add_argument(
+        "--pra_bands_string",
+        type=str,
+        default=DEFAULT_PRA_BANDS_STRING,
+        help="Default cPRA band specification used when split cPRA bands are not enabled",
+    )
+    parser.add_argument(
+        "--compat_pra_bands_string",
+        type=str,
+        default=None,
+        help="cPRA band specification for recipients with a blood-compatible donor",
+    )
+    parser.add_argument(
+        "--incompat_pra_bands_string",
+        type=str,
+        default=None,
+        help="cPRA band specification for recipients without a blood-compatible donor",
+    )
+    parser.add_argument(
+        "--compat_bands_string",
+        type=str,
+        default=DEFAULT_COMPAT_BANDS_STRING,
+        help="Compatibility-band specification mapping cPRA ranges to positive crossmatch probabilities",
+    )
+    parser.add_argument(
+        "--tune_iters",
+        type=int,
+        default=DEFAULT_TUNE_ITERS,
+        help="Maximum tuning iterations when tuning is enabled",
+    )
+    parser.add_argument(
+        "--tune_size",
+        type=int,
+        default=DEFAULT_TUNE_SIZE,
+        help="Synthetic instance size used during tuning when tuning is enabled",
+    )
+    parser.add_argument(
+        "--tune_error",
+        type=float,
+        default=DEFAULT_TUNE_ERROR,
+        help="Target max error threshold used during tuning when tuning is enabled",
+    )
+    parser.add_argument(
+        "--recipient_age_min",
+        type=int,
+        default=DEFAULT_RECIPIENT_AGE_MIN,
+        help="Minimum recipient age used for synthetic age sampling",
+    )
+    parser.add_argument(
+        "--recipient_age_max",
+        type=int,
+        default=DEFAULT_RECIPIENT_AGE_MAX,
+        help="Maximum recipient age used for synthetic age sampling",
+    )
+    parser.add_argument(
+        "--donor_age_min",
+        type=int,
+        default=DEFAULT_DONOR_AGE_MIN,
+        help="Minimum donor age used for synthetic age sampling",
+    )
+    parser.add_argument(
+        "--donor_age_max",
+        type=int,
+        default=DEFAULT_DONOR_AGE_MAX,
+        help="Maximum donor age used for synthetic age sampling",
+    )
+    parser.add_argument(
+        "--utility_min",
+        type=int,
+        default=DEFAULT_UTILITY_MIN,
+        help="Minimum edge utility used for synthetic utility sampling",
+    )
+    parser.add_argument(
+        "--utility_max",
+        type=int,
+        default=DEFAULT_UTILITY_MAX,
+        help="Maximum edge utility used for synthetic utility sampling",
+    )
+    parser.add_argument(
+        "--donor_probs_by_patient_o",
+        type=lambda value: parse_probability_vector(value, "--donor_probs_by_patient_o"),
+        default=DEFAULT_SPLIT_DONOR_BLOOD["O"],
+        help="Comma-separated donor blood type probabilities for recipient blood type O under --split_donor_blood",
+    )
+    parser.add_argument(
+        "--donor_probs_by_patient_a",
+        type=lambda value: parse_probability_vector(value, "--donor_probs_by_patient_a"),
+        default=DEFAULT_SPLIT_DONOR_BLOOD["A"],
+        help="Comma-separated donor blood type probabilities for recipient blood type A under --split_donor_blood",
+    )
+    parser.add_argument(
+        "--donor_probs_by_patient_b",
+        type=lambda value: parse_probability_vector(value, "--donor_probs_by_patient_b"),
+        default=DEFAULT_SPLIT_DONOR_BLOOD["B"],
+        help="Comma-separated donor blood type probabilities for recipient blood type B under --split_donor_blood",
+    )
+    parser.add_argument(
+        "--donor_probs_by_patient_ab",
+        type=lambda value: parse_probability_vector(value, "--donor_probs_by_patient_ab"),
+        default=DEFAULT_SPLIT_DONOR_BLOOD["AB"],
+        help="Comma-separated donor blood type probabilities for recipient blood type AB under --split_donor_blood",
+    )
+    parser.add_argument(
+        "--donor_probs_by_patient_ndd",
+        type=lambda value: parse_probability_vector(value, "--donor_probs_by_patient_ndd"),
+        default=DEFAULT_SPLIT_DONOR_BLOOD["NDD"],
+        help="Comma-separated donor blood type probabilities for NDD donors under --split_donor_blood",
+    )
 
     parser.add_argument("--seed", type=int, default=42, help="Random seed used for deterministic dataset generation")
     parser.add_argument("--output_root", type=str, default=str(RAW_DATA_DIR),
@@ -971,9 +1399,11 @@ def parse_args():
         action="store_true",
         help="Use different donor blood group distributions based on recipient blood group",
     )
-    args = parser.parse_args()
+    explicit_dests = collect_explicit_dests(parser, argv)
+    args = parser.parse_args(argv)
+    args._explicit_dests = explicit_dests
     args.tune = not args.no_tune
-    return args
+    return apply_preset_overrides(args, explicit_dests)
 
 
 def main():
@@ -1004,6 +1434,8 @@ def main():
     print(f"Output directory: {output_dir}")
     print(f"Generating {args.instances} graphs, {args.patients} patients/graph, NDD ratio: {args.prob_ndd}")
     print(f"Seed: {args.seed}")
+    if args.preset:
+        print(f"Preset: {args.preset}")
     if args.tune:
         print(" -> Tuning Enabled")
     if args.split_donor_blood:

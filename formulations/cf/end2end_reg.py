@@ -68,6 +68,36 @@ def enable_strict_reproducibility(seed):
 
 enable_strict_reproducibility(SEED)
 
+
+def normalize_feature_mode(feature_mode):
+    mode = (feature_mode or "full").strip().lower()
+    if mode not in {"full", "utility_cpra"}:
+        raise ValueError(f"Unsupported tabular feature mode: {feature_mode}")
+    return mode
+
+
+def default_feature_mode_for_family(model_family, feature_mode=None):
+    if feature_mode is not None:
+        return normalize_feature_mode(feature_mode)
+    return "utility_cpra" if normalize_tabular_model_family(model_family) == "lr" else "full"
+
+
+def infer_feature_mode_from_input_dim(input_dim):
+    return "utility_cpra" if int(input_dim) == 2 else "full"
+
+
+def tabular_input_dim(feature_mode):
+    return 2 if normalize_feature_mode(feature_mode) == "utility_cpra" else NODE_FEATURE_DIM * 2 + EDGE_RAW_DIM
+
+
+def tabular_edge_features(data, feature_mode="full"):
+    src, dst = data.edge_index
+    if normalize_feature_mode(feature_mode) == "utility_cpra":
+        utility = data.edge_attr[:, :1]
+        recipient_cpra = data.x[dst, 1:2]
+        return torch.cat([utility, recipient_cpra], dim=-1)
+    return torch.cat([data.x[src], data.x[dst], data.edge_attr], dim=-1)
+
 # ==========================================
 # Gurobi 环境池（避免频繁创建/销毁）
 # ==========================================
@@ -216,7 +246,7 @@ def sample_perturbed_solutions(w_preds_tensor, candidates, num_nodes, num_edges,
     z_samples = torch.tensor(np.stack(noise_list), device=w_preds_tensor.device, dtype=torch.float32)
     return y_samples.detach(), z_samples.detach()
 
-def save_solutions(model, dataset, sol_dir, device, model_tag="Reg-CF-FY"):
+def save_solutions(model, dataset, sol_dir, device, model_tag="Reg-CF-FY", feature_mode="full"):
     """
     在给定数据集上用模型预测权重求解 KEP，输出与 formulations/cf/stage2_solver.py
     完全相同格式的 *_sol.json 文件，供 4-evaluation.py 横向对比。
@@ -238,8 +268,7 @@ def save_solutions(model, dataset, sol_dir, device, model_tag="Reg-CF-FY"):
                 continue
 
             # 模型预测权重（MLP 前向）
-            src, dst      = data.edge_index
-            edge_features = torch.cat([data.x[src], data.x[dst], data.edge_attr], dim=-1)
+            edge_features = tabular_edge_features(data, feature_mode=feature_mode)
             w_preds       = model(edge_features).cpu().numpy().flatten()
 
             # Gurobi 求解（无扰动，确定性）
@@ -308,18 +337,35 @@ def load_real_dataset_dfl(directory, max_cycle=3, max_chain=4):
 
 
 def build_reg_model_from_config(config, model_family="mlp"):
+    resolved_family = normalize_tabular_model_family(config.get("MODEL_FAMILY", model_family))
+    resolved_feature_mode = default_feature_mode_for_family(resolved_family, config.get("FEATURE_MODE"))
+    input_dim = int(config.get("INPUT_DIM", tabular_input_dim(resolved_feature_mode)))
     return build_tabular_regression_model(
-        model_family=config.get("MODEL_FAMILY", model_family),
+        model_family=resolved_family,
         node_dim=config.get("NODE_DIM", NODE_FEATURE_DIM),
         edge_dim=config.get("EDGE_RAW_DIM", EDGE_RAW_DIM),
         hidden_dim=config.get("HIDDEN_DIM", 256),
+        input_dim=input_dim,
     )
 
 
 def load_pretrained_reg_model(pretrain_path, device, model_family="mlp"):
     ckpt = torch.load(pretrain_path, map_location=device)
     state_dict = ckpt["model_state_dict"] if "model_state_dict" in ckpt else ckpt
-    config = ckpt.get("config", {}) if isinstance(ckpt, dict) else {}
+    config = dict(ckpt.get("config", {}) if isinstance(ckpt, dict) else {})
+    resolved_family = normalize_tabular_model_family(config.get("MODEL_FAMILY", model_family))
+    input_dim = config.get("INPUT_DIM")
+    if input_dim is None:
+        first_weight = state_dict.get("net.0.weight")
+        if first_weight is not None and getattr(first_weight, "ndim", 0) == 2:
+            input_dim = int(first_weight.shape[1])
+            config["INPUT_DIM"] = input_dim
+    if "FEATURE_MODE" not in config:
+        if input_dim is not None:
+            config["FEATURE_MODE"] = infer_feature_mode_from_input_dim(input_dim)
+        else:
+            config["FEATURE_MODE"] = default_feature_mode_for_family(resolved_family)
+    config["MODEL_FAMILY"] = resolved_family
     model = build_reg_model_from_config(config, model_family=model_family).to(device)
     model.load_state_dict(state_dict)
     return model, config
@@ -349,8 +395,10 @@ def pretrain_timestamp_from_path(pretrain_path):
 # ==========================================
 # 3. 训练主流程
 # ==========================================
-def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_root=None, model_family="mlp"):
+def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_root=None, model_family="mlp", feature_mode=None):
     model_family = normalize_tabular_model_family(model_family)
+    feature_mode = default_feature_mode_for_family(model_family, feature_mode)
+    input_dim = tabular_input_dim(feature_mode)
     DEVICE        = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     LR            = 5e-4
     EPOCHS        = 10
@@ -416,10 +464,17 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
                 model.net[-1].weight.data /= Y_SCALE
                 model.net[-1].bias.data   /= Y_SCALE
             config_family = pretrain_config.get("MODEL_FAMILY", model_family)
+            config_feature_mode = pretrain_config.get("FEATURE_MODE", feature_mode)
+            if config_feature_mode != feature_mode:
+                raise ValueError(
+                    f"Pretrain checkpoint feature mode mismatch: expected {feature_mode}, got {config_feature_mode}. "
+                    "Use a matching 2-stage LR checkpoint or pass --feature_mode full for legacy checkpoints."
+                )
             print(f"Loaded pre-trained {tabular_model_label(config_family)} weights from: {PRETRAIN_PATH}")
             config_msg = (
                 "Pre-train config: "
                 f"MODEL_FAMILY={config_family}, "
+                f"FEATURE_MODE={config_feature_mode}, "
                 f"NODE_DIM={pretrain_config.get('NODE_DIM', NODE_FEATURE_DIM)}, "
                 f"EDGE_RAW_DIM={pretrain_config.get('EDGE_RAW_DIM', EDGE_RAW_DIM)}"
             )
@@ -427,8 +482,11 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
                 config_msg += f", HIDDEN_DIM={pretrain_config.get('HIDDEN_DIM', 256)}"
             print(config_msg)
         else:
-            model = build_tabular_regression_model(model_family=model_family).to(DEVICE)
-            print(f"Training {tabular_model_label(model_family)} from scratch with Fenchel-Young loss.")
+            model = build_tabular_regression_model(model_family=model_family, input_dim=input_dim).to(DEVICE)
+            print(
+                f"Training {tabular_model_label(model_family)} from scratch with Fenchel-Young loss "
+                f"(feature_mode={feature_mode})."
+            )
 
         optimizer     = optim.Adam(model.parameters(), lr=LR)
         best_val_loss = float('inf')
@@ -445,8 +503,7 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
                 optimizer.zero_grad()
 
                 # MLP 前向：拼接 src/dst 节点特征 + 边特征，直接输出 logits
-                src, dst      = batch.edge_index
-                edge_features = torch.cat([batch.x[src], batch.x[dst], batch.edge_attr], dim=-1)
+                edge_features = tabular_edge_features(batch, feature_mode=feature_mode)
                 w_preds       = model(edge_features).view(-1, 1)
 
                 # 1. Monte Carlo 采样：y^(m) = y*(w + ε z^(m))
@@ -504,8 +561,7 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
             with torch.no_grad():
                 for batch in val_loader:
                     batch = batch.to(DEVICE)
-                    src, dst      = batch.edge_index
-                    edge_features = torch.cat([batch.x[src], batch.x[dst], batch.edge_attr], dim=-1)
+                    edge_features = tabular_edge_features(batch, feature_mode=feature_mode)
                     w_preds       = model(edge_features).view(-1, 1)
 
                     # 验证时用确定性求解（epsilon=0），衡量实际部署质量
@@ -552,6 +608,8 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
                     'best_val_regret': best_val_loss,
                     'config': {
                         'MODEL_FAMILY': model_family,
+                        'FEATURE_MODE': feature_mode,
+                        'INPUT_DIM': input_dim,
                         'NODE_DIM': NODE_FEATURE_DIM,
                         'EDGE_RAW_DIM': EDGE_RAW_DIM,
                         'LR': LR, 'EPOCHS': EPOCHS,
@@ -594,8 +652,7 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
         with torch.no_grad():
             for batch in test_loader:
                 batch = batch.to(DEVICE)
-                src, dst      = batch.edge_index
-                edge_features = torch.cat([batch.x[src], batch.x[dst], batch.edge_attr], dim=-1)
+                edge_features = tabular_edge_features(batch, feature_mode=feature_mode)
                 w_preds       = model(edge_features).view(-1, 1)
 
                 # 用模型预测权重选边
@@ -648,7 +705,7 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
         # ---- 输出 solution 文件，供 4-evaluation.py 横向对比 ----
         sol_dir = str(solution_dir_for_result_dir(RESULTS_DIR, solutions_root=solutions_root or SOLUTIONS_ROOT))
         print(f"\nSaving solutions to: {sol_dir}")
-        save_solutions(model, full_dataset, sol_dir, DEVICE, model_tag=solution_model_tag(model_family))
+        save_solutions(model, full_dataset, sol_dir, DEVICE, model_tag=solution_model_tag(model_family), feature_mode=feature_mode)
 
     except Exception as e:
         import traceback
@@ -675,6 +732,8 @@ if __name__ == "__main__":
                         help="Root directory where timestamped solution outputs will be created")
     parser.add_argument("--model_family", type=str, default="mlp", choices=["mlp", "lr"],
                         help="Tabular prediction model used in the end-to-end pipeline")
+    parser.add_argument("--feature_mode", type=str, default=None, choices=["full", "utility_cpra"],
+                        help="Tabular feature set. Defaults to utility+recipient-cPRA for lr, full features for reg.")
     args = parser.parse_args()
     
     train_dfl(
@@ -683,4 +742,5 @@ if __name__ == "__main__":
         results_root=args.results_root,
         solutions_root=args.solutions_root,
         model_family=args.model_family,
+        feature_mode=args.feature_mode,
     )

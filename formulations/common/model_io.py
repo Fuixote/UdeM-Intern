@@ -10,6 +10,27 @@ from model.model_structure import (
 )
 
 
+def normalize_feature_mode(feature_mode):
+    mode = (feature_mode or "full").strip().lower()
+    if mode not in {"full", "utility_cpra"}:
+        raise ValueError(f"Unsupported tabular feature mode: {feature_mode}")
+    return mode
+
+
+def default_feature_mode_for_family(model_family, feature_mode=None):
+    if feature_mode is not None:
+        return normalize_feature_mode(feature_mode)
+    return "utility_cpra" if model_family == "lr" else "full"
+
+
+def infer_feature_mode_from_input_dim(input_dim):
+    return "utility_cpra" if int(input_dim) == 2 else "full"
+
+
+def tabular_input_dim(feature_mode):
+    return 2 if normalize_feature_mode(feature_mode) == "utility_cpra" else NODE_FEATURE_DIM * 2 + EDGE_RAW_DIM
+
+
 def infer_model_type(summary_content, state_dict):
     lowered_summary = summary_content.lower()
     if "GNN" in summary_content:
@@ -33,11 +54,14 @@ def build_model_from_checkpoint(model_type, config):
     model_family = config.get("MODEL_FAMILY")
     if model_family is None:
         model_family = "lr" if model_type == "LinearRegression" else "mlp"
+    feature_mode = default_feature_mode_for_family(model_family, config.get("FEATURE_MODE"))
+    input_dim = int(config.get("INPUT_DIM", tabular_input_dim(feature_mode)))
     return build_tabular_regression_model(
         model_family=model_family,
         node_dim=config.get("NODE_DIM", NODE_FEATURE_DIM),
         edge_dim=config.get("EDGE_RAW_DIM", EDGE_RAW_DIM),
         hidden_dim=config.get("HIDDEN_DIM", 256),
+        input_dim=input_dim,
     )
 
 
@@ -52,16 +76,33 @@ def load_prediction_model(model_path):
     checkpoint = torch.load(model_path, map_location="cpu")
     if isinstance(checkpoint, dict) and "model_state_dict" in checkpoint:
         state_dict = checkpoint["model_state_dict"]
-        config = checkpoint.get("config", {})
+        config = dict(checkpoint.get("config", {}))
     else:
         state_dict = checkpoint
         config = {}
 
     model_type = infer_model_type(summary_content, state_dict)
+    if model_type != "GNN":
+        model_family = config.get("MODEL_FAMILY")
+        if model_family is None:
+            model_family = "lr" if model_type == "LinearRegression" else "mlp"
+            config["MODEL_FAMILY"] = model_family
+        input_dim = config.get("INPUT_DIM")
+        if input_dim is None:
+            first_weight = state_dict.get("net.0.weight")
+            if first_weight is not None and getattr(first_weight, "ndim", 0) == 2:
+                input_dim = int(first_weight.shape[1])
+                config["INPUT_DIM"] = input_dim
+        if "FEATURE_MODE" not in config:
+            if input_dim is not None:
+                config["FEATURE_MODE"] = infer_feature_mode_from_input_dim(input_dim)
+            else:
+                config["FEATURE_MODE"] = default_feature_mode_for_family(model_family)
     model = build_model_from_checkpoint(model_type, config)
     model.load_state_dict(state_dict)
     model.expected_node_dim = config.get("NODE_DIM", NODE_FEATURE_DIM)
     model.expected_edge_raw_dim = config.get("EDGE_RAW_DIM", EDGE_RAW_DIM)
+    model.expected_feature_mode = config.get("FEATURE_MODE", "full")
     model.eval()
     return model_type, model
 
@@ -93,5 +134,11 @@ def predict_edge_weights(graph_data, model, model_type):
         if model_type == "GNN":
             return model(x, edge_index, edge_attr_for_model).numpy()
         src, dst = edge_index
-        edge_features = torch.cat([x[src], x[dst], edge_attr_for_model], dim=-1)
+        feature_mode = getattr(model, "expected_feature_mode", "full")
+        if feature_mode == "utility_cpra":
+            utility = edge_attr_for_model[:, :1]
+            recipient_cpra = x[dst, 1:2]
+            edge_features = torch.cat([utility, recipient_cpra], dim=-1)
+        else:
+            edge_features = torch.cat([x[src], x[dst], edge_attr_for_model], dim=-1)
         return model(edge_features).numpy()

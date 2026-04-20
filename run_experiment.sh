@@ -11,6 +11,7 @@ RAW_DATA_DIR="${KEP_RAW_DATA_DIR:-dataset/raw}"
 PROCESSED_DATA_DIR="${KEP_DATA_DIR:-dataset/processed}"
 RESULTS_ROOT="${KEP_RESULTS_DIR:-results}"
 SOLUTIONS_ROOT="${KEP_SOLUTIONS_DIR:-solutions}"
+STAGE1_EPOCHS=""
 DRY_RUN=0
 
 usage() {
@@ -39,6 +40,9 @@ Common options:
   --python <path>
       Explicitly set the Python interpreter. This replaces relying on `KEP_PYTHON`.
 
+  --epochs <int>
+      Set the number of stage-1 training epochs for `2stg-reg` and `2stg-lr`.
+
 Commands:
   data-generate [generator args...]
       Run 0-data-generation.py with any extra generator arguments.
@@ -56,12 +60,12 @@ Commands:
       Example: ./run_experiment.sh 2stg-gnn --solver cf --data_dir dataset/processed/<batch_name>
 
   2stg-reg
-      Run stage-1 MLP regression training, then stage-2 hybrid (CF-cycle +
-      PIEF-chain) solving on the latest checkpoint.
+      Run stage-1 Reg training (MLP tabular regression), then stage-2 hybrid
+      (CF-cycle + PIEF-chain) solving on the latest checkpoint.
 
   2stg-lr
-      Run stage-1 linear regression training, then stage-2 hybrid (CF-cycle +
-      PIEF-chain) solving on the latest checkpoint.
+      Run stage-1 LR training (linear tabular regression), then stage-2 hybrid
+      (CF-cycle + PIEF-chain) solving on the latest checkpoint.
 
   dfl-gnn [--pretrain_PATH <2stg_gnn_checkpoint>] [dfl args...]
       Run end-to-end GNN training with the hybrid formulation by default.
@@ -84,30 +88,34 @@ Commands:
       Run stage-1 GNN training, then stage-2 CF Gurobi solving on the latest checkpoint.
 
   2stg-reg-cf
-      Run stage-1 MLP regression training, then stage-2 CF Gurobi solving on the latest checkpoint.
+      Run stage-1 Reg training (MLP tabular regression), then stage-2 CF
+      Gurobi solving on the latest checkpoint.
 
   2stg-lr-cf
-      Run stage-1 linear regression training, then stage-2 CF Gurobi solving on
-      the latest checkpoint.
+      Run stage-1 LR training (linear tabular regression), then stage-2 CF
+      Gurobi solving on the latest checkpoint.
 
   2stg-gnn-pief
       Run stage-1 GNN training, then stage-2 dual-PIEF solving on the latest checkpoint.
 
   2stg-reg-pief
-      Run stage-1 MLP regression training, then stage-2 dual-PIEF solving on the latest checkpoint.
+      Run stage-1 Reg training (MLP tabular regression), then stage-2
+      dual-PIEF solving on the latest checkpoint.
 
   2stg-lr-pief
-      Run stage-1 linear regression training, then stage-2 dual-PIEF solving on
-      the latest checkpoint.
+      Run stage-1 LR training (linear tabular regression), then stage-2
+      dual-PIEF solving on the latest checkpoint.
 
   2stg-gnn-hybrid
       Run stage-1 GNN training, then stage-2 CF-cycle + PIEF-chain solving.
 
   2stg-reg-hybrid
-      Run stage-1 MLP regression training, then stage-2 CF-cycle + PIEF-chain solving.
+      Run stage-1 Reg training (MLP tabular regression), then stage-2 CF-cycle
+      + PIEF-chain solving.
 
   2stg-lr-hybrid
-      Run stage-1 linear regression training, then stage-2 CF-cycle + PIEF-chain solving.
+      Run stage-1 LR training (linear tabular regression), then stage-2
+      CF-cycle + PIEF-chain solving.
 
   dfl-gnn-cf [--pretrain_PATH <2stg_gnn_checkpoint>] [dfl args...]
       Run end-to-end GNN (Fenchel-Young / perturbed optimizer) training with
@@ -184,6 +192,12 @@ run_python() {
         KEP_RESULTS_DIR="$RESULTS_ROOT" \
         KEP_SOLUTIONS_DIR="$SOLUTIONS_ROOT" \
         "$PYTHON_BIN" "$@"
+}
+
+stage1_epoch_args() {
+    if [ -n "$STAGE1_EPOCHS" ]; then
+        printf '%s\0' --epochs "$STAGE1_EPOCHS"
+    fi
 }
 
 normalize_data_process_args() {
@@ -330,6 +344,11 @@ parse_common_cli_args() {
                 PYTHON_BIN="$2"
                 shift 2
                 ;;
+            --epochs)
+                require_option_value "$1" "${2:-}"
+                STAGE1_EPOCHS="$2"
+                shift 2
+                ;;
             *)
                 COMMAND_ARGS+=("$1")
                 shift
@@ -471,7 +490,8 @@ case "$COMMAND" in
         solver_name="$(resolve_command_solver "hybrid" "$ALIAS_SOLVER")"
         stage2_script="$(stage2_solver_entrypoint "$solver_name")"
         resolved_processed_dir="$(resolve_processed_data_dir "$PROCESSED_DATA_DIR")"
-        run_python 2-stage1-training-Reg.py --data_dir "$resolved_processed_dir" --results_root "$RESULTS_ROOT"
+        mapfile -d '' -t stage1_args < <(stage1_epoch_args)
+        run_python 2-stage1-training-Reg.py --data_dir "$resolved_processed_dir" --results_root "$RESULTS_ROOT" "${stage1_args[@]}"
         model_path="$(latest_checkpoint "2stg_Reg_" "best_stage1_model_real.pth")"
         log "Using latest checkpoint: $model_path"
         run_python "$stage2_script" --model_path "$model_path" --data_dir "$resolved_processed_dir" --results_root "$RESULTS_ROOT" --solutions_root "$SOLUTIONS_ROOT"
@@ -480,7 +500,8 @@ case "$COMMAND" in
         solver_name="$(resolve_command_solver "hybrid" "$ALIAS_SOLVER")"
         stage2_script="$(stage2_solver_entrypoint "$solver_name")"
         resolved_processed_dir="$(resolve_processed_data_dir "$PROCESSED_DATA_DIR")"
-        run_python 2-stage1-training-LR.py --data_dir "$resolved_processed_dir" --results_root "$RESULTS_ROOT"
+        mapfile -d '' -t stage1_args < <(stage1_epoch_args)
+        run_python 2-stage1-training-LR.py --data_dir "$resolved_processed_dir" --results_root "$RESULTS_ROOT" "${stage1_args[@]}"
         model_path="$(latest_checkpoint "2stg_LR_" "best_stage1_model_real.pth")"
         log "Using latest checkpoint: $model_path"
         run_python "$stage2_script" --model_path "$model_path" --data_dir "$resolved_processed_dir" --results_root "$RESULTS_ROOT" --solutions_root "$SOLUTIONS_ROOT"

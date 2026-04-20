@@ -70,6 +70,7 @@ export KEP_SOLUTIONS_DIR=/path/to/solutions
 
 | 参数 | 默认值 | 说明 |
 | --- | --- | --- |
+| `--preset` | 无 | 加载网页同款 / 论文来源的命名参数集，再由显式 CLI 参数覆盖 |
 | `--instances` | `1000` | 生成的图实例数量 |
 | `--patients` | `50` | 每个实例中的 patient / pair 数量 |
 | `--prob_ndd` | `0.05` | NDD（Non-Directed Donor / altruistic donor）比例 |
@@ -85,6 +86,24 @@ export KEP_SOLUTIONS_DIR=/path/to/solutions
 | `--prob_spousal` | `0.0` | donor 为配偶的概率 |
 | `--prob_female` | `0.0` | donor 为女性的概率 |
 | `--prob_spousal_pra_compat` | `0.0` | 配偶 donor 的 PRA compatibility 概率 |
+| `--pra_bands_string` | `"0.2 0.11\n0.8 0.89"` | 单一 cPRA 分布；仅当你显式指定该参数并不使用 split PRA 时生效 |
+| `--compat_pra_bands_string` | `split-pra.compat` | 对有血型相容 donor 的 recipient 使用的默认 cPRA 分布 |
+| `--incompat_pra_bands_string` | `split-pra.incompat` | 对无血型相容 donor 的 recipient 使用的默认 cPRA 分布 |
+| `--compat_bands_string` | `banded-xmatch` | 默认的 cPRA 到 positive crossmatch 概率分段映射 |
+| `--tune_iters` | `100` | tuning 最大迭代次数 |
+| `--tune_size` | `1000` | tuning 时生成的临时样本规模 |
+| `--tune_error` | `0.05` | tuning 的停止误差阈值 |
+| `--recipient_age_min` | `18` | recipient 年龄采样下界 |
+| `--recipient_age_max` | `68` | recipient 年龄采样上界 |
+| `--donor_age_min` | `18` | donor 年龄采样下界 |
+| `--donor_age_max` | `68` | donor 年龄采样上界 |
+| `--utility_min` | `1` | edge utility 采样下界 |
+| `--utility_max` | `90` | edge utility 采样上界 |
+| `--donor_probs_by_patient_o` | `0.3721,0.4899,0.1219,0.0161` | `--split_donor_blood` 时，recipient O 的 donor 血型分布 |
+| `--donor_probs_by_patient_a` | `0.2783,0.6039,0.0907,0.0271` | `--split_donor_blood` 时，recipient A 的 donor 血型分布 |
+| `--donor_probs_by_patient_b` | `0.2910,0.2719,0.3689,0.0682` | `--split_donor_blood` 时，recipient B 的 donor 血型分布 |
+| `--donor_probs_by_patient_ab` | `0.3166,0.4271,0.1910,0.0653` | `--split_donor_blood` 时，recipient AB 的 donor 血型分布 |
+| `--donor_probs_by_patient_ndd` | `0.4930,0.3990,0.0939,0.0141` | `--split_donor_blood` 时，NDD donor 血型分布 |
 | `--seed` | `42` | 随机种子；相同参数和相同种子会生成一致的数据 |
 | `--output_root` | `dataset/raw` | 输出根目录；会在其下创建带时间戳的批次目录 |
 | `--run_name` | 无 | 追加在时间戳目录后面的标签，例如生成 `2026-03-30_124157__my_run` |
@@ -99,12 +118,19 @@ export KEP_SOLUTIONS_DIR=/path/to/solutions
 ./run_experiment.sh data-generate --seed 42 --run_name my_run
 ./run_experiment.sh data-generate --output_dir /data/raw_batches --force
 ./run_experiment.sh data-generate --instances 2000 --patients 100 --prob_ndd 0.1
+./run_experiment.sh data-generate
+./run_experiment.sh data-generate --preset calc-xmatch
+./run_experiment.sh data-generate --preset banded-xmatch --patients 100
+./run_experiment.sh data-generate --compat_bands_string $'0 20 0 0.8\n20 80 0 1.0\n80 101 0 1.2'
+./run_experiment.sh data-generate --recipient_age_min 25 --recipient_age_max 75 --utility_min 5 --utility_max 60
+./run_experiment.sh data-generate --split_donor_blood --donor_probs_by_patient_o 0.40,0.45,0.10,0.05
 ```
 
 说明：
 - 同一组参数加同一个 `--seed`，会生成一致的数据。
 - 每次生成都会落到一个带日期时间的批次目录里，避免不同实验的数据混在一起。
 - 如果你想覆盖一个已有输出目录，需要显式加 `--force`。
+- 当前项目默认设置已经切换为：`SplitPRA + BandedXMatch`。
 - `config.json` 保存请求参数；`effective_config.json` 保存 `tuning` 后真正用于采样的配置。
 - `batch_summary.json` 和 `batch_report.md` 会汇总该批 raw 数据的结构统计、分布偏差、参数快照和告警，避免盲用数据。
 
