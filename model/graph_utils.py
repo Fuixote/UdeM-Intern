@@ -6,7 +6,7 @@ import re
 import torch
 from torch_geometric.data import Data
 
-from model.model_structure import DEFAULT_Y_SCALE, EDGE_RAW_DIM
+from model.model_structure import DEFAULT_Y_SCALE, EDGE_RAW_DIM, FAILURE_CONTEXT_DIM
 
 BT_MAP = {"O": 0, "A": 1, "B": 2, "AB": 3}
 BATCH_NAME_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}_\d{6}(?:__.+)?$")
@@ -37,6 +37,61 @@ def find_pair_donor_by_id(node, donor_id):
 def build_edge_feature(_src_node, match):
     utility = float(match.get('utility', 0.0)) / 100.0
     return [utility]
+
+
+def parse_float(value, default=0.0):
+    if value is None or value == "Unknown":
+        return default
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def build_failure_context_feature(src_node, dst_node, match, num_vertices):
+    utility = parse_float(match.get('utility'), 0.0) / 100.0
+    donor_age = parse_float(match.get('donor_age'), 0.0) / 100.0
+    recipient_age = parse_float(match.get('recipient_age'), 0.0) / 100.0
+    recipient_cpra = parse_float(match.get('recipient_cpra'), 0.0)
+    donor_bt = get_one_hot_bt(match.get('donor_bt'))
+    recipient_bt = get_one_hot_bt(match.get('recipient_bt'))
+    has_blood_compatible_donor = 0.0
+    if dst_node.get('type') == 'Pair':
+        has_blood_compatible_donor = 1.0 if dst_node.get('patient', {}).get('hasBloodCompatibleDonor') else 0.0
+    source_is_ndd = 1.0 if src_node.get('type') != 'Pair' else 0.0
+    scale = max(1.0, float(num_vertices))
+    recipient_in_degree = parse_float(match.get('recipient_in_degree'), 0.0) / scale
+    donor_out_degree = parse_float(match.get('donor_out_degree'), 0.0) / scale
+    has_reciprocal_edge = 1.0 if match.get('has_reciprocal_edge') else 0.0
+    return [
+        utility,
+        donor_age,
+        recipient_age,
+        recipient_cpra,
+    ] + donor_bt + recipient_bt + [
+        has_blood_compatible_donor,
+        source_is_ndd,
+        recipient_in_degree,
+        donor_out_degree,
+        has_reciprocal_edge,
+    ]
+
+
+def failure_context_edge_features(data):
+    if not hasattr(data, 'edge_context'):
+        raise ValueError(
+            "failure_context feature mode requires processed data with edge_context. "
+            "Regenerate processed data with the current 1-data-processing.py."
+        )
+    return data.edge_context
+
+
+def lr_small_edge_features(data):
+    src, dst = data.edge_index
+    utility = data.edge_attr[:, :1]
+    recipient_cpra = data.x[dst, 1:2]
+    source_donor_age = data.x[src, 7:8]
+    return torch.cat([utility, recipient_cpra, source_donor_age], dim=-1)
 
 
 def build_node_feature(node):
@@ -82,6 +137,7 @@ def build_graph_components(json_path, label_scale=1.0):
 
     edge_indices = []
     edge_attrs = []
+    edge_contexts = []
     y_labels = []
     gt_labels = []
     edge_count = 0
@@ -93,6 +149,7 @@ def build_graph_components(json_path, label_scale=1.0):
             dst_idx = id_map[dst_id]
             edge_indices.append([src_idx, dst_idx])
             edge_attrs.append(build_edge_feature(node, match))
+            edge_contexts.append(build_failure_context_feature(node, nodes_data[dst_id], match, len(node_ids)))
             gt_label = match.get('ground_truth_label', 0.0)
             gt_labels.append(gt_label)
             y_labels.append(gt_label / label_scale)
@@ -102,10 +159,12 @@ def build_graph_components(json_path, label_scale=1.0):
     if edge_indices:
         edge_index = torch.tensor(edge_indices, dtype=torch.long).t().contiguous()
         edge_attr = torch.tensor(edge_attrs, dtype=torch.float)
+        edge_context = torch.tensor(edge_contexts, dtype=torch.float)
         y = torch.tensor(y_labels, dtype=torch.float)
     else:
         edge_index = torch.empty((2, 0), dtype=torch.long)
         edge_attr = torch.empty((0, EDGE_RAW_DIM), dtype=torch.float)
+        edge_context = torch.empty((0, FAILURE_CONTEXT_DIM), dtype=torch.float)
         y = torch.empty((0,), dtype=torch.float)
 
     return {
@@ -118,6 +177,7 @@ def build_graph_components(json_path, label_scale=1.0):
         'x': x,
         'edge_index': edge_index,
         'edge_attr': edge_attr,
+        'edge_context': edge_context,
         'y': y,
         'gt_labels': gt_labels,
         'adj': adj,
@@ -178,6 +238,7 @@ def parse_json_to_pyg_data(json_path, label_scale=1.0):
         x=graph['x'],
         edge_index=graph['edge_index'],
         edge_attr=graph['edge_attr'],
+        edge_context=graph['edge_context'],
         y=graph['y'],
         filename=graph['filename'],
     )
@@ -189,6 +250,7 @@ def parse_json_to_graph_info(json_path):
         'x': graph['x'],
         'edge_index': graph['edge_index'],
         'edge_attr': graph['edge_attr'],
+        'edge_context': graph['edge_context'],
         'adj': graph['adj'],
         'nodes_data': graph['nodes_data'],
         'id_map_rev': graph['id_map_rev'],
@@ -209,6 +271,7 @@ def parse_json_to_dfl_data(json_path, max_cycle=3, max_chain=4, label_scale=DEFA
         x=graph['x'],
         edge_index=graph['edge_index'],
         edge_attr=graph['edge_attr'],
+        edge_context=graph['edge_context'],
         y=graph['y'],
         filename=graph['filename'],
     )

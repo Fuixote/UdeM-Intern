@@ -4,6 +4,8 @@ from torch_geometric.utils import scatter
 
 NODE_FEATURE_DIM = 13
 EDGE_RAW_DIM = 1
+FAILURE_CONTEXT_DIM = 17
+LR_SMALL_FEATURE_DIM = 3
 DEFAULT_Y_SCALE = 25.0
 
 

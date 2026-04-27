@@ -162,11 +162,11 @@ def get_expected_y(w_preds_tensor, edge_index, node_is_ndd, num_nodes, num_edges
 
 def sample_perturbed_solutions(w_preds_tensor, edge_index, node_is_ndd, num_nodes, num_edges, epsilon=0.1, M=8):
     """
-    返回严格 FY 标量 surrogate 所需的 Monte Carlo 样本：
+    返回 perturbed optimizer 的 Monte Carlo 样本：
     - Y_samples[m] = y*(w + ε z^(m))
-    - Z_samples[m] = z^(m)
 
-    两者都作为常数样本参与后续标量目标构造，不经过求解器反向传播。
+    这些样本作为常数参与 FY doubly stochastic 梯度估计，
+    不经过求解器反向传播。
     """
     w_np = w_preds_tensor.detach().cpu().numpy().flatten()
 
@@ -180,8 +180,7 @@ def sample_perturbed_solutions(w_preds_tensor, edge_index, node_is_ndd, num_node
 
     results = [solve_single(noise) for noise in noise_list]
     y_samples = torch.tensor(np.stack(results), device=w_preds_tensor.device, dtype=torch.float32)
-    z_samples = torch.tensor(np.stack(noise_list), device=w_preds_tensor.device, dtype=torch.float32)
-    return y_samples.detach(), z_samples.detach()
+    return y_samples.detach()
 
 def save_solutions(model, dataset, sol_dir, device, model_tag="GNN-PIEF-FY"):
     """
@@ -368,7 +367,7 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
                 w_preds = model(batch.x, batch.edge_index, batch.edge_attr).view(-1, 1)
 
                 # 1. Monte Carlo 采样：y^(m) = y*(w + ε z^(m))
-                y_samples, z_samples = sample_perturbed_solutions(
+                y_samples = sample_perturbed_solutions(
                     w_preds, batch.edge_index, node_is_ndd,
                     batch.num_nodes_custom[0].item(),
                     batch.num_edges,
@@ -385,14 +384,13 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
                         epsilon=0.0, M=1
                     )
 
-                # 3. 更严格的 FY 标量 surrogate（差一个与参数无关的常数项）：
-                #    F_ε(w) ≈ (1/M) Σ_m <w + ε z^(m), y^(m)>
-                #    L_FY(w; y*) = F_ε(w) - <w, y*>
-                # 其中 y^(m), z^(m), y* 都视为 stop-gradient 常数。
+                # 3. FY 的 doubly stochastic 梯度估计（Berthet et al., Eq. 6）：
+                #    ∇_w L_FY ≈ ȳ_ε(w) - y*
+                # 这里用一个线性 proxy 让 autograd 返回上述梯度；
+                # 它不是 FY loss 的闭式本体，而是与 FY 梯度一致的实现。
                 w_flat = w_preds.view(-1)
-                f_hat = torch.mean(torch.sum((w_flat.unsqueeze(0) + z_samples) * y_samples, dim=1))
-                target_term = torch.sum(w_flat * y_optimal.detach().view(-1))
-                fy_loss = f_hat - target_term
+                fy_direction = (y_pred_soft.detach() - y_optimal.detach()).view(-1)
+                fy_loss = torch.dot(w_flat, fy_direction)
 
                 fy_loss.backward()
                 torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)

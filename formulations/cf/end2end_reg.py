@@ -28,10 +28,12 @@ from experiment_config import (
     resolve_path,
     solution_dir_for_result_dir,
 )
-from model.graph_utils import load_graph_dataset, parse_json_to_dfl_data
+from model.graph_utils import failure_context_edge_features, load_graph_dataset, lr_small_edge_features, parse_json_to_dfl_data
 from model.model_structure import (
     DEFAULT_Y_SCALE,
     EDGE_RAW_DIM,
+    FAILURE_CONTEXT_DIM,
+    LR_SMALL_FEATURE_DIM,
     NODE_FEATURE_DIM,
     build_tabular_regression_model,
     normalize_tabular_model_family,
@@ -39,7 +41,7 @@ from model.model_structure import (
     tabular_model_label,
     tabular_model_result_token,
 )
-from split_binding import bind_dataset_to_split_files, deterministic_split_dataset, save_split_files
+from split_binding import bind_dataset_to_split_files, deterministic_split_dataset, limit_training_dataset, save_split_files
 
 # ==========================================
 # Global Settings
@@ -71,7 +73,7 @@ enable_strict_reproducibility(SEED)
 
 def normalize_feature_mode(feature_mode):
     mode = (feature_mode or "full").strip().lower()
-    if mode not in {"full", "utility_cpra"}:
+    if mode not in {"full", "utility_cpra", "failure_context", "lr_small"}:
         raise ValueError(f"Unsupported tabular feature mode: {feature_mode}")
     return mode
 
@@ -79,23 +81,42 @@ def normalize_feature_mode(feature_mode):
 def default_feature_mode_for_family(model_family, feature_mode=None):
     if feature_mode is not None:
         return normalize_feature_mode(feature_mode)
-    return "utility_cpra" if normalize_tabular_model_family(model_family) == "lr" else "full"
+    return "lr_small" if normalize_tabular_model_family(model_family) == "lr" else "full"
 
 
 def infer_feature_mode_from_input_dim(input_dim):
-    return "utility_cpra" if int(input_dim) == 2 else "full"
+    input_dim = int(input_dim)
+    if input_dim == 2:
+        return "utility_cpra"
+    if input_dim == LR_SMALL_FEATURE_DIM:
+        return "lr_small"
+    if input_dim == FAILURE_CONTEXT_DIM:
+        return "failure_context"
+    return "full"
 
 
 def tabular_input_dim(feature_mode):
-    return 2 if normalize_feature_mode(feature_mode) == "utility_cpra" else NODE_FEATURE_DIM * 2 + EDGE_RAW_DIM
+    mode = normalize_feature_mode(feature_mode)
+    if mode == "utility_cpra":
+        return 2
+    if mode == "lr_small":
+        return LR_SMALL_FEATURE_DIM
+    if mode == "failure_context":
+        return FAILURE_CONTEXT_DIM
+    return NODE_FEATURE_DIM * 2 + EDGE_RAW_DIM
 
 
 def tabular_edge_features(data, feature_mode="full"):
     src, dst = data.edge_index
-    if normalize_feature_mode(feature_mode) == "utility_cpra":
+    mode = normalize_feature_mode(feature_mode)
+    if mode == "utility_cpra":
         utility = data.edge_attr[:, :1]
         recipient_cpra = data.x[dst, 1:2]
         return torch.cat([utility, recipient_cpra], dim=-1)
+    if mode == "lr_small":
+        return lr_small_edge_features(data)
+    if mode == "failure_context":
+        return failure_context_edge_features(data)
     return torch.cat([data.x[src], data.x[dst], data.edge_attr], dim=-1)
 
 # ==========================================
@@ -225,11 +246,11 @@ def get_expected_y(w_preds_tensor, candidates, num_nodes, num_edges, epsilon=0.1
 
 def sample_perturbed_solutions(w_preds_tensor, candidates, num_nodes, num_edges, epsilon=0.1, M=8):
     """
-    返回严格 FY 标量 surrogate 所需的 Monte Carlo 样本：
+    返回 perturbed optimizer 的 Monte Carlo 样本：
     - Y_samples[m] = y*(w + ε z^(m))
-    - Z_samples[m] = z^(m)
 
-    两者都作为常数样本参与后续标量目标构造，不经过求解器反向传播。
+    这些样本作为常数参与 FY doubly stochastic 梯度估计，
+    不经过求解器反向传播。
     """
     w_np = w_preds_tensor.detach().cpu().numpy().flatten()
 
@@ -243,8 +264,7 @@ def sample_perturbed_solutions(w_preds_tensor, candidates, num_nodes, num_edges,
 
     results = [solve_single(noise) for noise in noise_list]
     y_samples = torch.tensor(np.stack(results), device=w_preds_tensor.device, dtype=torch.float32)
-    z_samples = torch.tensor(np.stack(noise_list), device=w_preds_tensor.device, dtype=torch.float32)
-    return y_samples.detach(), z_samples.detach()
+    return y_samples.detach()
 
 def save_solutions(model, dataset, sol_dir, device, model_tag="Reg-CF-FY", feature_mode="full"):
     """
@@ -395,14 +415,14 @@ def pretrain_timestamp_from_path(pretrain_path):
 # ==========================================
 # 3. 训练主流程
 # ==========================================
-def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_root=None, model_family="mlp", feature_mode=None):
+def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_root=None, model_family="mlp", feature_mode=None, train_size=None):
     model_family = normalize_tabular_model_family(model_family)
     feature_mode = default_feature_mode_for_family(model_family, feature_mode)
     input_dim = tabular_input_dim(feature_mode)
     DEVICE        = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     LR            = 5e-4
     EPOCHS        = 10
-    EPSILON_INIT  = 0.5
+    EPSILON_INIT  = 0.2
     M_SAMPLES     = 8       # 扰动采样次数，越高梯度估计越稳定但越慢；forward 需 M 次求解
     DATA_DIR      = str(resolve_path(data_dir or PROCESSED_DATA_DIR))
     STRICT_REPRODUCIBILITY = True
@@ -437,7 +457,13 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
         train_dataset = split_datasets["train"]
         val_dataset = split_datasets["val"]
         test_dataset = split_datasets["test"]
-        print(f"Split: Train={len(train_dataset)}, Val={len(val_dataset)}, Test={len(test_dataset)}")
+        original_train_count = len(train_dataset)
+        train_dataset = limit_training_dataset(train_dataset, train_size)
+        effective_train_size = len(train_dataset)
+        print(
+            f"Split: Train={len(train_dataset)}, Val={len(val_dataset)}, Test={len(test_dataset)} "
+            f"(train pool before --train_size: {original_train_count})"
+        )
         if PRETRAIN_PATH is not None:
             print(f"Bound train split from: {bound_split_paths['train']}")
             print(f"Bound validation split from: {bound_split_paths['val']}")
@@ -468,7 +494,7 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
             if config_feature_mode != feature_mode:
                 raise ValueError(
                     f"Pretrain checkpoint feature mode mismatch: expected {feature_mode}, got {config_feature_mode}. "
-                    "Use a matching 2-stage LR checkpoint or pass --feature_mode full for legacy checkpoints."
+                    "Use a matching 2-stage LR checkpoint or pass the checkpoint's --feature_mode for legacy checkpoints."
                 )
             print(f"Loaded pre-trained {tabular_model_label(config_family)} weights from: {PRETRAIN_PATH}")
             config_msg = (
@@ -492,8 +518,8 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
         best_val_loss = float('inf')
 
         for epoch in range(1, EPOCHS + 1):
-            # epsilon 衰减：训练前期探索性强，后期收敛
-            current_epsilon = EPSILON_INIT * (0.95 ** (epoch - 1))
+            # Keep the perturbed optimizer noise fixed across epochs.
+            current_epsilon = EPSILON_INIT
             model.train()
             total_train_regret = 0.0
             total_train_graphs = 0
@@ -507,7 +533,7 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
                 w_preds       = model(edge_features).view(-1, 1)
 
                 # 1. Monte Carlo 采样：y^(m) = y*(w + ε z^(m))
-                y_samples, z_samples = sample_perturbed_solutions(
+                y_samples = sample_perturbed_solutions(
                     w_preds, batch.candidates[0],
                     batch.num_nodes_custom[0].item(),
                     batch.num_edges,
@@ -524,14 +550,13 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
                         epsilon=0.0, M=1
                     )
 
-                # 3. 更严格的 FY 标量 surrogate（差一个与参数无关的常数项）：
-                #    F_ε(w) ≈ (1/M) Σ_m <w + ε z^(m), y^(m)>
-                #    L_FY(w; y*) = F_ε(w) - <w, y*>
-                # 其中 y^(m), z^(m), y* 都视为 stop-gradient 常数。
+                # 3. FY 的 doubly stochastic 梯度估计（Berthet et al., Eq. 6）：
+                #    ∇_w L_FY ≈ ȳ_ε(w) - y*
+                # 这里用一个线性 proxy 让 autograd 返回上述梯度；
+                # 它不是 FY loss 的闭式本体，而是与 FY 梯度一致的实现。
                 w_flat = w_preds.view(-1)
-                f_hat = torch.mean(torch.sum((w_flat.unsqueeze(0) + z_samples) * y_samples, dim=1))
-                target_term = torch.sum(w_flat * y_optimal.detach().view(-1))
-                fy_loss = f_hat - target_term
+                fy_direction = (y_pred_soft.detach() - y_optimal.detach()).view(-1)
+                fy_loss = torch.dot(w_flat, fy_direction)
 
                 fy_loss.backward()
                 torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
@@ -617,6 +642,9 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
                         'M_SAMPLES': M_SAMPLES, 'SEED': SEED,
                         'PRETRAIN_PATH': PRETRAIN_PATH,
                         'PRETRAIN_TIMESTAMP': PRETRAIN_TIMESTAMP,
+                        'TRAIN_SIZE_REQUESTED': train_size,
+                        'TRAIN_SIZE_EFFECTIVE': effective_train_size,
+                        'TRAIN_POOL_SIZE': original_train_count,
                         'SPLIT_BINDING_MODE': split_binding_mode,
                         'BOUND_SPLIT_FILES': dict(bound_split_paths),
                         'STRICT_REPRODUCIBILITY': STRICT_REPRODUCIBILITY,
@@ -693,6 +721,9 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
             f.write(f"Model: {checkpoint_model_label(model_family)} + FY Loss\n")
             f.write(f"Pretrain Path     : {PRETRAIN_PATH}\n")
             f.write(f"Pretrain Timestamp: {PRETRAIN_TIMESTAMP}\n")
+            f.write(f"Train Size Requested: {train_size}\n")
+            f.write(f"Train Size Effective: {effective_train_size}\n")
+            f.write(f"Train Pool Size   : {original_train_count}\n")
             f.write(f"Strict Repro      : {STRICT_REPRODUCIBILITY}\n")
             f.write(f"CUBLAS Workspace  : {os.environ.get('CUBLAS_WORKSPACE_CONFIG', '')}\n")
             f.write(f"Test graphs      : {total_test_graphs}\n")
@@ -732,8 +763,14 @@ if __name__ == "__main__":
                         help="Root directory where timestamped solution outputs will be created")
     parser.add_argument("--model_family", type=str, default="mlp", choices=["mlp", "lr"],
                         help="Tabular prediction model used in the end-to-end pipeline")
-    parser.add_argument("--feature_mode", type=str, default=None, choices=["full", "utility_cpra"],
-                        help="Tabular feature set. Defaults to utility+recipient-cPRA for lr, full features for reg.")
+    parser.add_argument("--feature_mode", type=str, default=None, choices=["full", "utility_cpra", "failure_context", "lr_small"],
+                        help="Tabular feature set. Defaults to lr_small for lr, full features for reg.")
+    parser.add_argument(
+        "--train_size",
+        type=int,
+        default=None,
+        help="Number of graphs to use from the training split; default uses the full training split",
+    )
     args = parser.parse_args()
     
     train_dfl(
@@ -743,4 +780,5 @@ if __name__ == "__main__":
         solutions_root=args.solutions_root,
         model_family=args.model_family,
         feature_mode=args.feature_mode,
+        train_size=args.train_size,
     )
