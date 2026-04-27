@@ -33,6 +33,21 @@ def split_dataset_counts(total_len):
     return train_count, val_count, test_count
 
 
+def limit_training_dataset(train_dataset, train_size=None):
+    dataset = list(train_dataset)
+    if train_size is None:
+        return dataset
+
+    train_size = int(train_size)
+    if train_size <= 0:
+        raise ValueError(f"train_size must be positive, got {train_size}")
+    if train_size > len(dataset):
+        raise ValueError(
+            f"train_size={train_size} exceeds available training graphs ({len(dataset)})"
+        )
+    return dataset[:train_size]
+
+
 def save_split_files(results_dir, train_dataset, val_dataset, test_dataset):
     split_datasets = {
         "train": train_dataset,
@@ -115,14 +130,6 @@ def bind_dataset_to_split_files(full_dataset, pretrain_path):
 
         split_datasets[split_name] = [data_by_filename[name] for name in filenames]
         assigned.update(filenames)
-
-    extra = sorted(name for name in data_by_filename if name not in assigned)
-    if extra:
-        raise ValueError(
-            "Strict split binding found dataset files absent from the bound split manifests: "
-            + ", ".join(extra[:10])
-            + (" ..." if len(extra) > 10 else "")
-        )
 
     if not split_datasets["train"]:
         raise ValueError("Strict split binding produced an empty training set.")

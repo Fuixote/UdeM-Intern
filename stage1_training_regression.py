@@ -17,9 +17,17 @@ from datetime import datetime
 from torch_geometric.loader import DataLoader
 
 from experiment_config import PROCESSED_DATA_DIR, RESULTS_ROOT, make_results_dir, resolve_path
-from model.graph_utils import load_graph_dataset, parse_json_to_pyg_data, resolve_graph_data_dir
+from model.graph_utils import (
+    failure_context_edge_features,
+    load_graph_dataset,
+    lr_small_edge_features,
+    parse_json_to_pyg_data,
+    resolve_graph_data_dir,
+)
 from model.model_structure import (
     EDGE_RAW_DIM,
+    FAILURE_CONTEXT_DIM,
+    LR_SMALL_FEATURE_DIM,
     NODE_FEATURE_DIM,
     build_tabular_regression_model,
     normalize_tabular_model_family,
@@ -28,7 +36,7 @@ from model.model_structure import (
     tabular_model_result_token,
     tabular_model_summary_label,
 )
-from split_binding import save_split_files, split_dataset_counts
+from split_binding import limit_training_dataset, save_split_files, split_dataset_counts
 
 SEED = 42
 
@@ -65,7 +73,7 @@ def dataset_num_edges(dataset):
 
 def normalize_feature_mode(feature_mode):
     mode = (feature_mode or "full").strip().lower()
-    if mode not in {"full", "utility_cpra"}:
+    if mode not in {"full", "utility_cpra", "failure_context", "lr_small"}:
         raise ValueError(f"Unsupported tabular feature mode: {feature_mode}")
     return mode
 
@@ -74,6 +82,10 @@ def tabular_input_dim(feature_mode):
     mode = normalize_feature_mode(feature_mode)
     if mode == "utility_cpra":
         return 2
+    if mode == "lr_small":
+        return LR_SMALL_FEATURE_DIM
+    if mode == "failure_context":
+        return FAILURE_CONTEXT_DIM
     return NODE_FEATURE_DIM * 2 + EDGE_RAW_DIM
 
 
@@ -84,12 +96,16 @@ def tabular_edge_features(batch, feature_mode="full"):
         utility = batch.edge_attr[:, :1]
         recipient_cpra = batch.x[dst, 1:2]
         return torch.cat([utility, recipient_cpra], dim=-1)
+    if mode == "lr_small":
+        return lr_small_edge_features(batch)
+    if mode == "failure_context":
+        return failure_context_edge_features(batch)
 
     src, dst = batch.edge_index
     return torch.cat([batch.x[src], batch.x[dst], batch.edge_attr], dim=-1)
 
 
-def train_baseline(model_family="mlp", data_dir=None, results_root=None, feature_mode="full", epochs=50):
+def train_baseline(model_family="mlp", data_dir=None, results_root=None, feature_mode="full", epochs=50, train_size=None):
     model_family = normalize_tabular_model_family(model_family)
     feature_mode = normalize_feature_mode(feature_mode)
 
@@ -128,13 +144,19 @@ def train_baseline(model_family="mlp", data_dir=None, results_root=None, feature
     train_dataset = full_dataset[:train_end]
     val_dataset = full_dataset[train_end:val_end]
     test_dataset = full_dataset[val_end:]
+    original_train_count = len(train_dataset)
+    train_dataset = limit_training_dataset(train_dataset, train_size)
+    effective_train_size = len(train_dataset)
 
     split_paths = save_split_files(results_dir, train_dataset, val_dataset, test_dataset)
     print(f"📄 Train split file list saved to: {split_paths['train']}")
     print(f"📄 Validation split file list saved to: {split_paths['val']}")
     print(f"📄 Test split file list saved to: {split_paths['test']}")
 
-    print(f"📊 Split result: Train={len(train_dataset)}, Val={len(val_dataset)}, Test={len(test_dataset)}")
+    print(
+        f"📊 Split result: Train={len(train_dataset)}, Val={len(val_dataset)}, Test={len(test_dataset)} "
+        f"(train pool before --train_size: {original_train_count})"
+    )
     if len(val_dataset) == 0:
         print("⚠️ Validation split is empty; training loss will be reused as the model-selection metric.")
     if len(test_dataset) == 0:
@@ -223,6 +245,9 @@ def train_baseline(model_family="mlp", data_dir=None, results_root=None, feature
                     "EDGE_RAW_DIM": edge_raw_dim_value,
                     "LEARNING_RATE": learning_rate,
                     "BATCH_SIZE": batch_size,
+                    "TRAIN_SIZE_REQUESTED": train_size,
+                    "TRAIN_SIZE_EFFECTIVE": effective_train_size,
+                    "TRAIN_POOL_SIZE": original_train_count,
                     "SEED": SEED,
                     "STRICT_REPRODUCIBILITY": strict_reproducibility,
                     "CUBLAS_WORKSPACE_CONFIG": os.environ.get("CUBLAS_WORKSPACE_CONFIG", ""),
@@ -311,6 +336,9 @@ def train_baseline(model_family="mlp", data_dir=None, results_root=None, feature
         if model_family == "mlp":
             handle.write(f"HIDDEN_DIM: {hidden_dim}\n")
         handle.write(f"BATCH_SIZE: {batch_size}\n")
+        handle.write(f"TRAIN_SIZE_REQUESTED: {train_size}\n")
+        handle.write(f"TRAIN_SIZE_EFFECTIVE: {effective_train_size}\n")
+        handle.write(f"TRAIN_POOL_SIZE: {original_train_count}\n")
         handle.write(f"LEARNING_RATE: {learning_rate}\n")
         handle.write(f"NUM_EPOCHS: {num_epochs}\n")
         handle.write(f"SEED: {SEED}\n")
@@ -325,7 +353,7 @@ def train_baseline(model_family="mlp", data_dir=None, results_root=None, feature
     print(f"📝 Training summary saved at: {summary_path}")
 
 
-def main(default_model_family="mlp", default_feature_mode="full", description="Stage-1 regression training"):
+def main(default_model_family="mlp", default_feature_mode="full", default_epochs=50, description="Stage-1 regression training"):
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument("--data_dir", type=str, default=str(PROCESSED_DATA_DIR), help="Directory containing processed G-*.json graphs")
     parser.add_argument("--results_root", type=str, default=str(RESULTS_ROOT), help="Root directory where timestamped training outputs will be created")
@@ -334,10 +362,19 @@ def main(default_model_family="mlp", default_feature_mode="full", description="S
         "--feature_mode",
         type=str,
         default=default_feature_mode,
-        choices=["full", "utility_cpra"],
-        help="Tabular feature set: full graph-derived features or the 2D utility+recipient-cPRA sanity-check setup",
+        choices=["full", "utility_cpra", "failure_context", "lr_small"],
+        help=(
+            "Tabular feature set: full features, failure-context features, "
+            "lr_small 3D proxy features, or the 2D utility+recipient-cPRA sanity-check setup"
+        ),
     )
-    parser.add_argument("--epochs", type=int, default=50, help="Number of training epochs")
+    parser.add_argument("--epochs", type=int, default=default_epochs, help="Number of training epochs")
+    parser.add_argument(
+        "--train_size",
+        type=int,
+        default=None,
+        help="Number of graphs to use from the training split; default uses the full training split",
+    )
     args = parser.parse_args()
     train_baseline(
         model_family=args.model_family,
@@ -345,4 +382,5 @@ def main(default_model_family="mlp", default_feature_mode="full", description="S
         results_root=args.results_root,
         feature_mode=args.feature_mode,
         epochs=args.epochs,
+        train_size=args.train_size,
     )

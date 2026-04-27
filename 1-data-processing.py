@@ -28,8 +28,11 @@ PROCESSED_METADATA_FILES = (
     "batch_summary.json",
     "batch_report.md",
 )
-GROUND_TRUTH_NOISE_SIGMA = 0.15
+GROUND_TRUTH_NOISE_SIGMA = 0.08
 GROUND_TRUTH_NOISE_MODE = "deterministic_per_edge"
+GROUND_TRUTH_LABEL_MODE = "nonlinear_medical_expected_qaly_with_scarcity_priority"
+ARC_FAILURE_PROB_RANGE = (0.02, 0.82)
+VERTEX_FAILURE_PROB_RANGE = (0.02, 0.50)
 
 
 def timestamp_now(now=None):
@@ -56,6 +59,19 @@ def parse_numeric(value):
         except ValueError:
             return None
     return None
+
+
+def clamp(value, low, high):
+    return max(low, min(high, value))
+
+
+def sigmoid(value):
+    return 1.0 / (1.0 + math.exp(-value))
+
+
+def numeric_or_default(value, default):
+    parsed = parse_numeric(value)
+    return default if parsed is None else parsed
 
 
 def compute_quantile(sorted_values, q):
@@ -179,19 +195,48 @@ def read_text_if_exists(path):
     return path.read_text(encoding="utf-8")
 
 
-def get_survival_time(age):
-    if age is None or age == "Unknown":
+def get_survival_time(donor_age, recipient_age=None, utility=None):
+    if donor_age is None or donor_age == "Unknown":
         return None
-    val = 25 - 0.3 * (float(age) - 20)
-    return round(max(5.0, val), 2)
+    donor_age_value = numeric_or_default(donor_age, 43.0)
+    recipient_age_value = numeric_or_default(recipient_age, 43.0)
+    utility_norm = clamp(numeric_or_default(utility, 45.0) / 91.0, 0.0, 1.0)
+
+    old_donor_risk = sigmoid((donor_age_value - 62.0) / 4.0)
+    very_old_donor_risk = sigmoid((donor_age_value - 68.0) / 3.0)
+    young_donor_bonus = sigmoid((34.0 - donor_age_value) / 7.0)
+    old_recipient_risk = sigmoid((recipient_age_value - 58.0) / 5.0)
+    low_compatibility_risk = sigmoid((0.32 - utility_norm) / 0.08)
+
+    survival = (
+        17.5
+        + 1.2 * young_donor_bonus
+        + 0.45 * math.sqrt(utility_norm)
+        - 4.6 * old_donor_risk
+        - 3.1 * very_old_donor_risk
+        - 4.2 * old_recipient_risk
+        - 0.8 * low_compatibility_risk
+        - 3.8 * old_donor_risk * old_recipient_risk
+    )
+    return round(clamp(survival, 4.0, 24.0), 2)
 
 
-def get_qaly(utility, survival_time):
+def get_qaly(utility, survival_time, recipient_age=None, cpra=None):
     if survival_time is None:
         return None
-    u_norm = float(utility) / 91.0
-    multiplier = math.sqrt(1.0 + u_norm ** 2) / math.sqrt(2.0)
-    return round(multiplier * survival_time, 2)
+    utility_norm = clamp(numeric_or_default(utility, 45.0) / 91.0, 0.0, 1.0)
+    recipient_age_value = numeric_or_default(recipient_age, 43.0)
+    cpra_value = clamp(numeric_or_default(cpra, 0.5), 0.0, 1.0)
+
+    quality_multiplier = 0.75 + 0.25 * math.sqrt(utility_norm)
+    recipient_life_expectancy_factor = clamp(
+        1.15 - 0.55 * sigmoid((recipient_age_value - 58.0) / 5.0),
+        0.55,
+        1.15,
+    )
+    sensitization_burden = 1.0 - 0.05 * sigmoid((cpra_value - 0.88) / 0.05)
+
+    return round(survival_time * quality_multiplier * recipient_life_expectancy_factor * sensitization_burden, 2)
 
 
 def get_success_prob(utility, cpra, alpha=0.7, beta=0.3):
@@ -209,12 +254,268 @@ def get_deterministic_epsilon(source_key, sigma=GROUND_TRUTH_NOISE_SIGMA):
     return rng.gauss(0, sigma)
 
 
-def get_ground_truth(success_prob, qaly, source_key, sigma=GROUND_TRUTH_NOISE_SIGMA):
-    if success_prob is None or qaly is None:
+def get_blood_type_risk(donor_bt, recipient_bt):
+    risk = 0.0
+    if recipient_bt == "O":
+        risk += 0.20
+    elif recipient_bt == "B":
+        risk += 0.10
+    elif recipient_bt == "AB":
+        risk -= 0.05
+
+    if donor_bt == "AB":
+        risk += 0.15
+    elif donor_bt == "B":
+        risk += 0.08
+    elif donor_bt == "O":
+        risk -= 0.05
+    return clamp(risk, -0.10, 0.40)
+
+
+def get_arc_failure_prob(utility, cpra, donor_age, recipient_age, donor_bt, recipient_bt, source_key):
+    utility_norm = clamp(numeric_or_default(utility, 45.0) / 91.0, 0.0, 1.0)
+    cpra_value = clamp(numeric_or_default(cpra, 0.5), 0.0, 1.0)
+    donor_age_value = numeric_or_default(donor_age, 43.0)
+    recipient_age_value = numeric_or_default(recipient_age, 43.0)
+    high_cpra_risk = sigmoid((cpra_value - 0.75) / 0.08)
+    old_donor_risk = sigmoid((donor_age_value - 62.0) / 4.0)
+    old_recipient_risk = sigmoid((recipient_age_value - 58.0) / 5.0)
+    low_compatibility_risk = sigmoid((0.32 - utility_norm) / 0.08)
+    blood_type_risk = get_blood_type_risk(donor_bt, recipient_bt)
+    adverse_blood_context = max(blood_type_risk, 0.0)
+    compatibility_buffer = math.sqrt(utility_norm) * (1.0 - cpra_value)
+    deterministic_noise = get_deterministic_epsilon(f"{source_key}|arc_failure", sigma=0.16)
+
+    logit = (
+        -2.65
+        + 1.35 * high_cpra_risk
+        + 0.65 * old_donor_risk
+        + 1.15 * old_recipient_risk
+        + 0.35 * low_compatibility_risk
+        + 1.05 * high_cpra_risk * old_donor_risk
+        + 1.20 * old_donor_risk * old_recipient_risk
+        + 0.40 * high_cpra_risk * low_compatibility_risk
+        + 1.20 * blood_type_risk
+        + 0.95 * high_cpra_risk * adverse_blood_context
+        - 0.45 * compatibility_buffer
+        + deterministic_noise
+    )
+    low, high = ARC_FAILURE_PROB_RANGE
+    return round(clamp(sigmoid(logit), low, high), 4)
+
+
+def get_pair_vertex_failure_prob(patient_info):
+    cpra_value = clamp(numeric_or_default(patient_info.get("cPRA"), 0.5), 0.0, 1.0)
+    age_value = numeric_or_default(patient_info.get("age"), 43.0)
+    high_cpra_risk = sigmoid((cpra_value - 0.80) / 0.08)
+    age_risk = sigmoid((age_value - 58.0) / 7.0)
+    incompatible_donor_risk = 0.35 if not patient_info.get("hasBloodCompatibleDonor", False) else 0.0
+    logit = (
+        -2.55
+        + 0.90 * high_cpra_risk
+        + 0.50 * age_risk
+        + incompatible_donor_risk
+        + 0.45 * high_cpra_risk * age_risk
+    )
+    low, high = VERTEX_FAILURE_PROB_RANGE
+    return round(clamp(sigmoid(logit), low, high), 4)
+
+
+def get_ndd_vertex_failure_prob(donor_age):
+    donor_age_value = numeric_or_default(donor_age, 43.0)
+    age_risk = sigmoid((donor_age_value - 58.0) / 7.0)
+    logit = -3.10 + 0.85 * age_risk
+    low, high = VERTEX_FAILURE_PROB_RANGE
+    return round(clamp(sigmoid(logit), low, high), 4)
+
+
+def get_priority_multiplier(recipient_cpra, target_scarcity, donor_flexibility, has_reciprocal_edge):
+    cpra_value = clamp(numeric_or_default(recipient_cpra, 0.5), 0.0, 1.0)
+    high_cpra_priority = sigmoid((cpra_value - 0.75) / 0.08)
+    scarcity_value = clamp(numeric_or_default(target_scarcity, 0.5), 0.0, 1.0)
+    flexibility_value = clamp(numeric_or_default(donor_flexibility, 0.5), 0.0, 1.0)
+    reciprocal_bonus = 1.0 if has_reciprocal_edge else 0.0
+    multiplier = (
+        1.0
+        + 0.78 * high_cpra_priority * scarcity_value
+        + 0.36 * scarcity_value * (1.0 - flexibility_value)
+        + 0.12 * reciprocal_bonus
+        - 0.38 * flexibility_value * (1.0 - scarcity_value)
+    )
+    return round(clamp(multiplier, 0.65, 1.85), 4)
+
+
+def get_ground_truth(
+    expected_transplant_count,
+    qaly,
+    priority_multiplier,
+    source_key,
+    sigma=GROUND_TRUTH_NOISE_SIGMA,
+):
+    if expected_transplant_count is None or qaly is None:
         return None
     epsilon = get_deterministic_epsilon(source_key, sigma)
-    w_true = success_prob * qaly * (1 + epsilon)
+    w_true = expected_transplant_count * qaly * priority_multiplier * (1 + epsilon)
     return round(max(0.0, w_true), 4)
+
+
+def raw_source_vertex_id(node_id, attributes):
+    if attributes.get("altruistic", False):
+        return str(node_id)
+    sources = attributes.get("sources", [])
+    return str(sources[0]) if sources else str(node_id)
+
+
+def compute_graph_context(raw_data):
+    source_vertex_by_node = {
+        str(node_id): raw_source_vertex_id(node_id, attributes)
+        for node_id, attributes in raw_data.items()
+    }
+    valid_vertices = set(source_vertex_by_node.values())
+    outgoing_targets_by_vertex = {vertex_id: set() for vertex_id in valid_vertices}
+    incoming_sources_by_target = {vertex_id: set() for vertex_id in valid_vertices}
+    donor_out_degree = {}
+
+    for node_id, attributes in raw_data.items():
+        node_key = str(node_id)
+        source_vertex = source_vertex_by_node[node_key]
+        raw_targets = {
+            str(match.get("recipient"))
+            for match in attributes.get("matches", [])
+            if str(match.get("recipient")) in valid_vertices
+        }
+        donor_out_degree[node_key] = len(raw_targets)
+        outgoing_targets_by_vertex.setdefault(source_vertex, set()).update(raw_targets)
+        for target in raw_targets:
+            incoming_sources_by_target.setdefault(target, set()).add(source_vertex)
+
+    max_donor_out_degree = max(donor_out_degree.values(), default=0)
+    max_log_out_degree = math.log1p(max_donor_out_degree) if max_donor_out_degree > 0 else 1.0
+    recipient_in_degree = {
+        vertex_id: len(sources)
+        for vertex_id, sources in incoming_sources_by_target.items()
+    }
+
+    return {
+        "source_vertex_by_node": source_vertex_by_node,
+        "outgoing_targets_by_vertex": outgoing_targets_by_vertex,
+        "recipient_in_degree": recipient_in_degree,
+        "donor_out_degree": donor_out_degree,
+        "max_log_out_degree": max_log_out_degree,
+    }
+
+
+def processing_config():
+    return {
+        "ground_truth_label_mode": GROUND_TRUTH_LABEL_MODE,
+        "ground_truth_noise_sigma": GROUND_TRUTH_NOISE_SIGMA,
+        "ground_truth_noise_mode": GROUND_TRUTH_NOISE_MODE,
+        "arc_failure_prob_range": list(ARC_FAILURE_PROB_RANGE),
+        "vertex_failure_prob_range": list(VERTEX_FAILURE_PROB_RANGE),
+        "graph_context_features": [
+            "recipient_in_degree",
+            "donor_out_degree",
+            "target_scarcity",
+            "donor_flexibility",
+            "has_reciprocal_edge",
+        ],
+        "priority_multiplier_formula": (
+            "clip(1 + 0.78*sigmoid((recipient_cPRA-0.75)/0.08)*target_scarcity "
+            "+ 0.36*target_scarcity*(1-donor_flexibility) "
+            "+ 0.12*has_reciprocal_edge "
+            "- 0.38*donor_flexibility*(1-target_scarcity), 0.65, 1.85)"
+        ),
+    }
+
+
+def build_match_payload(
+    input_file,
+    source_node_id,
+    source_vertex_id,
+    source_vertex_failure_prob,
+    match,
+    recipients_data,
+    graph_context,
+):
+    target = str(match["recipient"])
+    d_age = match.get("donor_age")
+    utility = match.get("utility", 0)
+    cpra = match.get("recipient_cpra")
+    recipient_age = match.get("recipient_age")
+    donor_bt = match.get("donor_bt")
+    recipient_bt = match.get("recipient_bt")
+    survival_time = get_survival_time(d_age, recipient_age, utility)
+    qaly = get_qaly(utility, survival_time, recipient_age, cpra)
+    source_key = "|".join(
+        [
+            input_file.name,
+            str(source_node_id),
+            target,
+            str(utility),
+        ]
+    )
+
+    target_patient_info = recipients_data.get(target, {})
+    recipient_in_degree = graph_context["recipient_in_degree"].get(target, 0)
+    donor_out_degree = graph_context["donor_out_degree"].get(str(source_node_id), 0)
+    max_log_out_degree = graph_context["max_log_out_degree"]
+    target_scarcity = round(1.0 / math.sqrt(recipient_in_degree + 1.0), 4)
+    donor_flexibility = round(math.log1p(donor_out_degree) / max_log_out_degree, 4)
+    has_reciprocal_edge = str(source_vertex_id) in graph_context["outgoing_targets_by_vertex"].get(target, set())
+    target_vertex_failure_prob = get_pair_vertex_failure_prob(target_patient_info)
+    arc_failure_prob = get_arc_failure_prob(
+        utility,
+        cpra,
+        d_age,
+        recipient_age,
+        donor_bt,
+        recipient_bt,
+        source_key,
+    )
+    arc_success_prob = round(1.0 - arc_failure_prob, 4)
+    source_vertex_available_prob = round(1.0 - source_vertex_failure_prob, 4)
+    target_vertex_available_prob = round(1.0 - target_vertex_failure_prob, 4)
+    expected_transplant_count = round(
+        arc_success_prob * source_vertex_available_prob * target_vertex_available_prob,
+        4,
+    )
+    priority_multiplier = get_priority_multiplier(
+        cpra,
+        target_scarcity,
+        donor_flexibility,
+        has_reciprocal_edge,
+    )
+
+    return {
+        "donor_node_id": str(source_node_id),
+        "recipient": target,
+        "utility": utility,
+        "graft_survival_time": survival_time,
+        "qaly": qaly,
+        "medical_success_score": get_success_prob(utility, cpra),
+        "success_prob": arc_success_prob,
+        "arc_failure_prob": arc_failure_prob,
+        "source_vertex_failure_prob": source_vertex_failure_prob,
+        "target_vertex_failure_prob": target_vertex_failure_prob,
+        "expected_transplant_count": expected_transplant_count,
+        "recipient_in_degree": recipient_in_degree,
+        "donor_out_degree": donor_out_degree,
+        "target_scarcity": target_scarcity,
+        "donor_flexibility": donor_flexibility,
+        "has_reciprocal_edge": has_reciprocal_edge,
+        "priority_multiplier": priority_multiplier,
+        "ground_truth_label": get_ground_truth(
+            expected_transplant_count,
+            qaly,
+            priority_multiplier,
+            source_key,
+        ),
+        "donor_age": d_age,
+        "donor_bt": donor_bt,
+        "recipient_age": recipient_age,
+        "recipient_cpra": cpra,
+        "recipient_bt": recipient_bt,
+    }
 
 
 def build_processed_payload(input_file):
@@ -223,15 +524,19 @@ def build_processed_payload(input_file):
 
     raw_data = data.get("data", {})
     recipients_data = data.get("recipients", {})
+    graph_context = compute_graph_context(raw_data)
     vertices = {}
 
     for node_id, attributes in raw_data.items():
         is_altruistic = attributes.get("altruistic", False)
 
         if is_altruistic:
+            vertex_failure_prob = get_ndd_vertex_failure_prob(attributes.get("dage", "Unknown"))
             vertices[str(node_id)] = {
                 "type": "NDD",
                 "id": str(node_id),
+                "vertex_failure_prob": vertex_failure_prob,
+                "vertex_available_prob": round(1.0 - vertex_failure_prob, 4),
                 "donor": {
                     "dage": attributes.get("dage", "Unknown"),
                     "bloodtype": attributes.get("bloodtype", "Unknown"),
@@ -239,37 +544,16 @@ def build_processed_payload(input_file):
                 "matches": [],
             }
             for match in attributes.get("matches", []):
-                d_age = match.get("donor_age")
-                survival_time = get_survival_time(d_age)
-                utility = match.get("utility", 0)
-                cpra = match.get("recipient_cpra")
-                source_key = "|".join(
-                    [
-                        input_file.name,
-                        str(node_id),
-                        str(match.get("recipient")),
-                        str(utility),
-                    ]
-                )
                 vertices[str(node_id)]["matches"].append(
-                    {
-                        "donor_node_id": str(node_id),
-                        "recipient": str(match["recipient"]),
-                        "utility": utility,
-                        "graft_survival_time": survival_time,
-                        "qaly": get_qaly(utility, survival_time),
-                        "success_prob": get_success_prob(utility, cpra),
-                        "ground_truth_label": get_ground_truth(
-                            get_success_prob(utility, cpra),
-                            get_qaly(utility, survival_time),
-                            source_key,
-                        ),
-                        "donor_age": d_age,
-                        "donor_bt": match.get("donor_bt"),
-                        "recipient_age": match.get("recipient_age"),
-                        "recipient_cpra": match.get("recipient_cpra"),
-                        "recipient_bt": match.get("recipient_bt"),
-                    }
+                    build_match_payload(
+                        input_file,
+                        node_id,
+                        str(node_id),
+                        vertex_failure_prob,
+                        match,
+                        recipients_data,
+                        graph_context,
+                    )
                 )
         else:
             sources = attributes.get("sources", [])
@@ -277,9 +561,12 @@ def build_processed_payload(input_file):
 
             if patient_id not in vertices:
                 patient_info = recipients_data.get(patient_id, {})
+                vertex_failure_prob = get_pair_vertex_failure_prob(patient_info)
                 vertices[patient_id] = {
                     "type": "Pair",
                     "id": patient_id,
+                    "vertex_failure_prob": vertex_failure_prob,
+                    "vertex_available_prob": round(1.0 - vertex_failure_prob, 4),
                     "patient": {
                         "age": patient_info.get("age", "Unknown"),
                         "bloodtype": patient_info.get("bloodtype", "Unknown"),
@@ -299,37 +586,16 @@ def build_processed_payload(input_file):
             )
 
             for match in attributes.get("matches", []):
-                d_age = match.get("donor_age")
-                survival_time = get_survival_time(d_age)
-                utility = match.get("utility", 0)
-                cpra = match.get("recipient_cpra")
-                source_key = "|".join(
-                    [
-                        input_file.name,
-                        str(node_id),
-                        str(match.get("recipient")),
-                        str(utility),
-                    ]
-                )
                 vertices[patient_id]["matches"].append(
-                    {
-                        "donor_node_id": str(node_id),
-                        "recipient": str(match["recipient"]),
-                        "utility": utility,
-                        "graft_survival_time": survival_time,
-                        "qaly": get_qaly(utility, survival_time),
-                        "success_prob": get_success_prob(utility, cpra),
-                        "ground_truth_label": get_ground_truth(
-                            get_success_prob(utility, cpra),
-                            get_qaly(utility, survival_time),
-                            source_key,
-                        ),
-                        "donor_age": d_age,
-                        "donor_bt": match.get("donor_bt"),
-                        "recipient_age": match.get("recipient_age"),
-                        "recipient_cpra": match.get("recipient_cpra"),
-                        "recipient_bt": match.get("recipient_bt"),
-                    }
+                    build_match_payload(
+                        input_file,
+                        node_id,
+                        patient_id,
+                        vertices[patient_id]["vertex_failure_prob"],
+                        match,
+                        recipients_data,
+                        graph_context,
+                    )
                 )
 
     final_vertices = {}
@@ -337,16 +603,34 @@ def build_processed_payload(input_file):
         best_matches = {}
         for match in vertex_data.get("matches", []):
             target = match["recipient"]
-            utility = match["utility"]
+            match_value = match.get("ground_truth_label")
+            if match_value is None:
+                match_value = match.get("utility", 0)
+            best_value = None
+            if target in best_matches:
+                best_value = best_matches[target].get("ground_truth_label")
+                if best_value is None:
+                    best_value = best_matches[target].get("utility", 0)
             if target in vertices and (
-                target not in best_matches or utility > best_matches[target]["utility"]
+                target not in best_matches or match_value > best_value
             ):
                 best_matches[target] = {
                     "recipient": target,
-                    "utility": utility,
+                    "utility": match.get("utility"),
                     "graft_survival_time": match.get("graft_survival_time"),
                     "qaly": match.get("qaly"),
+                    "medical_success_score": match.get("medical_success_score"),
                     "success_prob": match.get("success_prob"),
+                    "arc_failure_prob": match.get("arc_failure_prob"),
+                    "source_vertex_failure_prob": match.get("source_vertex_failure_prob"),
+                    "target_vertex_failure_prob": match.get("target_vertex_failure_prob"),
+                    "expected_transplant_count": match.get("expected_transplant_count"),
+                    "recipient_in_degree": match.get("recipient_in_degree"),
+                    "donor_out_degree": match.get("donor_out_degree"),
+                    "target_scarcity": match.get("target_scarcity"),
+                    "donor_flexibility": match.get("donor_flexibility"),
+                    "has_reciprocal_edge": match.get("has_reciprocal_edge"),
+                    "priority_multiplier": match.get("priority_multiplier"),
                     "ground_truth_label": match.get("ground_truth_label"),
                     "donor_age": match.get("donor_age"),
                     "donor_bt": match.get("donor_bt"),
@@ -365,8 +649,7 @@ def build_processed_payload(input_file):
             "original_file": input_file.name,
             "total_vertices": len(final_vertices),
             "structure": "Unified Pair/NDD Graph",
-            "ground_truth_noise_sigma": GROUND_TRUTH_NOISE_SIGMA,
-            "ground_truth_noise_mode": GROUND_TRUTH_NOISE_MODE,
+            **processing_config(),
         },
         "data": final_vertices,
     }
@@ -393,7 +676,17 @@ def collect_processed_payload_metrics(payload, file_name):
     outgoing_matches_per_vertex = []
     utility_values = []
     qaly_values = []
+    medical_success_score_values = []
     success_prob_values = []
+    arc_failure_prob_values = []
+    expected_transplant_count_values = []
+    vertex_failure_prob_values = []
+    recipient_in_degree_values = []
+    donor_out_degree_values = []
+    target_scarcity_values = []
+    donor_flexibility_values = []
+    reciprocal_edge_values = []
+    priority_multiplier_values = []
     ground_truth_values = []
 
     for vertex in data.values():
@@ -401,6 +694,7 @@ def collect_processed_payload_metrics(payload, file_name):
         matches = vertex.get("matches", []) or []
         outgoing_matches_per_vertex.append(len(matches))
         edge_count += len(matches)
+        vertex_failure_prob_values.append(parse_numeric(vertex.get("vertex_failure_prob")))
 
         if vertex_type == "Pair":
             pair_count += 1
@@ -411,7 +705,16 @@ def collect_processed_payload_metrics(payload, file_name):
         for match in matches:
             utility_values.append(parse_numeric(match.get("utility")))
             qaly_values.append(parse_numeric(match.get("qaly")))
+            medical_success_score_values.append(parse_numeric(match.get("medical_success_score")))
             success_prob_values.append(parse_numeric(match.get("success_prob")))
+            arc_failure_prob_values.append(parse_numeric(match.get("arc_failure_prob")))
+            expected_transplant_count_values.append(parse_numeric(match.get("expected_transplant_count")))
+            recipient_in_degree_values.append(parse_numeric(match.get("recipient_in_degree")))
+            donor_out_degree_values.append(parse_numeric(match.get("donor_out_degree")))
+            target_scarcity_values.append(parse_numeric(match.get("target_scarcity")))
+            donor_flexibility_values.append(parse_numeric(match.get("donor_flexibility")))
+            reciprocal_edge_values.append(1.0 if match.get("has_reciprocal_edge") else 0.0)
+            priority_multiplier_values.append(parse_numeric(match.get("priority_multiplier")))
             ground_truth_values.append(parse_numeric(match.get("ground_truth_label")))
 
     return {
@@ -430,7 +733,17 @@ def collect_processed_payload_metrics(payload, file_name):
         "outgoing_matches_per_vertex_values": outgoing_matches_per_vertex,
         "utility_values": utility_values,
         "qaly_values": qaly_values,
+        "medical_success_score_values": medical_success_score_values,
         "success_prob_values": success_prob_values,
+        "arc_failure_prob_values": arc_failure_prob_values,
+        "expected_transplant_count_values": expected_transplant_count_values,
+        "vertex_failure_prob_values": vertex_failure_prob_values,
+        "recipient_in_degree_values": recipient_in_degree_values,
+        "donor_out_degree_values": donor_out_degree_values,
+        "target_scarcity_values": target_scarcity_values,
+        "donor_flexibility_values": donor_flexibility_values,
+        "reciprocal_edge_values": reciprocal_edge_values,
+        "priority_multiplier_values": priority_multiplier_values,
         "ground_truth_values": ground_truth_values,
     }
 
@@ -526,8 +839,7 @@ def build_run_info(
             "failed_count": len(failed_outputs),
         },
         "processing_config": {
-            "ground_truth_noise_sigma": GROUND_TRUTH_NOISE_SIGMA,
-            "ground_truth_noise_mode": GROUND_TRUTH_NOISE_MODE,
+            **processing_config(),
         },
         "raw_artifacts": raw_artifacts,
         "artifacts": {
@@ -578,7 +890,17 @@ def build_batch_summary(
     outgoing_matches_per_vertex = []
     utility_values = []
     qaly_values = []
+    medical_success_score_values = []
     success_prob_values = []
+    arc_failure_prob_values = []
+    expected_transplant_count_values = []
+    vertex_failure_prob_values = []
+    recipient_in_degree_values = []
+    donor_out_degree_values = []
+    target_scarcity_values = []
+    donor_flexibility_values = []
+    reciprocal_edge_values = []
+    priority_multiplier_values = []
     ground_truth_values = []
 
     for output_name in processed_output_names:
@@ -611,7 +933,17 @@ def build_batch_summary(
         outgoing_matches_per_vertex.extend(metrics["outgoing_matches_per_vertex_values"])
         utility_values.extend(metrics["utility_values"])
         qaly_values.extend(metrics["qaly_values"])
+        medical_success_score_values.extend(metrics["medical_success_score_values"])
         success_prob_values.extend(metrics["success_prob_values"])
+        arc_failure_prob_values.extend(metrics["arc_failure_prob_values"])
+        expected_transplant_count_values.extend(metrics["expected_transplant_count_values"])
+        vertex_failure_prob_values.extend(metrics["vertex_failure_prob_values"])
+        recipient_in_degree_values.extend(metrics["recipient_in_degree_values"])
+        donor_out_degree_values.extend(metrics["donor_out_degree_values"])
+        target_scarcity_values.extend(metrics["target_scarcity_values"])
+        donor_flexibility_values.extend(metrics["donor_flexibility_values"])
+        reciprocal_edge_values.extend(metrics["reciprocal_edge_values"])
+        priority_multiplier_values.extend(metrics["priority_multiplier_values"])
         ground_truth_values.extend(metrics["ground_truth_values"])
 
     if failed_outputs:
@@ -659,8 +991,7 @@ def build_batch_summary(
         "parameters": {
             "cli_args": vars(args),
             "processing_config": {
-                "ground_truth_noise_sigma": GROUND_TRUTH_NOISE_SIGMA,
-                "ground_truth_noise_mode": GROUND_TRUTH_NOISE_MODE,
+                **processing_config(),
             },
             "raw_config": raw_config,
             "raw_effective_config": raw_effective_config,
@@ -685,7 +1016,17 @@ def build_batch_summary(
                 "outgoing_matches_per_vertex": summarize_numeric(outgoing_matches_per_vertex, 4),
                 "utility": summarize_numeric(utility_values, 4),
                 "qaly": summarize_numeric(qaly_values, 4),
+                "medical_success_score": summarize_numeric(medical_success_score_values, 4),
                 "success_prob": summarize_numeric(success_prob_values, 4),
+                "arc_failure_prob": summarize_numeric(arc_failure_prob_values, 4),
+                "expected_transplant_count": summarize_numeric(expected_transplant_count_values, 4),
+                "vertex_failure_prob": summarize_numeric(vertex_failure_prob_values, 4),
+                "recipient_in_degree": summarize_numeric(recipient_in_degree_values, 4),
+                "donor_out_degree": summarize_numeric(donor_out_degree_values, 4),
+                "target_scarcity": summarize_numeric(target_scarcity_values, 4),
+                "donor_flexibility": summarize_numeric(donor_flexibility_values, 4),
+                "has_reciprocal_edge": summarize_numeric(reciprocal_edge_values, 4),
+                "priority_multiplier": summarize_numeric(priority_multiplier_values, 4),
                 "ground_truth_label": summarize_numeric(ground_truth_values, 4),
             },
         },
@@ -764,7 +1105,17 @@ def render_batch_report(summary):
             f"- Outgoing matches per vertex: mean `{format_value(aggregate['population_level']['outgoing_matches_per_vertex']['mean'])}`, median `{format_value(aggregate['population_level']['outgoing_matches_per_vertex']['median'])}`",
             f"- Utility: mean `{format_value(aggregate['population_level']['utility']['mean'])}`, p25 `{format_value(aggregate['population_level']['utility']['p25'])}`, median `{format_value(aggregate['population_level']['utility']['median'])}`, p75 `{format_value(aggregate['population_level']['utility']['p75'])}`",
             f"- QALY: mean `{format_value(aggregate['population_level']['qaly']['mean'])}`, p25 `{format_value(aggregate['population_level']['qaly']['p25'])}`, median `{format_value(aggregate['population_level']['qaly']['median'])}`, p75 `{format_value(aggregate['population_level']['qaly']['p75'])}`",
-            f"- Success probability: mean `{format_value(aggregate['population_level']['success_prob']['mean'])}`, p25 `{format_value(aggregate['population_level']['success_prob']['p25'])}`, median `{format_value(aggregate['population_level']['success_prob']['median'])}`, p75 `{format_value(aggregate['population_level']['success_prob']['p75'])}`",
+            f"- Medical success score: mean `{format_value(aggregate['population_level']['medical_success_score']['mean'])}`, p25 `{format_value(aggregate['population_level']['medical_success_score']['p25'])}`, median `{format_value(aggregate['population_level']['medical_success_score']['median'])}`, p75 `{format_value(aggregate['population_level']['medical_success_score']['p75'])}`",
+            f"- Arc success probability: mean `{format_value(aggregate['population_level']['success_prob']['mean'])}`, p25 `{format_value(aggregate['population_level']['success_prob']['p25'])}`, median `{format_value(aggregate['population_level']['success_prob']['median'])}`, p75 `{format_value(aggregate['population_level']['success_prob']['p75'])}`",
+            f"- Arc failure probability: mean `{format_value(aggregate['population_level']['arc_failure_prob']['mean'])}`, p25 `{format_value(aggregate['population_level']['arc_failure_prob']['p25'])}`, median `{format_value(aggregate['population_level']['arc_failure_prob']['median'])}`, p75 `{format_value(aggregate['population_level']['arc_failure_prob']['p75'])}`",
+            f"- Vertex failure probability: mean `{format_value(aggregate['population_level']['vertex_failure_prob']['mean'])}`, p25 `{format_value(aggregate['population_level']['vertex_failure_prob']['p25'])}`, median `{format_value(aggregate['population_level']['vertex_failure_prob']['median'])}`, p75 `{format_value(aggregate['population_level']['vertex_failure_prob']['p75'])}`",
+            f"- Expected transplant count: mean `{format_value(aggregate['population_level']['expected_transplant_count']['mean'])}`, p25 `{format_value(aggregate['population_level']['expected_transplant_count']['p25'])}`, median `{format_value(aggregate['population_level']['expected_transplant_count']['median'])}`, p75 `{format_value(aggregate['population_level']['expected_transplant_count']['p75'])}`",
+            f"- Recipient in-degree: mean `{format_value(aggregate['population_level']['recipient_in_degree']['mean'])}`, p25 `{format_value(aggregate['population_level']['recipient_in_degree']['p25'])}`, median `{format_value(aggregate['population_level']['recipient_in_degree']['median'])}`, p75 `{format_value(aggregate['population_level']['recipient_in_degree']['p75'])}`",
+            f"- Donor out-degree: mean `{format_value(aggregate['population_level']['donor_out_degree']['mean'])}`, p25 `{format_value(aggregate['population_level']['donor_out_degree']['p25'])}`, median `{format_value(aggregate['population_level']['donor_out_degree']['median'])}`, p75 `{format_value(aggregate['population_level']['donor_out_degree']['p75'])}`",
+            f"- Target scarcity: mean `{format_value(aggregate['population_level']['target_scarcity']['mean'])}`, p25 `{format_value(aggregate['population_level']['target_scarcity']['p25'])}`, median `{format_value(aggregate['population_level']['target_scarcity']['median'])}`, p75 `{format_value(aggregate['population_level']['target_scarcity']['p75'])}`",
+            f"- Donor flexibility: mean `{format_value(aggregate['population_level']['donor_flexibility']['mean'])}`, p25 `{format_value(aggregate['population_level']['donor_flexibility']['p25'])}`, median `{format_value(aggregate['population_level']['donor_flexibility']['median'])}`, p75 `{format_value(aggregate['population_level']['donor_flexibility']['p75'])}`",
+            f"- Reciprocal edge ratio: mean `{format_value(aggregate['population_level']['has_reciprocal_edge']['mean'])}`",
+            f"- Priority multiplier: mean `{format_value(aggregate['population_level']['priority_multiplier']['mean'])}`, p25 `{format_value(aggregate['population_level']['priority_multiplier']['p25'])}`, median `{format_value(aggregate['population_level']['priority_multiplier']['median'])}`, p75 `{format_value(aggregate['population_level']['priority_multiplier']['p75'])}`",
             f"- Ground-truth label: mean `{format_value(aggregate['population_level']['ground_truth_label']['mean'])}`, p25 `{format_value(aggregate['population_level']['ground_truth_label']['p25'])}`, median `{format_value(aggregate['population_level']['ground_truth_label']['median'])}`, p75 `{format_value(aggregate['population_level']['ground_truth_label']['p75'])}`",
             "",
             "## Processing Outcome",

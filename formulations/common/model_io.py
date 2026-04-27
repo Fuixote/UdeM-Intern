@@ -3,6 +3,8 @@ import torch
 
 from model.model_structure import (
     EDGE_RAW_DIM,
+    FAILURE_CONTEXT_DIM,
+    LR_SMALL_FEATURE_DIM,
     NODE_FEATURE_DIM,
     KidneyEdgePredictor,
     build_tabular_regression_model,
@@ -12,7 +14,7 @@ from model.model_structure import (
 
 def normalize_feature_mode(feature_mode):
     mode = (feature_mode or "full").strip().lower()
-    if mode not in {"full", "utility_cpra"}:
+    if mode not in {"full", "utility_cpra", "failure_context", "lr_small"}:
         raise ValueError(f"Unsupported tabular feature mode: {feature_mode}")
     return mode
 
@@ -20,15 +22,29 @@ def normalize_feature_mode(feature_mode):
 def default_feature_mode_for_family(model_family, feature_mode=None):
     if feature_mode is not None:
         return normalize_feature_mode(feature_mode)
-    return "utility_cpra" if model_family == "lr" else "full"
+    return "lr_small" if model_family == "lr" else "full"
 
 
 def infer_feature_mode_from_input_dim(input_dim):
-    return "utility_cpra" if int(input_dim) == 2 else "full"
+    input_dim = int(input_dim)
+    if input_dim == 2:
+        return "utility_cpra"
+    if input_dim == LR_SMALL_FEATURE_DIM:
+        return "lr_small"
+    if input_dim == FAILURE_CONTEXT_DIM:
+        return "failure_context"
+    return "full"
 
 
 def tabular_input_dim(feature_mode):
-    return 2 if normalize_feature_mode(feature_mode) == "utility_cpra" else NODE_FEATURE_DIM * 2 + EDGE_RAW_DIM
+    mode = normalize_feature_mode(feature_mode)
+    if mode == "utility_cpra":
+        return 2
+    if mode == "lr_small":
+        return LR_SMALL_FEATURE_DIM
+    if mode == "failure_context":
+        return FAILURE_CONTEXT_DIM
+    return NODE_FEATURE_DIM * 2 + EDGE_RAW_DIM
 
 
 def infer_model_type(summary_content, state_dict):
@@ -139,6 +155,18 @@ def predict_edge_weights(graph_data, model, model_type):
             utility = edge_attr_for_model[:, :1]
             recipient_cpra = x[dst, 1:2]
             edge_features = torch.cat([utility, recipient_cpra], dim=-1)
+        elif feature_mode == "lr_small":
+            utility = edge_attr_for_model[:, :1]
+            recipient_cpra = x[dst, 1:2]
+            source_donor_age = x[src, 7:8]
+            edge_features = torch.cat([utility, recipient_cpra, source_donor_age], dim=-1)
+        elif feature_mode == "failure_context":
+            if "edge_context" not in graph_data:
+                raise ValueError(
+                    "failure_context checkpoint requires graph_data['edge_context']. "
+                    "Regenerate processed data with the current 1-data-processing.py."
+                )
+            edge_features = graph_data["edge_context"]
         else:
             edge_features = torch.cat([x[src], x[dst], edge_attr_for_model], dim=-1)
         return model(edge_features).numpy()

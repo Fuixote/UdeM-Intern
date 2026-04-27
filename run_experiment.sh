@@ -62,10 +62,19 @@ Commands:
   2stg-reg
       Run stage-1 Reg training (MLP tabular regression), then stage-2 hybrid
       (CF-cycle + PIEF-chain) solving on the latest checkpoint.
+      Use --train_size <int> to train on only the first N graphs sampled from
+      the 60% training split.
 
   2stg-lr
       Run stage-1 LR training (linear tabular regression), then stage-2 hybrid
       (CF-cycle + PIEF-chain) solving on the latest checkpoint.
+      Use --train_size <int> to train on only the first N graphs sampled from
+      the 60% training split.
+
+  2stg-dfl-lr
+      Run stage-1 LR training, stage-2 solving, then end-to-end LR training
+      warm-started from the newly created stage-1 LR checkpoint.
+      Example: ./run_experiment.sh 2stg-dfl-lr --data_dir dataset/processed/<batch_name> --train_size 20
 
   dfl-gnn [--pretrain_PATH <2stg_gnn_checkpoint>] [dfl args...]
       Run end-to-end GNN training with the hybrid formulation by default.
@@ -76,6 +85,7 @@ Commands:
   dfl-reg [--pretrain_PATH <2stg_reg_checkpoint>] [dfl args...]
       Run end-to-end MLP training with the hybrid formulation by default.
       If --pretrain_PATH is omitted, train from scratch with a deterministic 60/20/20 split.
+      Use --train_size <int> to train on only a subset of the training split.
       Example: ./run_experiment.sh dfl-reg --data_dir dataset/processed/<batch_name> --pretrain_PATH results/2stg_Reg_<timestamp>/best_stage1_model_real.pth
       Example: ./run_experiment.sh dfl-reg --data_dir dataset/processed/<batch_name>
 
@@ -83,6 +93,7 @@ Commands:
       Run end-to-end linear regression training with the hybrid formulation by
       default. If --pretrain_PATH is omitted, train from scratch with a
       deterministic 60/20/20 split.
+      Use --train_size <int> to train on only a subset of the training split.
 
   2stg-gnn-cf
       Run stage-1 GNN training, then stage-2 CF Gurobi solving on the latest checkpoint.
@@ -177,6 +188,7 @@ run_cmd() {
     if [ "$DRY_RUN" -eq 0 ]; then
         "$@"
     fi
+    return 0
 }
 
 run_python() {
@@ -427,15 +439,15 @@ REQUESTED_SOLVER=""
 ALIAS_SOLVER=""
 
 case "$COMMAND" in
-    2stg-gnn-cf|2stg-reg-cf|2stg-lr-cf|dfl-gnn-cf|dfl-reg-cf|dfl-lr-cf)
+    2stg-gnn-cf|2stg-reg-cf|2stg-lr-cf|dfl-gnn-cf|dfl-reg-cf|dfl-lr-cf|2stg-dfl-lr-cf)
         ALIAS_SOLVER="cf"
         COMMAND="${COMMAND%-cf}"
         ;;
-    2stg-gnn-pief|2stg-reg-pief|2stg-lr-pief|dfl-gnn-pief|dfl-reg-pief|dfl-lr-pief)
+    2stg-gnn-pief|2stg-reg-pief|2stg-lr-pief|dfl-gnn-pief|dfl-reg-pief|dfl-lr-pief|2stg-dfl-lr-pief)
         ALIAS_SOLVER="pief"
         COMMAND="${COMMAND%-pief}"
         ;;
-    2stg-gnn-hybrid|2stg-reg-hybrid|2stg-lr-hybrid|dfl-gnn-hybrid|dfl-reg-hybrid|dfl-lr-hybrid)
+    2stg-gnn-hybrid|2stg-reg-hybrid|2stg-lr-hybrid|dfl-gnn-hybrid|dfl-reg-hybrid|dfl-lr-hybrid|2stg-dfl-lr-hybrid)
         ALIAS_SOLVER="hybrid"
         COMMAND="${COMMAND%-hybrid}"
         ;;
@@ -462,6 +474,10 @@ case "$COMMAND" in
     dfl-lr-cf-piefchain)
         ALIAS_SOLVER="hybrid"
         COMMAND="dfl-lr"
+        ;;
+    2stg-dfl-lr-cf-piefchain)
+        ALIAS_SOLVER="hybrid"
+        COMMAND="2stg-dfl-lr"
         ;;
 esac
 
@@ -491,7 +507,7 @@ case "$COMMAND" in
         stage2_script="$(stage2_solver_entrypoint "$solver_name")"
         resolved_processed_dir="$(resolve_processed_data_dir "$PROCESSED_DATA_DIR")"
         mapfile -d '' -t stage1_args < <(stage1_epoch_args)
-        run_python 2-stage1-training-Reg.py --data_dir "$resolved_processed_dir" --results_root "$RESULTS_ROOT" "${stage1_args[@]}"
+        run_python 2-stage1-training-Reg.py --data_dir "$resolved_processed_dir" --results_root "$RESULTS_ROOT" "${stage1_args[@]}" "$@"
         model_path="$(latest_checkpoint "2stg_Reg_" "best_stage1_model_real.pth")"
         log "Using latest checkpoint: $model_path"
         run_python "$stage2_script" --model_path "$model_path" --data_dir "$resolved_processed_dir" --results_root "$RESULTS_ROOT" --solutions_root "$SOLUTIONS_ROOT"
@@ -501,10 +517,23 @@ case "$COMMAND" in
         stage2_script="$(stage2_solver_entrypoint "$solver_name")"
         resolved_processed_dir="$(resolve_processed_data_dir "$PROCESSED_DATA_DIR")"
         mapfile -d '' -t stage1_args < <(stage1_epoch_args)
-        run_python 2-stage1-training-LR.py --data_dir "$resolved_processed_dir" --results_root "$RESULTS_ROOT" "${stage1_args[@]}"
+        run_python 2-stage1-training-LR.py --data_dir "$resolved_processed_dir" --results_root "$RESULTS_ROOT" "${stage1_args[@]}" "$@"
         model_path="$(latest_checkpoint "2stg_LR_" "best_stage1_model_real.pth")"
         log "Using latest checkpoint: $model_path"
         run_python "$stage2_script" --model_path "$model_path" --data_dir "$resolved_processed_dir" --results_root "$RESULTS_ROOT" --solutions_root "$SOLUTIONS_ROOT"
+        ;;
+    2stg-dfl-lr)
+        solver_name="$(resolve_command_solver "hybrid" "$ALIAS_SOLVER")"
+        stage2_script="$(stage2_solver_entrypoint "$solver_name")"
+        dfl_script="$(dfl_reg_entrypoint "$solver_name")"
+        resolved_processed_dir="$(resolve_processed_data_dir "$PROCESSED_DATA_DIR")"
+        mapfile -d '' -t stage1_args < <(stage1_epoch_args)
+        run_python 2-stage1-training-LR.py --data_dir "$resolved_processed_dir" --results_root "$RESULTS_ROOT" "${stage1_args[@]}" "$@"
+        model_path="$(latest_checkpoint "2stg_LR_" "best_stage1_model_real.pth")"
+        log "Using latest checkpoint: $model_path"
+        run_python "$stage2_script" --model_path "$model_path" --data_dir "$resolved_processed_dir" --results_root "$RESULTS_ROOT" --solutions_root "$SOLUTIONS_ROOT"
+        log "Warm-starting dfl-lr from: $model_path"
+        run_python "$dfl_script" "$@" --model_family lr --pretrain_PATH "$model_path" --data_dir "$resolved_processed_dir" --results_root "$RESULTS_ROOT" --solutions_root "$SOLUTIONS_ROOT"
         ;;
     dfl-gnn)
         solver_name="$(resolve_command_solver "hybrid" "$ALIAS_SOLVER")"

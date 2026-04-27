@@ -203,9 +203,9 @@ where $\lambda>0$ and $\alpha_u>0$ are fixed constants chosen to keep the utilit
 Finally, the supervised edge label is computed as the nonnegative noisy product of success probability and QALY:
 \[
 w_{\text{true}}
-=\max\!\left\{0,\ P_{\mathrm{succ}}(u,c)\,\mathrm{QALY}(u,a_d)\,(1+\varepsilon)\right\},
+=\max\!\left\{0,\ P_{\mathrm{succ}}(u,c)\,\mathrm{QALY}(u,a_d)\,(1+\xi)\right\},
 \qquad
-\varepsilon\sim\mathcal{N}(0,\sigma^2),\ \sigma=0.15.
+\xi\sim\mathcal{N}(0,\sigma^2),\ \sigma=0.15.
 \]
 \paragraph{Remark.}
 As an example of a clinically grounded edge-benefit component, \citet{massie2016risk} use the living kidney donor profile index (LKDPI), which depends on both donor and recipient characteristics:
@@ -287,7 +287,7 @@ As an upper-bound reference, we solve each instance with ground-truth edge weigh
 \subsubsection{Training Protocol}
 
 \paragraph{Hyperparameters}
-For all experiments, we use a fixed random seed of 42 and split the dataset into 60\% training, 20\% validation, and 20\% test instances. In the two-stage setting, both predictors are trained with Adam for 50 epochs using a learning rate of $10^{-3}$ and batch size 8. The MLP baseline takes 27-dimensional edge inputs and uses hidden dimensions $27 \rightarrow 256 \rightarrow 128 \rightarrow 64 \rightarrow 1$. The GNN uses node feature dimension 13, edge feature dimension 1, hidden size 64, three directed edge-convolution layers, and an MLP decoder of dimensions $64 \rightarrow 64 \rightarrow 64 \rightarrow 32 \rightarrow 1$. In end-to-end DFL training, we use Adam with learning rate $5 \times 10^{-4}$, batch size 1, and 10 training epochs. The perturbed optimizer uses initial noise scale $\epsilon_0 = 0.5$, exponential decay $\epsilon_t = \epsilon_0 \cdot 0.95^{t-1}$, and $M = 8$ perturbation samples. Ground-truth edge labels are normalized by a constant factor of $Y\_\text{SCALE} = 25.0$. All optimization calls are solved with Gurobi using one thread and a per-solve time limit of 10 seconds.
+For all experiments, we use a fixed random seed of 42 and split the dataset into 60\% training, 20\% validation, and 20\% test instances. In the two-stage setting, both predictors are trained with Adam for 50 epochs using a learning rate of $10^{-3}$ and batch size 8. The MLP baseline takes 27-dimensional edge inputs and uses hidden dimensions $27 \rightarrow 256 \rightarrow 128 \rightarrow 64 \rightarrow 1$. The GNN uses node feature dimension 13, edge feature dimension 1, hidden size 64, three directed edge-convolution layers, and an MLP decoder of dimensions $64 \rightarrow 64 \rightarrow 64 \rightarrow 32 \rightarrow 1$. In end-to-end DFL training, we use Adam with learning rate $10^{-4}$, batch size 1, and 10 training epochs. The perturbed optimizer uses initial noise scale $\epsilon_0 = 0.2$, exponential decay $\epsilon_t = \epsilon_0 \cdot 0.95^{t-1}$, and $M = 16$ perturbation samples. Ground-truth edge labels are normalized by a constant factor of $Y\_\text{SCALE} = 25.0$. All optimization calls are solved with Gurobi using one thread and a per-solve time limit of 10 seconds.
 
 \paragraph{Pre-training and warm start}
 Before end-to-end training, we first train the corresponding two-stage predictor using supervised regression. The learned stage-1 parameters are then used to initialize the end-to-end model as a warm start. Starting from this pretrained initialization allows us to test whether decision-focused learning provides additional gains beyond a strong supervised predictor. In addition, end-to-end training is computationally expensive because each update requires repeated calls to the combinatorial solver under perturbations. We nevertheless run end-to-end fine-tuning for 10 epochs to give the decision-focused objective more room to improve downstream decision quality.
@@ -303,12 +303,50 @@ In all settings, we save the best-performing checkpoint on the validation split 
 \paragraph{Inference and solver settings}
 At decision time, predicted edge weights are passed to a mixed-integer optimization model with disjointness constraints over candidate cycles/chains. During perturbed optimization in DFL training, we use deterministic single-thread solves and a fixed per-solve time limit of 10 seconds for stable throughput.
 
-For validation and test inference, we use deterministic decisions (i.e., no perturbation, typically $\epsilon=0$), so each instance is solved once with the learned predicted weights.
+For validation and test inference, we use deterministic decisions (i.e., no perturbation, typically $\epsilon_t=0$), so each instance is solved once with the learned predicted weights.
+
+\paragraph{Notation.}
+Table~\ref{tab:loss-notation} summarizes the main symbols used in the loss definitions below.
+
+\begin{table}[H]
+\centering
+\caption{Notation used in the loss-function definitions.}
+\label{tab:loss-notation}
+\begin{tabular}{@{}p{0.34\linewidth}p{0.58\linewidth}@{}}
+\toprule
+\textbf{Symbol} & \textbf{Meaning} \\
+\midrule
+\(\mA\) & Edge set of the current graph instance \\
+\(w\in\mathbb{R}^{|\mA|}\) & Generic edge-weight vector used as input to \(\mathcal{S}\), \(F_{\epsilon_t}\), and \(\mathcal{L}_{\mathrm{FY}}\) \\
+\(w(\theta)\in\mathbb{R}^{|\mA|}\) & Predicted edge-weight vector produced by model parameters \(\theta\) \\
+\(\mathbf w_{\mathrm{true}}\in\mathbb{R}^{|\mA|}\) & Ground-truth edge-weight vector \\
+\(\mathcal{Y}\subseteq\{0,1\}^{|\mA|}\) & Feasible set of binary edge-incidence decisions \\
+\(\mathcal{S}(\cdot)\) & Black-box KEP solver mapping weights to a feasible decision in \(\mathcal{Y}\) \\
+\(y(\theta)=\mathcal{S}(w(\theta))\) & Decision induced by the predicted weights \\
+\(y^\star=\mathcal{S}(\mathbf w_{\mathrm{true}})\) & Oracle decision under ground-truth weights \\
+\(\epsilon_t\) & Perturbation scale at training epoch \(t\) \\
+\(\mathbf z^{(m)}\sim\mathcal{N}(\mathbf 0,I)\) & i.i.d.\ Gaussian perturbation sample, \(m=1,\dots,M\) \\
+\(M\) & Number of Monte Carlo perturbation samples \\
+\(\Omega\) & Convex regularizer on \(\operatorname{conv}(\mathcal{Y})\) \\
+\(F_{\epsilon_t}(w)\) & Perturbed maximum under weights \(w\) and scale \(\epsilon_t\) \\
+\(y_{\epsilon_t}(w)\in\operatorname{conv}(\mathcal{Y})\) & Perturbed average decision, equal to \(\nabla_w F_{\epsilon_t}(w)\) \\
+\(\bar{y}_{\epsilon_t}(w(\theta))\) & Monte Carlo estimate of \(y_{\epsilon_t}(w(\theta))\) \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \subsubsection{Loss Functions}
 
 \paragraph{Two-stage supervised loss}
-For a graph instance with edge set \(\mA\), let \(\hat w_e\) denote the predicted weight of edge \(e\in\mA\), and let \(w_{\mathrm{true},e}\) denote its synthetic ground-truth label. Both the MLP and GNN two-stage predictors are trained with the same mean squared error objective:
+For a graph instance with edge set \(\mA\), let \(\hat w_e\) denote the predicted weight of edge \(e\in\mA\), and let \(w_{\mathrm{true},e}\) denote its synthetic ground-truth label. Let
+\[
+w(\theta)=\bigl(\hat w_e\bigr)_{e\in\mA}\in\mathbb{R}^{|\mA|}
+\]
+denote the vector of all predicted edge weights produced by a model with parameters \(\theta\), and let
+\[
+\mathbf w_{\mathrm{true}}=\bigl(w_{\mathrm{true},e}\bigr)_{e\in\mA}\in\mathbb{R}^{|\mA|}
+\]
+denote the corresponding ground-truth weight vector. Both the MLP and GNN two-stage predictors are trained with the same mean squared error objective:
 \[
 \mathcal{L}_{\mathrm{MSE}}(\theta)
 = \frac{1}{|\mA|} \sum_{e\in\mA} \bigl(\hat w_e - w_{\mathrm{true},e}\bigr)^2.
@@ -316,71 +354,172 @@ For a graph instance with edge set \(\mA\), let \(\hat w_e\) denote the predicte
 This loss is purely edge-wise: it improves prediction accuracy for individual transplant edges, but it does not explicitly account for how these predictions alter the final cycle/chain selection after combinatorial optimization.
 
 \paragraph{What end-to-end DFL actually optimizes}
-Let \(\hat{\mathbf w}_\theta\) denote the vector of predicted edge weights produced by a model with parameters \(\theta\), and let \(\mathcal{S}(\cdot)\) denote the black-box KEP solver returning the binary edge-incidence vector of the optimal exchange plan under a given weight vector. The downstream decision induced by the model is therefore
+Let \(\mathcal{S}(\cdot)\) denote the black-box KEP solver returning the binary edge-incidence vector of the optimal exchange plan under a given weight vector. We write
 \[
-\hat{\mathbf y}_\theta = \mathcal{S}(\hat{\mathbf w}_\theta).
+\mathcal{S}: \mathbb{R}^{|\mA|}\to\mathcal{Y},
+\qquad
+y(\theta)=\mathcal{S}(w(\theta)).
 \]
-The ideal end-to-end objective is to maximize the true value of the selected plan under the ground-truth edge weights \(\mathbf w_{\mathrm{true}}\):
+The ideal end-to-end objective is to maximize the true value of the selected plan under the ground-truth edge weights:
 \[
-\max_\theta \; \mathbf w_{\mathrm{true}}^\top \mathcal{S}(\hat{\mathbf w}_\theta).
+\max_\theta \; \mathbf w_{\mathrm{true}}^\top \mathcal{S}(w(\theta)).
 \]
 Equivalently, one may minimize the regret relative to the oracle plan
 \[
-\mathbf y^\star = \mathcal{S}(\mathbf w_{\mathrm{true}}),
+y^\star = \mathcal{S}(\mathbf w_{\mathrm{true}}),
 \]
 namely
 \[
 \mathcal{R}(\theta)
-= \mathbf w_{\mathrm{true}}^\top \mathbf y^\star
-- \mathbf w_{\mathrm{true}}^\top \mathcal{S}(\hat{\mathbf w}_\theta).
+= \mathbf w_{\mathrm{true}}^\top y^\star
+- \mathbf w_{\mathrm{true}}^\top y(\theta).
 \]
-This is the quantity we truly care about at test time. However, it is not directly suitable for gradient-based learning because \(\mathcal{S}(\cdot)\) is a discrete combinatorial optimizer: the map from \(\hat{\mathbf w}_\theta\) to the selected plan is piecewise constant, non-smooth, and effectively non-differentiable almost everywhere. We therefore train with surrogate losses whose gradients encourage lower downstream regret even though they do not optimize \(\mathcal{R}(\theta)\) exactly.
+This is the quantity we truly care about at test time. However, direct gradient-based optimization is blocked by the Jacobian of the discrete solver:
+\[
+\nabla_\theta \mathcal{R}(\theta)
+= -\,\mathbf w_{\mathrm{true}}^\top
+\underbrace{\frac{\partial \mathcal{S}(w(\theta))}{\partial w(\theta)}}_{\displaystyle =\,0\ \text{a.e.}}
+\cdot \frac{\partial w(\theta)}{\partial \theta}.
+\]
+Since \(\mathcal{S}(\cdot)\) is a piecewise-constant combinatorial optimizer, its Jacobian with respect to the input weights vanishes almost everywhere, so the exact regret objective is not directly trainable with standard backpropagation. We therefore train with surrogate losses whose gradients encourage lower downstream regret even though they do not optimize \(\mathcal{R}(\theta)\) exactly.
 
 \paragraph{Fenchel--Young surrogate (FY Loss)}
-For the Fenchel--Young approach, we smooth the decision map by perturbing the predicted weights and averaging the resulting solver outputs:
-\[
-\bar{\mathbf y}_{\epsilon_t}(\hat{\mathbf w})
-= \frac{1}{M}\sum_{m=1}^{M} \mathcal{S}\bigl(\hat{\mathbf w}+\epsilon_t \mathbf z^{(m)}\bigr),
-\qquad \mathbf z^{(m)}\sim \mathcal N(\mathbf 0, I).
-\]
-For each perturbation sample, define
-\[
-\mathbf y^{(m)} = \mathcal{S}(\hat{\mathbf w}+\epsilon_t \mathbf z^{(m)}).
-\]
-The resulting Monte Carlo Fenchel--Young surrogate used in our implementation is
-\[
-\mathcal{L}_{\mathrm{FY}}(\theta)
-= \frac{1}{M}\sum_{m=1}^{M}
-\left\langle
-\hat{\mathbf w}+\epsilon_t \mathbf z^{(m)},\; \operatorname{sg}(\mathbf y^{(m)})
-\right\rangle
-- \left\langle \hat{\mathbf w},\; \operatorname{sg}(\mathbf y^\star) \right\rangle,
-\]
-where \(\operatorname{sg}(\cdot)\) denotes a stop-gradient operator. Its gradient with respect to the predicted edge weights is
-\[
-\nabla_{\hat{\mathbf w}} \mathcal{L}_{\mathrm{FY}}
-= \bar{\mathbf y}_{\epsilon_t}(\hat{\mathbf w}) - \mathbf y^\star.
-\]
-Thus, FY training pushes the model so that the perturbed average decision induced by \(\hat{\mathbf w}\) moves closer to the oracle decision under \(\mathbf w_{\mathrm{true}}\). This follows the differentiable perturbed-optimizer framework of~\citet{berthet2020learning}.
 
-\paragraph{SPO\(^+\) surrogate}
-The SPO route starts from the same regret objective, but replaces it with a loss-augmented optimization surrogate. Define the loss-augmented decision
-\[
-\tilde{\mathbf y}
-= \arg\max_{\mathbf y\in\mathcal Y} (2\hat{\mathbf w}-\mathbf w_{\mathrm{true}})^\top \mathbf y.
-\]
-The SPO\(^+\) surrogate used in our implementation is equivalent, up to additive constants independent of \(\theta\), to
-\[
-\mathcal{L}_{\mathrm{SPO}^+}(\theta)
-= 2\,\hat{\mathbf w}^\top \bigl(\tilde{\mathbf y}-\mathbf y^\star\bigr).
-\]
-Its gradient with respect to \(\hat{\mathbf w}\) is proportional to
-\[
-\nabla_{\hat{\mathbf w}} \mathcal{L}_{\mathrm{SPO}^+}
-\propto \tilde{\mathbf y}-\mathbf y^\star.
-\]
-So unlike FY, which compares the oracle decision with a perturbed average of model-induced decisions, SPO\(^+\) compares the oracle decision with a loss-augmented adversarial decision. Intuitively, SPO\(^+\) penalizes prediction errors mainly when they are large enough to change the selected exchange plan and thereby hurt the final downstream objective.
+The fundamental obstacle to optimizing \(\mathcal{R}(\theta)\) directly is that
+\(\mathcal{S}(\cdot)\) is piecewise constant, so its Jacobian vanishes almost
+everywhere.  The Fenchel--Young approach resolves this by replacing the
+discrete decision map with a smoothed counterpart constructed via stochastic
+perturbation.
 
+\medskip
+\noindent\textbf{Perturbed maximizer.}
+For a temperature parameter \(\epsilon_t > 0\), define the \emph{perturbed
+maximum}
+\[
+  F_{\epsilon_t}(w)
+  \;=\;
+  \mathbb{E}_{\mathbf{z}\sim\mathcal{N}(\mathbf{0},I)}
+  \!\left[
+    \max_{y\in\mathcal{Y}}\,\langle w + \epsilon_t\,\mathbf{z},\,y\rangle
+  \right],
+\]
+and its gradient, the \emph{perturbed average decision},
+\[
+  y_{\epsilon_t}(w)
+  \;=\;
+  \nabla_{w} F_{\epsilon_t}(w)
+  \;=\;
+  \mathbb{E}_{\mathbf{z}\sim\mathcal{N}(\mathbf{0},I)}
+  \!\left[
+    \mathcal{S}(w + \epsilon_t\,\mathbf{z})
+  \right],
+\]
+where the exchange of gradient and expectation follows from the
+absolute-continuity of \(\mathcal{N}(\mathbf{0},I)\) and Danskin's theorem.
+Because \(\mathcal{N}(\mathbf{0},I)\) has positive density everywhere,
+\(y_{\epsilon_t}(w)\) is differentiable in \(w\) for all \(\epsilon_t>0\),
+and satisfies \(y_{\epsilon_t}(w)\to\mathcal{S}(w)\) as \(\epsilon_t\to 0\).
+
+\medskip
+\noindent\textbf{Fenchel--Young loss.}
+The smoothed maximum can be written as
+\[
+  F_{\epsilon_t}(w)
+  =
+  \max_{\mu\in\operatorname{conv}(\mathcal{Y})}
+  \bigl[\langle w,\mu\rangle-\epsilon_t\Omega(\mu)\bigr],
+\]
+so \(F_{\epsilon_t}\) is the Fenchel conjugate of \(\epsilon_t\Omega\). The
+Fenchel--Young inequality gives
+\[
+  \langle w,\,y^{\star}\rangle
+  \;\leq\;
+  F_{\epsilon_t}(w) + \epsilon_t\,\Omega(y^{\star}),
+\]
+with equality if and only if \(y^{\star}=y_{\epsilon_t}(w)\).  We define the
+\emph{Fenchel--Young loss} as the slack of this inequality:
+\[
+  \mathcal{L}_{\mathrm{FY}}(w;\,y^{\star})
+  \;=\;
+  F_{\epsilon_t}(w) + \epsilon_t\,\Omega(y^{\star})
+  - \langle w,\,y^{\star}\rangle
+  \;\geq\; 0,
+\]
+which vanishes if and only if \(y_{\epsilon_t}(w)=y^{\star}\), and
+whose gradient is
+\[
+  \nabla_{w}\,\mathcal{L}_{\mathrm{FY}}(w;\,y^{\star})
+  \;=\;
+  y_{\epsilon_t}(w) - y^{\star}.
+\]
+This gradient is informative whenever \(y_{\epsilon_t}(w)\neq y^{\star}\),
+resolving the vanishing-gradient problem of \(\mathcal{R}(\theta)\).
+
+\medskip
+\noindent\textbf{Monte Carlo approximation and linear proxy.}
+Because \(y_{\epsilon_t}(w(\theta))\) requires integrating over all
+perturbations, we approximate it by drawing \(M\) i.i.d.\ samples
+\(\mathbf{z}^{(m)}\sim\mathcal{N}(\mathbf{0},I)\) and solving the KEP under
+each perturbed weight vector:
+\[
+  y^{(m)}
+  \;=\;
+  \mathcal{S}\!\bigl(w(\theta)+\epsilon_t\,\mathbf{z}^{(m)}\bigr)
+  \;\in\;\mathcal{Y},
+  \qquad m=1,\dots,M.
+\]
+The Monte Carlo estimate
+\[
+  \bar{y}_{\epsilon_t}(w(\theta))
+  \;=\;
+  \frac{1}{M}\sum_{m=1}^{M} y^{(m)}
+  \;\approx\;
+  y_{\epsilon_t}(w(\theta))
+\]
+is an unbiased estimator of the perturbed average decision by the
+independence of the samples.
+
+Computing \(F_{\epsilon_t}(w(\theta))\) exactly is intractable, but since the
+term \(\epsilon_t\Omega(y^{\star})\) is constant in \(w(\theta)\), the
+gradient of \(\mathcal{L}_{\mathrm{FY}}\) is preserved by the linear proxy
+\[
+  \widetilde{\mathcal{L}}_{\mathrm{FY}}(\theta)
+  \;=\;
+  w(\theta)^{\!\top}
+  \bigl(\bar{y}_{\epsilon_t}(w(\theta)) - y^{\star}\bigr),
+\]
+where \(\bar{y}_{\epsilon_t}(w(\theta))\) and \(y^{\star}\) are treated as
+constants (stop-gradient) during differentiation with respect to \(\theta\).
+The resulting gradient with respect to the predicted weights is
+\[
+  \frac{\partial\,\widetilde{\mathcal{L}}_{\mathrm{FY}}}{\partial\,w(\theta)}
+  \;=\;
+  \bar{y}_{\epsilon_t}(w(\theta)) - y^{\star},
+\]
+which is an unbiased Monte Carlo estimate of
+\(\nabla_{w}\mathcal{L}_{\mathrm{FY}}\).  The gradient with respect to
+\(\theta\) is then obtained by backpropagating through \(w(\theta)\) via the
+chain rule:
+\[
+  \nabla_{\theta}\,\widetilde{\mathcal{L}}_{\mathrm{FY}}
+  \;=\;
+  \bigl(\bar{y}_{\epsilon_t}(w(\theta))-y^{\star}\bigr)^{\!\top}
+  \frac{\partial\,w(\theta)}{\partial\,\theta}.
+\]
+
+\medskip
+\noindent\textbf{Surrogate validity.}
+Minimizing \(\widetilde{\mathcal{L}}_{\mathrm{FY}}\) drives
+\(\bar{y}_{\epsilon_t}(w(\theta))\to y^{\star}\), which as \(\epsilon_t\to 0\)
+implies \(\mathcal{S}(w(\theta))\to y^{\star}\) and hence
+\(\mathcal{R}(\theta)\to 0\).  The two objectives share the same minimizer
+under ideal conditions, but in the misspecified setting studied here—where the
+linear predictor cannot exactly represent \(\mathbf w_{\mathrm{true}}\)—their
+landscape geometries differ, and their respective optima
+\(\theta^{*}_{\mathrm{FY}}\) and \(\theta^{*}_{\mathcal{R}}\) need not
+coincide.  This distinction is the theoretical motivation for our three-way
+empirical comparison.  The construction follows the differentiable
+perturbed-optimizer framework of~\citet{berthet2020learning}.
 \paragraph{Oracle reference}
 The oracle upper bound is not trained and therefore has no learning loss. Instead, it solves each instance directly with \(\mathbf w_{\mathrm{true}}\), providing the best achievable benchmark under the same optimization model.
 
