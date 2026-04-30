@@ -30,7 +30,12 @@ PROCESSED_METADATA_FILES = (
 )
 GROUND_TRUTH_NOISE_SIGMA = 0.08
 GROUND_TRUTH_NOISE_MODE = "deterministic_per_edge"
-GROUND_TRUTH_LABEL_MODE = "nonlinear_medical_expected_qaly_with_scarcity_priority"
+LABEL_MODE_REALISTIC_SYNTHETIC = "realistic_synthetic"
+LABEL_MODE_CLEAN_LINEAR_UTILITY_CPRA = "clean_linear_utility_cpra"
+LEGACY_REALISTIC_LABEL_MODE = "nonlinear_medical_expected_qaly_with_scarcity_priority"
+GROUND_TRUTH_LABEL_MODE = LABEL_MODE_REALISTIC_SYNTHETIC
+DEFAULT_CLEAN_LINEAR_UTILITY_WEIGHT = 10.0
+DEFAULT_CLEAN_LINEAR_CPRA_WEIGHT = 5.0
 ARC_FAILURE_PROB_RANGE = (0.02, 0.82)
 VERTEX_FAILURE_PROB_RANGE = (0.02, 0.50)
 
@@ -45,20 +50,20 @@ def round_or_none(value, digits=4):
     return round(float(value), digits)
 
 
-def parse_numeric(value):
+def parse_numeric(value, default=None):
     if isinstance(value, bool) or value is None:
-        return None
+        return default
     if isinstance(value, (int, float)):
         return float(value)
     if isinstance(value, str):
         stripped = value.strip()
         if not stripped:
-            return None
+            return default
         try:
             return float(stripped)
         except ValueError:
-            return None
-    return None
+            return default
+    return default
 
 
 def clamp(value, low, high):
@@ -173,10 +178,10 @@ def build_processed_batch_name(raw_batch_dir, started_at):
     return f"{timestamp_now(started_at)}__processed"
 
 
-def resolve_processed_batch_dir(raw_batch_dir, output_dir_arg, started_at):
+def resolve_processed_batch_dir(raw_batch_dir, output_dir_arg, started_at, output_as_batch_dir=False):
     if output_dir_arg:
         requested_path = resolve_path(output_dir_arg)
-        if is_batch_name(requested_path.name):
+        if output_as_batch_dir or is_batch_name(requested_path.name):
             return requested_path
         return requested_path / build_processed_batch_name(raw_batch_dir, started_at)
     return resolve_path(PROCESSED_DATA_DIR) / build_processed_batch_name(raw_batch_dir, started_at)
@@ -405,9 +410,37 @@ def compute_graph_context(raw_data):
     }
 
 
-def processing_config():
+def normalize_label_mode(label_mode):
+    if label_mode == LEGACY_REALISTIC_LABEL_MODE:
+        return LABEL_MODE_REALISTIC_SYNTHETIC
+    if label_mode in {LABEL_MODE_REALISTIC_SYNTHETIC, LABEL_MODE_CLEAN_LINEAR_UTILITY_CPRA}:
+        return label_mode
+    raise ValueError(f"Unsupported label mode: {label_mode}")
+
+
+def label_config_from_args(args):
     return {
-        "ground_truth_label_mode": GROUND_TRUTH_LABEL_MODE,
+        "label_mode": normalize_label_mode(args.label_mode),
+        "clean_linear_utility_weight": float(args.clean_linear_utility_weight),
+        "clean_linear_cpra_weight": float(args.clean_linear_cpra_weight),
+    }
+
+
+def processing_config(label_config=None):
+    label_config = label_config or {
+        "label_mode": GROUND_TRUTH_LABEL_MODE,
+        "clean_linear_utility_weight": DEFAULT_CLEAN_LINEAR_UTILITY_WEIGHT,
+        "clean_linear_cpra_weight": DEFAULT_CLEAN_LINEAR_CPRA_WEIGHT,
+    }
+    label_mode = normalize_label_mode(label_config["label_mode"])
+    clean_utility_weight = float(label_config["clean_linear_utility_weight"])
+    clean_cpra_weight = float(label_config["clean_linear_cpra_weight"])
+    config = {
+        "ground_truth_label_mode": label_mode,
+        "available_label_modes": [
+            LABEL_MODE_REALISTIC_SYNTHETIC,
+            LABEL_MODE_CLEAN_LINEAR_UTILITY_CPRA,
+        ],
         "ground_truth_noise_sigma": GROUND_TRUTH_NOISE_SIGMA,
         "ground_truth_noise_mode": GROUND_TRUTH_NOISE_MODE,
         "arc_failure_prob_range": list(ARC_FAILURE_PROB_RANGE),
@@ -426,6 +459,49 @@ def processing_config():
             "- 0.38*donor_flexibility*(1-target_scarcity), 0.65, 1.85)"
         ),
     }
+    if label_mode == LABEL_MODE_REALISTIC_SYNTHETIC:
+        config["label_formula"] = "expected_transplant_count * qaly * priority_multiplier * (1 + deterministic_noise)"
+    elif label_mode == LABEL_MODE_CLEAN_LINEAR_UTILITY_CPRA:
+        config.update(
+            {
+                "label_formula": "utility_weight * (utility / 100) + cpra_weight * recipient_cPRA",
+                "clean_linear_utility_weight": clean_utility_weight,
+                "clean_linear_cpra_weight": clean_cpra_weight,
+            }
+        )
+    return config
+
+
+def clean_linear_utility_cpra_label(utility, cpra, label_config):
+    utility_norm = clamp(numeric_or_default(utility, 0.0) / 100.0, 0.0, 1.0)
+    cpra_value = clamp(numeric_or_default(cpra, 0.0), 0.0, 1.0)
+    value = (
+        float(label_config["clean_linear_utility_weight"]) * utility_norm
+        + float(label_config["clean_linear_cpra_weight"]) * cpra_value
+    )
+    return round(max(0.0, value), 4)
+
+
+def compute_ground_truth_label(
+    label_config,
+    expected_transplant_count,
+    qaly,
+    priority_multiplier,
+    source_key,
+    utility,
+    cpra,
+):
+    label_mode = normalize_label_mode(label_config["label_mode"])
+    if label_mode == LABEL_MODE_REALISTIC_SYNTHETIC:
+        return get_ground_truth(
+            expected_transplant_count,
+            qaly,
+            priority_multiplier,
+            source_key,
+        )
+    if label_mode == LABEL_MODE_CLEAN_LINEAR_UTILITY_CPRA:
+        return clean_linear_utility_cpra_label(utility, cpra, label_config)
+    raise ValueError(f"Unsupported label mode: {label_mode}")
 
 
 def build_match_payload(
@@ -436,6 +512,7 @@ def build_match_payload(
     match,
     recipients_data,
     graph_context,
+    label_config,
 ):
     target = str(match["recipient"])
     d_age = match.get("donor_age")
@@ -504,11 +581,14 @@ def build_match_payload(
         "donor_flexibility": donor_flexibility,
         "has_reciprocal_edge": has_reciprocal_edge,
         "priority_multiplier": priority_multiplier,
-        "ground_truth_label": get_ground_truth(
+        "ground_truth_label": compute_ground_truth_label(
+            label_config,
             expected_transplant_count,
             qaly,
             priority_multiplier,
             source_key,
+            utility,
+            cpra,
         ),
         "donor_age": d_age,
         "donor_bt": donor_bt,
@@ -518,7 +598,7 @@ def build_match_payload(
     }
 
 
-def build_processed_payload(input_file):
+def build_processed_payload(input_file, label_config):
     with input_file.open("r", encoding="utf-8") as handle:
         data = json.load(handle)
 
@@ -553,6 +633,7 @@ def build_processed_payload(input_file):
                         match,
                         recipients_data,
                         graph_context,
+                        label_config,
                     )
                 )
         else:
@@ -595,6 +676,7 @@ def build_processed_payload(input_file):
                         match,
                         recipients_data,
                         graph_context,
+                        label_config,
                     )
                 )
 
@@ -603,16 +685,18 @@ def build_processed_payload(input_file):
         best_matches = {}
         for match in vertex_data.get("matches", []):
             target = match["recipient"]
-            match_value = match.get("ground_truth_label")
-            if match_value is None:
-                match_value = match.get("utility", 0)
-            best_value = None
+            match_utility = parse_numeric(match.get("utility"), 0.0)
+            best_utility = None
             if target in best_matches:
-                best_value = best_matches[target].get("ground_truth_label")
-                if best_value is None:
-                    best_value = best_matches[target].get("utility", 0)
+                best_utility = parse_numeric(best_matches[target].get("utility"), 0.0)
             if target in vertices and (
-                target not in best_matches or match_value > best_value
+                target not in best_matches
+                or match_utility > best_utility
+                or (
+                    match_utility == best_utility
+                    and str(match.get("donor_node_id", ""))
+                    < str(best_matches[target].get("donor_node_id", ""))
+                )
             ):
                 best_matches[target] = {
                     "recipient": target,
@@ -649,15 +733,15 @@ def build_processed_payload(input_file):
             "original_file": input_file.name,
             "total_vertices": len(final_vertices),
             "structure": "Unified Pair/NDD Graph",
-            **processing_config(),
+            **processing_config(label_config),
         },
         "data": final_vertices,
     }
 
 
-def write_processed_file(input_file, output_file):
+def write_processed_file(input_file, output_file, label_config):
     print(f"Processing {input_file} -> {output_file}")
-    payload = build_processed_payload(input_file)
+    payload = build_processed_payload(input_file, label_config)
     output_file.parent.mkdir(parents=True, exist_ok=True)
     with output_file.open("w", encoding="utf-8") as handle:
         json.dump(payload, handle, indent=2)
@@ -814,6 +898,7 @@ def build_run_info(
     processing_mode,
 ):
     raw_artifacts = collect_raw_artifacts(raw_batch_dir)
+    label_config = label_config_from_args(args)
     return {
         "generated_at": started_at.isoformat(timespec="seconds"),
         "finished_at": finished_at.isoformat(timespec="seconds"),
@@ -839,7 +924,7 @@ def build_run_info(
             "failed_count": len(failed_outputs),
         },
         "processing_config": {
-            **processing_config(),
+            **processing_config(label_config),
         },
         "raw_artifacts": raw_artifacts,
         "artifacts": {
@@ -865,6 +950,7 @@ def build_batch_summary(
     failed_outputs,
     processing_mode,
 ):
+    label_config = label_config_from_args(args)
     warnings = []
     raw_artifact_paths = collect_raw_artifacts(raw_batch_dir)
     raw_artifact_presence = {}
@@ -991,7 +1077,7 @@ def build_batch_summary(
         "parameters": {
             "cli_args": vars(args),
             "processing_config": {
-                **processing_config(),
+                **processing_config(label_config),
             },
             "raw_config": raw_config,
             "raw_effective_config": raw_effective_config,
@@ -1261,7 +1347,13 @@ def write_batch_artifacts(
 
 def process_explicit_batch(args, raw_batch_dir):
     started_at = datetime.now()
-    processed_batch_dir = resolve_processed_batch_dir(raw_batch_dir, args.output_dir, started_at)
+    label_config = label_config_from_args(args)
+    processed_batch_dir = resolve_processed_batch_dir(
+        raw_batch_dir,
+        args.output_dir,
+        started_at,
+        output_as_batch_dir=args.output_as_batch_dir,
+    )
     assessment = assess_batch(raw_batch_dir, processed_batch_dir)
     raw_files = assessment["raw_files"]
 
@@ -1310,7 +1402,7 @@ def process_explicit_batch(args, raw_batch_dir):
             continue
 
         try:
-            write_processed_file(raw_file, output_path)
+            write_processed_file(raw_file, output_path, label_config)
             newly_processed_output_names.append(output_name)
         except Exception as exc:
             failed_outputs.add(output_name)
@@ -1380,6 +1472,7 @@ def process_scan_mode(args, raw_root):
     repaired_count = 0
     skipped_count = 0
     failure_count = 0
+    label_config = label_config_from_args(args)
 
     for raw_batch_dir in raw_batches:
         started_at = datetime.now()
@@ -1419,7 +1512,7 @@ def process_scan_mode(args, raw_root):
             output_name = expected_output_name(raw_file)
             output_path = processed_batch_dir / output_name
             try:
-                write_processed_file(raw_file, output_path)
+                write_processed_file(raw_file, output_path, label_config)
                 newly_processed_output_names.append(output_name)
             except Exception as exc:
                 failed_outputs.add(output_name)
@@ -1490,6 +1583,36 @@ def parse_args():
         action="store_true",
         help="Rebuild selected outputs even if they already exist. Only valid with an explicit raw batch directory.",
     )
+    parser.add_argument(
+        "--label_mode",
+        choices=[LABEL_MODE_REALISTIC_SYNTHETIC, LABEL_MODE_CLEAN_LINEAR_UTILITY_CPRA, LEGACY_REALISTIC_LABEL_MODE],
+        default=LABEL_MODE_REALISTIC_SYNTHETIC,
+        help=(
+            "Ground-truth label generation mode. "
+            "'realistic_synthetic' uses the nonlinear medical reward; "
+            "'clean_linear_utility_cpra' uses a linear utility+cPRA reward."
+        ),
+    )
+    parser.add_argument(
+        "--clean_linear_utility_weight",
+        type=float,
+        default=DEFAULT_CLEAN_LINEAR_UTILITY_WEIGHT,
+        help="Coefficient a in clean label a*(utility/100)+b*cPRA.",
+    )
+    parser.add_argument(
+        "--clean_linear_cpra_weight",
+        type=float,
+        default=DEFAULT_CLEAN_LINEAR_CPRA_WEIGHT,
+        help="Coefficient b in clean label a*(utility/100)+b*cPRA.",
+    )
+    parser.add_argument(
+        "--output_as_batch_dir",
+        action="store_true",
+        help=(
+            "Treat output_dir as the final processed batch directory even when "
+            "its name is not timestamp-shaped. Useful for semantic dataset names."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -1500,6 +1623,9 @@ def main():
     raw_root = resolve_path(RAW_DATA_DIR)
 
     if explicit_input_dir is None or explicit_input_dir == raw_root:
+        if args.output_as_batch_dir:
+            print("Error: --output_as_batch_dir requires an explicit raw batch input_dir.")
+            return 1
         return process_scan_mode(args, raw_root)
 
     if not explicit_input_dir.exists() or not explicit_input_dir.is_dir():

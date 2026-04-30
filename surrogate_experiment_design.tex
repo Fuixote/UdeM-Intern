@@ -1,0 +1,278 @@
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{natbib}
+
+\input{math-macros.tex}
+
+\title{Experimental Roadmap for Validating Fenchel--Young Surrogates in Kidney Exchange}
+\author{Weikang}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Motivation}
+
+The purpose of the experiments is not only to compare decision-focused learning
+(DFL) against a two-stage predict-then-optimize pipeline, but also to establish
+whether the Fenchel--Young (FY) perturbed-optimizer loss
+\citep{berthet2020learning} is a meaningful surrogate for the true decision
+loss in our kidney exchange setting.
+
+This distinction matters because the realistic synthetic benchmark used in our
+main experiments has a complex reward mechanism. The ground-truth edge reward is
+not a simple linear function of utility, but a nonlinear product of transplant
+success probability, QALY, scarcity priority, graph-structural variables, and
+deterministic edge-level noise. Therefore, a direct comparison between DFL and a
+two-stage baseline on this benchmark alone cannot isolate the behavior of the
+surrogate loss. If DFL improves the final matching score, the improvement may be
+due to the surrogate, the choice of perturbation scale, the warm start, or model
+capacity. If DFL does not improve, the failure may instead be caused by model
+misspecification or an overly complex label-generation process.
+
+We therefore separate the experimental study into several layers, moving from a
+clean surrogate-validity test to the full realistic synthetic benchmark.
+
+\section{Experimental Roadmap}
+
+\subsection{Step 1: Surrogate Validity Under a Clean Linear Label}
+
+The first experiment should validate whether the FY loss is directionally aligned
+with the true regret in a controlled setting. We use a label-generation mechanism
+that is exactly representable by the prediction model:
+\[
+    w^{\mathrm{true}}_e = a u_e + b c_e,
+\]
+where \(u_e\) is the edge utility and \(c_e\) is the recipient cPRA associated
+with edge \(e\). The corresponding prediction model is
+\[
+    \hat w_e(\theta) = \theta_1 u_e + \theta_2 c_e.
+\]
+
+This setting removes model misspecification. If the FY surrogate is appropriate,
+its minimizer should lie in or near the low-regret region of the true decision
+loss landscape.
+
+The main diagnostic objects are:
+\begin{itemize}
+    \item the true regret landscape \(R(\theta_1,\theta_2)\);
+    \item the FY surrogate landscape \(L_{\mathrm{FY}}(\theta_1,\theta_2)\);
+    \item the two-stage MSE solution \(\theta^\star_{\mathrm{2s}}\);
+    \item the true oracle set
+    \[
+        \Theta^\star = \arg\min_{\theta} R(\theta);
+    \]
+    \item the FY minimizer
+    \[
+        \theta^\star_{\mathrm{FY}}(\epsilon)
+        =
+        \arg\min_{\theta} L_{\mathrm{FY},\epsilon}(\theta).
+    \]
+\end{itemize}
+
+The primary metric should be regret gap rather than parameter distance:
+\[
+    \Delta R(\epsilon)
+    =
+    R(\theta^\star_{\mathrm{FY}}(\epsilon))
+    -
+    \min_{\theta} R(\theta).
+\]
+This is important because the KEP solver is piecewise constant, so the true
+regret landscape often has an optimal plateau rather than a unique isolated
+minimizer. In such cases, parameter-space distance to one selected oracle point
+is not well-defined, whereas \(\Delta R\) remains meaningful.
+
+This step answers the question:
+
+\begin{quote}
+Does the FY surrogate point toward the true low-regret region when the predictive
+model is correctly specified?
+\end{quote}
+
+\subsection{Step 2: Controlled Model Misspecification}
+
+The second experiment should introduce a limited amount of misspecification.
+For example, the true reward may include an additional feature or interaction:
+\[
+    w^{\mathrm{true}}_e
+    =
+    a u_e + b c_e + d\,\mathrm{age}^{\mathrm{donor}}_e,
+\]
+or
+\[
+    w^{\mathrm{true}}_e
+    =
+    a u_e + b c_e + d\,u_e c_e.
+\]
+The prediction model can then be kept deliberately simpler:
+\[
+    \hat w_e(\theta) = \theta_1 u_e + \theta_2 c_e.
+\]
+
+This setting tests whether FY optimization is robust when the model cannot
+perfectly recover the edge rewards. The question is no longer whether FY can
+recover the true label function, but whether it can still produce better
+decisions than an MSE-trained predictor.
+
+The same landscape diagnostics should be reported:
+\[
+    R(\theta), \quad
+    L_{\mathrm{FY},\epsilon}(\theta), \quad
+    R(\theta^\star_{\mathrm{2s}}), \quad
+    R(\theta^\star_{\mathrm{FY}}), \quad
+    \Delta R.
+\]
+
+This step answers the question:
+
+\begin{quote}
+When the predictive model is misspecified, does the FY surrogate still move the
+parameters toward lower true regret than the two-stage MSE solution?
+\end{quote}
+
+\subsection{Step 3: Training-Level DFL vs Two-Stage Comparison}
+
+After the landscape-level surrogate diagnostics, we should run actual training
+experiments on the same controlled settings. Both methods should use the same
+train/validation/test split, the same model class, and the same KEP solver.
+
+The two-stage baseline first minimizes prediction error:
+\[
+    \min_{\theta}
+    \sum_{e}
+    \left(\hat w_e(\theta)-w^{\mathrm{true}}_e\right)^2,
+\]
+then solves the KEP using the predicted weights \(\hat \bw(\theta)\).
+
+The DFL model starts either from the two-stage checkpoint or from random
+initialization and then updates the predictor using the FY gradient estimate:
+\[
+    \nabla_{\hat \bw} L_{\mathrm{FY}}
+    \approx
+    \bar y_{\epsilon}(\hat \bw) - y^\star,
+\]
+where
+\[
+    \bar y_{\epsilon}(\hat \bw)
+    =
+    \frac{1}{M}
+    \sum_{m=1}^{M}
+    S(\hat \bw+\epsilon z^{(m)}),
+    \qquad
+    z^{(m)}\sim \mathcal{N}(0,I).
+\]
+
+The primary evaluation metric should be final achieved ground-truth score, or
+equivalently average regret:
+\[
+    R(\theta)
+    =
+    \frac{1}{N}
+    \sum_{i=1}^{N}
+    \left[
+        (\bw^i)^\top y^\star(\bw^i)
+        -
+        (\bw^i)^\top S(\hat \bw^i(\theta))
+    \right].
+\]
+
+This step answers the question:
+
+\begin{quote}
+Does the landscape-level alignment between FY and true regret translate into a
+training-level improvement over the two-stage baseline?
+\end{quote}
+
+\subsection{Step 4: Realistic Synthetic Benchmark}
+
+The final main benchmark should use the currently processed dataset, now named
+\texttt{dataset/processed/realistic\_synthetic\_benchmark}. This benchmark uses
+the nonlinear medical reward:
+\[
+    w^{\mathrm{true}}_e
+    =
+    E[\mathrm{transplant}]_e
+    \cdot
+    \mathrm{QALY}_e
+    \cdot
+    \mathrm{priority}_e
+    \cdot
+    (1+\xi_e).
+\]
+This label incorporates utility, recipient cPRA, donor and recipient age, blood
+type context, arc failure probability, vertex failure probability, scarcity,
+donor flexibility, reciprocal edges, and deterministic edge-level noise.
+
+This benchmark should be described as a realistic synthetic benchmark rather
+than a clean surrogate-identification experiment. Its role is to test whether
+the DFL pipeline improves exchange-plan quality in a richer synthetic
+environment.
+
+The interpretation should be careful:
+\begin{itemize}
+    \item If DFL improves over two-stage, this provides empirical evidence that
+    the FY-based pipeline can help in a complex KEP setting.
+    \item If DFL does not improve, this does not by itself prove that the FY
+    surrogate is invalid; the failure may come from model misspecification,
+    insufficient features, perturbation scale, or optimization instability.
+\end{itemize}
+
+This step answers the question:
+
+\begin{quote}
+Under a medically motivated synthetic reward model, does FY-based DFL improve
+the final kidney exchange objective compared with the two-stage pipeline?
+\end{quote}
+
+\subsection{Step 5: Sensitivity and Ablation Studies}
+
+The last layer should quantify which design choices affect the result. The most
+important ablations are:
+\begin{itemize}
+    \item perturbation scale \(\epsilon\);
+    \item number of perturbation samples \(M\);
+    \item warm start from the two-stage solution versus random initialization;
+    \item feature set: utility only, utility+cPRA, small linear features,
+    failure context features, and full features;
+    \item label noise on versus off;
+    \item solver formulation, such as CF, PIEF, and hybrid.
+\end{itemize}
+
+For the perturbation scale, it is important to distinguish absolute and relative
+noise. Since the KEP solver is an argmax, its output is invariant to positive
+rescaling of all weights. Therefore the effective smoothing strength is governed
+by the relative scale of the perturbation:
+\[
+    S(\hat \bw+\epsilon z)
+    =
+    S\left(\frac{\hat \bw}{\epsilon}+z\right).
+\]
+Thus, \(\epsilon\) should be interpreted relative to the scale of
+\(\hat \bw\). In the landscape plots, \(\epsilon\) may be calibrated relative to
+the MSE weight scale, while in end-to-end training it may be used as an absolute
+noise standard deviation. This difference should be reported explicitly.
+
+\section{Recommended Presentation Order}
+
+The final paper should present the experiments in the following order:
+\begin{enumerate}
+    \item clean linear surrogate-validity benchmark;
+    \item controlled misspecification benchmark;
+    \item training-level DFL versus two-stage comparison on controlled labels;
+    \item realistic synthetic benchmark;
+    \item epsilon, sample-size, feature-set, and initialization ablations.
+\end{enumerate}
+
+This ordering separates mechanism validation from final empirical performance.
+It allows the paper to make precise claims: first, whether the FY surrogate is
+aligned with true regret under controlled conditions; second, whether this
+alignment survives moderate misspecification; and finally, whether it yields
+practical improvements on the realistic synthetic KEP benchmark.
+
+\bibliographystyle{plainnat}
+\bibliography{ref}
+
+\end{document}

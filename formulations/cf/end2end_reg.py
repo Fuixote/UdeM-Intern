@@ -81,7 +81,7 @@ def normalize_feature_mode(feature_mode):
 def default_feature_mode_for_family(model_family, feature_mode=None):
     if feature_mode is not None:
         return normalize_feature_mode(feature_mode)
-    return "lr_small" if normalize_tabular_model_family(model_family) == "lr" else "full"
+    return "utility_cpra" if normalize_tabular_model_family(model_family) == "lr" else "full"
 
 
 def infer_feature_mode_from_input_dim(input_dim):
@@ -415,14 +415,15 @@ def pretrain_timestamp_from_path(pretrain_path):
 # ==========================================
 # 3. 训练主流程
 # ==========================================
-def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_root=None, model_family="mlp", feature_mode=None, train_size=None):
+def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_root=None,
+              model_family="mlp", feature_mode=None, train_size=None, epsilon_init=None):
     model_family = normalize_tabular_model_family(model_family)
     feature_mode = default_feature_mode_for_family(model_family, feature_mode)
     input_dim = tabular_input_dim(feature_mode)
     DEVICE        = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     LR            = 5e-4
     EPOCHS        = 10
-    EPSILON_INIT  = 0.2
+    EPSILON_INIT  = float(epsilon_init) if epsilon_init is not None else 2.0
     M_SAMPLES     = 8       # 扰动采样次数，越高梯度估计越稳定但越慢；forward 需 M 次求解
     DATA_DIR      = str(resolve_path(data_dir or PROCESSED_DATA_DIR))
     STRICT_REPRODUCIBILITY = True
@@ -488,7 +489,8 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
             model, pretrain_config = load_pretrained_reg_model(PRETRAIN_PATH, DEVICE, model_family=model_family)
             with torch.no_grad():
                 model.net[-1].weight.data /= Y_SCALE
-                model.net[-1].bias.data   /= Y_SCALE
+                if model.net[-1].bias is not None:
+                    model.net[-1].bias.data /= Y_SCALE
             config_family = pretrain_config.get("MODEL_FAMILY", model_family)
             config_feature_mode = pretrain_config.get("FEATURE_MODE", feature_mode)
             if config_feature_mode != feature_mode:
@@ -724,6 +726,9 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
             f.write(f"Train Size Requested: {train_size}\n")
             f.write(f"Train Size Effective: {effective_train_size}\n")
             f.write(f"Train Pool Size   : {original_train_count}\n")
+            f.write(f"Feature Mode      : {feature_mode}\n")
+            f.write(f"Epsilon Init      : {EPSILON_INIT}\n")
+            f.write(f"M Samples         : {M_SAMPLES}\n")
             f.write(f"Strict Repro      : {STRICT_REPRODUCIBILITY}\n")
             f.write(f"CUBLAS Workspace  : {os.environ.get('CUBLAS_WORKSPACE_CONFIG', '')}\n")
             f.write(f"Test graphs      : {total_test_graphs}\n")
@@ -764,13 +769,15 @@ if __name__ == "__main__":
     parser.add_argument("--model_family", type=str, default="mlp", choices=["mlp", "lr"],
                         help="Tabular prediction model used in the end-to-end pipeline")
     parser.add_argument("--feature_mode", type=str, default=None, choices=["full", "utility_cpra", "failure_context", "lr_small"],
-                        help="Tabular feature set. Defaults to lr_small for lr, full features for reg.")
+                        help="Tabular feature set. Defaults to utility_cpra for lr, full features for reg.")
     parser.add_argument(
         "--train_size",
         type=int,
         default=None,
         help="Number of graphs to use from the training split; default uses the full training split",
     )
+    parser.add_argument("--epsilon", type=float, default=None,
+                        help="FY perturbation epsilon. Defaults to 2.0 for tabular end-to-end training.")
     args = parser.parse_args()
     
     train_dfl(
@@ -781,4 +788,5 @@ if __name__ == "__main__":
         model_family=args.model_family,
         feature_mode=args.feature_mode,
         train_size=args.train_size,
+        epsilon_init=args.epsilon,
     )

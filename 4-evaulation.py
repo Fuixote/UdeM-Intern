@@ -4,6 +4,8 @@ import json
 import os
 import re
 
+import torch
+
 from experiment_config import PROCESSED_DATA_DIR, RESULTS_ROOT, SOLUTIONS_ROOT, resolve_path
 
 
@@ -51,6 +53,21 @@ def parse_dataset_path_from_summary(results_dir):
             if line.startswith("Dataset Path:"):
                 return line.split(":", 1)[1].strip()
     return None
+
+
+def load_experiment_config(results_dir):
+    """Read saved checkpoint config for display metadata such as epsilon."""
+    for checkpoint_name in ("best_dfl_reg_model.pth", "best_stage1_model_real.pth", "best_dfl_gnn_model.pth"):
+        checkpoint_path = os.path.join(results_dir, checkpoint_name)
+        if not os.path.exists(checkpoint_path):
+            continue
+        try:
+            checkpoint = torch.load(checkpoint_path, map_location="cpu")
+        except Exception:
+            return {}
+        if isinstance(checkpoint, dict):
+            return dict(checkpoint.get("config", {}))
+    return {}
 
 
 def infer_data_dir_for_experiment(sol_dir, default_data_dir, results_root):
@@ -109,6 +126,7 @@ def evaluate_directory(
     edge_lookup_cache=None,
 ):
     exp_id = os.path.basename(sol_dir)
+    result_dir = os.path.join(results_root, exp_id)
     edge_lookup_cache = edge_lookup_cache if edge_lookup_cache is not None else {}
 
     resolved_data_dir, graph_files, data_source = infer_data_dir_for_experiment(
@@ -208,6 +226,10 @@ def evaluate_directory(
         "missing_edges": overall["missing_edges"],
         "attempted_edges": overall["attempted_edges"],
     }
+
+    config = load_experiment_config(result_dir)
+    result["epsilon"] = config.get("EPSILON_INIT")
+    result["feature_mode"] = config.get("FEATURE_MODE")
 
     if overall["missing_edges"] > 0:
         missing_ratio = overall["missing_edges"] / overall["attempted_edges"] if overall["attempted_edges"] else 0.0
@@ -340,14 +362,17 @@ if __name__ == "__main__":
         if valid_results:
             print("\n" + "=" * 158)
             print(
-                f"{'Experiment / Model':<35} | {'Graphs':<6} | {'Cycles/Chains':<13} | "
+                f"{'Experiment / Model':<35} | {'Eps':<6} | {'Graphs':<6} | {'Cycles/Chains':<13} | "
                 f"{'Transplants':<11} | {'Total GT Score':<14} | {'Avg/Graph':<9} | "
                 f"{'Avg/Transplant':<14} | {'Skipped':<7}"
             )
             print("-" * 158)
             for result in valid_results:
+                epsilon = result.get("epsilon")
+                epsilon_text = "" if epsilon is None else f"{float(epsilon):.3g}"
                 print(
                     f"{result['dir']:<35} | "
+                    f"{epsilon_text:<6} | "
                     f"{result['graphs']:<6} | "
                     f"{result['matches']:<13} | "
                     f"{result['transplants']:<11} | "
@@ -363,7 +388,8 @@ if __name__ == "__main__":
                 print(
                     f"- {result['dir']}: data={result['data_dir']} "
                     f"[{result['data_source']}], filter={result['filter_source']}, "
-                    f"solution_files={result['solution_files']}, missing_edges={result['missing_edges']}"
+                    f"solution_files={result['solution_files']}, missing_edges={result['missing_edges']}, "
+                    f"feature_mode={result.get('feature_mode')}, epsilon={result.get('epsilon')}"
                 )
 
         if failed_results:

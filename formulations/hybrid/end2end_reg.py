@@ -28,7 +28,7 @@ from experiment_config import (
     resolve_path,
     solution_dir_for_result_dir,
 )
-from formulations.hybrid.backend import solve_cf_cycle_pief_chain
+from formulations.hybrid.backend import CachedHybridKepModel, solve_cf_cycle_pief_chain
 from formulations.common.backend_utils import infer_ndd_mask
 from model.graph_utils import failure_context_edge_features, load_graph_dataset, lr_small_edge_features, parse_json_to_dfl_data
 from model.model_structure import (
@@ -83,7 +83,7 @@ def normalize_feature_mode(feature_mode):
 def default_feature_mode_for_family(model_family, feature_mode=None):
     if feature_mode is not None:
         return normalize_feature_mode(feature_mode)
-    return "lr_small" if normalize_tabular_model_family(model_family) == "lr" else "full"
+    return "utility_cpra" if normalize_tabular_model_family(model_family) == "lr" else "full"
 
 
 def infer_feature_mode_from_input_dim(input_dim):
@@ -177,7 +177,22 @@ gurobi_pool = GurobiEnvPool(pool_size=8)
 # ==========================================
 # 1. 核心求解器：带环境池的黑盒
 # ==========================================
-def blackbox_kep_solver(w_preds_np, cycle_candidates, edge_index, node_is_ndd, num_edges, num_nodes, max_chain=4):
+def blackbox_kep_solver(
+    w_preds_np,
+    cycle_candidates,
+    edge_index,
+    node_is_ndd,
+    num_edges,
+    num_nodes,
+    max_chain=4,
+    cached_solver=None,
+):
+    if cached_solver is not None:
+        result = cached_solver.solve(w_preds_np)
+        if result["status"] not in (GRB.OPTIMAL, GRB.TIME_LIMIT):
+            print(f"警告: Gurobi 求解失败，状态码: {result['status']}")
+        return result["edge_selection"]
+
     env = gurobi_pool.get_env()
     try:
         result = solve_cf_cycle_pief_chain(
@@ -196,7 +211,17 @@ def blackbox_kep_solver(w_preds_np, cycle_candidates, edge_index, node_is_ndd, n
         gurobi_pool.return_env(env)
 
 
-def get_expected_y(w_preds_tensor, cycle_candidates, edge_index, node_is_ndd, num_nodes, num_edges, epsilon=0.1, M=8):
+def get_expected_y(
+    w_preds_tensor,
+    cycle_candidates,
+    edge_index,
+    node_is_ndd,
+    num_nodes,
+    num_edges,
+    epsilon=0.1,
+    M=8,
+    cached_solver=None,
+):
     """
     计算扰动优化器的期望决策分布（纯前向，不参与反向传播）。
 
@@ -213,14 +238,32 @@ def get_expected_y(w_preds_tensor, cycle_candidates, edge_index, node_is_ndd, nu
         noise_list = [np.zeros_like(w_np, dtype=np.float32) for _ in range(M)]
 
     def solve_single(noise):
-        return blackbox_kep_solver(w_np + noise, cycle_candidates, edge_index, node_is_ndd, num_edges, num_nodes)
+        return blackbox_kep_solver(
+            w_np + noise,
+            cycle_candidates,
+            edge_index,
+            node_is_ndd,
+            num_edges,
+            num_nodes,
+            cached_solver=cached_solver,
+        )
 
     results = [solve_single(noise) for noise in noise_list]
     y_soft = np.mean(results, axis=0)
     return torch.tensor(y_soft, device=w_preds_tensor.device, dtype=torch.float32).view(-1, 1)
 
 
-def sample_perturbed_solutions(w_preds_tensor, cycle_candidates, edge_index, node_is_ndd, num_nodes, num_edges, epsilon=0.1, M=8):
+def sample_perturbed_solutions(
+    w_preds_tensor,
+    cycle_candidates,
+    edge_index,
+    node_is_ndd,
+    num_nodes,
+    num_edges,
+    epsilon=0.1,
+    M=8,
+    cached_solver=None,
+):
     """
     返回 perturbed optimizer 的 Monte Carlo 样本：
     - Y_samples[m] = y*(w + ε z^(m))
@@ -236,11 +279,104 @@ def sample_perturbed_solutions(w_preds_tensor, cycle_candidates, edge_index, nod
         noise_list = [np.zeros_like(w_np, dtype=np.float32) for _ in range(M)]
 
     def solve_single(noise):
-        return blackbox_kep_solver(w_np + noise, cycle_candidates, edge_index, node_is_ndd, num_edges, num_nodes)
+        return blackbox_kep_solver(
+            w_np + noise,
+            cycle_candidates,
+            edge_index,
+            node_is_ndd,
+            num_edges,
+            num_nodes,
+            cached_solver=cached_solver,
+        )
 
     results = [solve_single(noise) for noise in noise_list]
     y_samples = torch.tensor(np.stack(results), device=w_preds_tensor.device, dtype=torch.float32)
     return y_samples.detach()
+
+
+def graph_cache_key(data):
+    """Return a stable graph key for raw Data objects and batch_size=1 batches."""
+    filename = getattr(data, "filename", None)
+    if isinstance(filename, (list, tuple)):
+        filename = filename[0]
+    return str(filename)
+
+
+def cycle_candidates_from_data(data):
+    candidates = data.candidates
+    if candidates and isinstance(candidates[0], list):
+        candidates = candidates[0]
+    return [candidate for candidate in candidates if candidate["type"] == "cycle"]
+
+
+def build_y_optimal_cache(dataset, device):
+    """Precompute true-weight optimal decisions once per graph.
+
+    y_optimal depends only on the graph structure and ground-truth edge labels,
+    not on model parameters or FY perturbation epsilon.
+    """
+    cache = {}
+    total = len(dataset)
+    print(f"Precomputing y_optimal cache for {total} graphs...", flush=True)
+    with torch.no_grad():
+        for idx, data in enumerate(dataset, start=1):
+            key = graph_cache_key(data)
+            if key in cache:
+                continue
+            node_is_ndd = infer_ndd_mask(data.x)
+            cycle_candidates = cycle_candidates_from_data(data)
+            y_optimal = get_expected_y(
+                data.y.view(-1, 1),
+                cycle_candidates,
+                data.edge_index,
+                node_is_ndd,
+                data.num_nodes_custom[0].item(),
+                data.num_edges,
+                epsilon=0.0,
+                M=1,
+            )
+            cache[key] = y_optimal.detach().cpu()
+            if idx % 100 == 0 or idx == total:
+                print(f"  y_optimal cache: {idx}/{total}", flush=True)
+    return cache
+
+
+def build_hybrid_solver_cache(dataset):
+    """Prebuild reusable Gurobi models for a set of graph instances."""
+    cache = {}
+    env = gurobi_pool.get_env()
+    try:
+        total = len(dataset)
+        print(f"Prebuilding cached hybrid Gurobi models for {total} graphs...", flush=True)
+        for idx, data in enumerate(dataset, start=1):
+            key = graph_cache_key(data)
+            if key in cache:
+                continue
+            node_is_ndd = infer_ndd_mask(data.x)
+            cache[key] = CachedHybridKepModel(
+                edge_index=data.edge_index,
+                is_ndd_mask=node_is_ndd,
+                num_nodes=data.num_nodes_custom[0].item(),
+                cycle_candidates=cycle_candidates_from_data(data),
+                env=env,
+                name=f"cached_hybrid_{key}",
+            )
+            if idx % 100 == 0 or idx == total:
+                print(f"  cached hybrid models: {idx}/{total}", flush=True)
+    except Exception:
+        for cached_solver in cache.values():
+            cached_solver.dispose()
+        gurobi_pool.return_env(env)
+        raise
+    return cache, env
+
+
+def dispose_hybrid_solver_cache(cache, env):
+    for cached_solver in cache.values():
+        cached_solver.dispose()
+    if env is not None:
+        gurobi_pool.return_env(env)
+
 
 def save_solutions(model, dataset, sol_dir, device, model_tag="Reg-Hybrid-FY", feature_mode="full"):
     """
@@ -295,7 +431,14 @@ def save_solutions(model, dataset, sol_dir, device, model_tag="Reg-Hybrid-FY", f
     print(f"Solutions saved: {saved} files → {sol_dir}")
 
 
-def evaluate_reg_mlp_regret(model, dataset, device, feature_mode="full"):
+def evaluate_reg_mlp_regret(
+    model,
+    dataset,
+    device,
+    feature_mode="full",
+    y_optimal_cache=None,
+    solver_cache=None,
+):
     model.eval()
     loader = DataLoader(dataset, batch_size=1, shuffle=False, num_workers=0)
     total_achieved = 0.0
@@ -319,17 +462,21 @@ def evaluate_reg_mlp_regret(model, dataset, device, feature_mode="full"):
                 batch.num_edges,
                 epsilon=0.0,
                 M=1,
+                cached_solver=(solver_cache or {}).get(graph_cache_key(batch)),
             )
-            y_optimal = get_expected_y(
-                batch.y.view(-1, 1),
-                cycle_candidates,
-                batch.edge_index,
-                node_is_ndd,
-                batch.num_nodes_custom[0].item(),
-                batch.num_edges,
-                epsilon=0.0,
-                M=1,
-            )
+            if y_optimal_cache is not None:
+                y_optimal = y_optimal_cache[graph_cache_key(batch)].to(device)
+            else:
+                y_optimal = get_expected_y(
+                    batch.y.view(-1, 1),
+                    cycle_candidates,
+                    batch.edge_index,
+                    node_is_ndd,
+                    batch.num_nodes_custom[0].item(),
+                    batch.num_edges,
+                    epsilon=0.0,
+                    M=1,
+                )
 
             true_w = batch.y.view(-1, 1)
             achieved = torch.sum(true_w * Y_SCALE * y_pred).item()
@@ -422,14 +569,16 @@ def pretrain_timestamp_from_path(pretrain_path):
 # ==========================================
 # 3. 训练主流程
 # ==========================================
-def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_root=None, model_family="mlp", feature_mode=None, train_size=None):
+def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_root=None,
+              model_family="mlp", feature_mode=None, train_size=None, epsilon_init=None,
+              use_solver_cache=True):
     model_family = normalize_tabular_model_family(model_family)
     feature_mode = default_feature_mode_for_family(model_family, feature_mode)
     input_dim = tabular_input_dim(feature_mode)
     DEVICE        = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     LR            = 1e-4
     EPOCHS        = 10
-    EPSILON_INIT  = 0.2
+    EPSILON_INIT  = float(epsilon_init) if epsilon_init is not None else 2.0
     M_SAMPLES     = 16      # 扰动采样次数，越高梯度估计越稳定但越慢；forward 需 M 次求解
     DATA_DIR      = str(resolve_path(data_dir or PROCESSED_DATA_DIR))
     STRICT_REPRODUCIBILITY = True
@@ -446,6 +595,8 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
     )
     SAVE_PATH   = os.path.join(RESULTS_DIR, 'best_dfl_reg_model.pth')
     print(f"Results will be saved at: {RESULTS_DIR}")
+    solver_cache = {}
+    solver_cache_env = None
 
     try:
         # ---- 数据加载 ----
@@ -490,13 +641,25 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
         )
         val_loader = DataLoader(val_dataset, batch_size=1, shuffle=False, num_workers=0)
 
+        y_optimal_cache = build_y_optimal_cache(
+            list(train_dataset) + list(val_dataset) + list(test_dataset),
+            device=DEVICE,
+        )
+        if use_solver_cache:
+            solver_cache, solver_cache_env = build_hybrid_solver_cache(
+                list(train_dataset) + list(val_dataset)
+            )
+        else:
+            print("Hybrid Gurobi model cache disabled; using one-shot solver path.", flush=True)
+
         # ---- 初始化 ----
         if PRETRAIN_PATH is not None:
             model, pretrain_config = load_pretrained_reg_model(PRETRAIN_PATH, DEVICE, model_family=model_family)
             # Stage-1 tabular baseline 输出范围 ~[0, Y_SCALE]，缩放到合理的 logit 范围
             with torch.no_grad():
                 model.net[-1].weight.data /= Y_SCALE
-                model.net[-1].bias.data   /= Y_SCALE
+                if model.net[-1].bias is not None:
+                    model.net[-1].bias.data /= Y_SCALE
             config_family = pretrain_config.get("MODEL_FAMILY", model_family)
             config_feature_mode = pretrain_config.get("FEATURE_MODE", feature_mode)
             if config_feature_mode != feature_mode:
@@ -525,8 +688,17 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
         optimizer     = optim.Adam(model.parameters(), lr=LR)
         best_val_loss = float('inf')
 
-        epoch0_val = evaluate_reg_mlp_regret(model, val_dataset, DEVICE, feature_mode=feature_mode)
-        epoch0_test = evaluate_reg_mlp_regret(model, test_dataset, DEVICE, feature_mode=feature_mode)
+        epoch0_val = evaluate_reg_mlp_regret(
+            model,
+            val_dataset,
+            DEVICE,
+            feature_mode=feature_mode,
+            y_optimal_cache=y_optimal_cache,
+            solver_cache=solver_cache,
+        )
+        epoch0_test = evaluate_reg_mlp_regret(
+            model, test_dataset, DEVICE, feature_mode=feature_mode, y_optimal_cache=y_optimal_cache
+        )
         epoch0_eval_path = os.path.join(RESULTS_DIR, "epoch0_warmstart_eval.txt")
         with open(epoch0_eval_path, "w", encoding="utf-8") as f:
             f.write("Epoch 0 warm-start evaluation (before DFL updates)\n")
@@ -563,6 +735,38 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
         )
         print(f"Epoch 0 evaluation saved to: {epoch0_eval_path}")
 
+        best_val_loss = epoch0_val["avg_regret"]
+        checkpoint = {
+            'epoch': 0,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'best_val_regret': best_val_loss,
+            'config': {
+                'MODEL_FAMILY': model_family,
+                'FEATURE_MODE': feature_mode,
+                'INPUT_DIM': input_dim,
+                'NODE_DIM': NODE_FEATURE_DIM,
+                'EDGE_RAW_DIM': EDGE_RAW_DIM,
+                'LR': LR, 'EPOCHS': EPOCHS,
+                'EPSILON_INIT': EPSILON_INIT,
+                'M_SAMPLES': M_SAMPLES, 'SEED': SEED,
+                'PRETRAIN_PATH': PRETRAIN_PATH,
+                'PRETRAIN_TIMESTAMP': PRETRAIN_TIMESTAMP,
+                'TRAIN_SIZE_REQUESTED': train_size,
+                'TRAIN_SIZE_EFFECTIVE': effective_train_size,
+                'TRAIN_POOL_SIZE': original_train_count,
+                'HYBRID_SOLVER_CACHE': bool(use_solver_cache),
+                'SPLIT_BINDING_MODE': split_binding_mode,
+                'BOUND_SPLIT_FILES': dict(bound_split_paths),
+                'STRICT_REPRODUCIBILITY': STRICT_REPRODUCIBILITY,
+                'CUBLAS_WORKSPACE_CONFIG': os.environ.get("CUBLAS_WORKSPACE_CONFIG", ""),
+            }
+        }
+        if model_family == "mlp":
+            checkpoint["config"]["HIDDEN_DIM"] = 256
+        torch.save(checkpoint, SAVE_PATH)
+        print(f"  --> [Saved] Epoch 0 warm start | Best Val Regret: {best_val_loss:.4f}")
+
         for epoch in range(1, EPOCHS + 1):
             # Keep the perturbed optimizer noise fixed across epochs.
             current_epsilon = EPSILON_INIT
@@ -585,18 +789,14 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
                     w_preds, cycle_candidates, batch.edge_index, node_is_ndd,
                     batch.num_nodes_custom[0].item(),
                     batch.num_edges,
-                    epsilon=current_epsilon, M=M_SAMPLES
+                    epsilon=current_epsilon, M=M_SAMPLES,
+                    cached_solver=solver_cache.get(graph_cache_key(batch)),
                 )
                 y_pred_soft = y_samples.mean(dim=0, keepdim=False).view(-1, 1)
 
                 # 2. 真实权重下最优决策（无扰动，不参与反向传播）
                 with torch.no_grad():
-                    y_optimal = get_expected_y(
-                        batch.y.view(-1, 1), cycle_candidates, batch.edge_index, node_is_ndd,
-                        batch.num_nodes_custom[0].item(),
-                        batch.num_edges,
-                        epsilon=0.0, M=1
-                    )
+                    y_optimal = y_optimal_cache[graph_cache_key(batch)].to(DEVICE)
 
                 # 3. FY 的 doubly stochastic 梯度估计（Berthet et al., Eq. 6）：
                 #    ∇_w L_FY ≈ ȳ_ε(w) - y*
@@ -645,14 +845,10 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
                         w_preds, cycle_candidates, batch.edge_index, node_is_ndd,
                         batch.num_nodes_custom[0].item(),
                         batch.num_edges,
-                        epsilon=0.0, M=1
+                        epsilon=0.0, M=1,
+                        cached_solver=solver_cache.get(graph_cache_key(batch)),
                     )
-                    y_optimal = get_expected_y(
-                        batch.y.view(-1, 1), cycle_candidates, batch.edge_index, node_is_ndd,
-                        batch.num_nodes_custom[0].item(),
-                        batch.num_edges,
-                        epsilon=0.0, M=1
-                    )
+                    y_optimal = y_optimal_cache[graph_cache_key(batch)].to(DEVICE)
 
                     true_w = batch.y.view(-1, 1)
                     # regret = sum_edges(ground_truth_label × decision_diff)
@@ -696,6 +892,7 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
                         'TRAIN_SIZE_REQUESTED': train_size,
                         'TRAIN_SIZE_EFFECTIVE': effective_train_size,
                         'TRAIN_POOL_SIZE': original_train_count,
+                        'HYBRID_SOLVER_CACHE': bool(use_solver_cache),
                         'SPLIT_BINDING_MODE': split_binding_mode,
                         'BOUND_SPLIT_FILES': dict(bound_split_paths),
                         'STRICT_REPRODUCIBILITY': STRICT_REPRODUCIBILITY,
@@ -743,11 +940,7 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
                     batch.num_edges, epsilon=0.0, M=1
                 )
                 # 用真实 w 选边（Oracle 上界）
-                y_optimal = get_expected_y(
-                    batch.y.view(-1, 1), cycle_candidates, batch.edge_index, node_is_ndd,
-                    batch.num_nodes_custom[0].item(),
-                    batch.num_edges, epsilon=0.0, M=1
-                )
+                y_optimal = y_optimal_cache[graph_cache_key(batch)].to(DEVICE)
 
                 true_w = batch.y.view(-1, 1)
                 # 模型方案实际获得的期望收益
@@ -777,6 +970,10 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
             f.write(f"Train Size Requested: {train_size}\n")
             f.write(f"Train Size Effective: {effective_train_size}\n")
             f.write(f"Train Pool Size   : {original_train_count}\n")
+            f.write(f"Feature Mode      : {feature_mode}\n")
+            f.write(f"Epsilon Init      : {EPSILON_INIT}\n")
+            f.write(f"M Samples         : {M_SAMPLES}\n")
+            f.write(f"Hybrid Solver Cache: {bool(use_solver_cache)}\n")
             f.write(f"Strict Repro      : {STRICT_REPRODUCIBILITY}\n")
             f.write(f"CUBLAS Workspace  : {os.environ.get('CUBLAS_WORKSPACE_CONFIG', '')}\n")
             f.write(f"Test graphs      : {total_test_graphs}\n")
@@ -799,6 +996,7 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
     finally:
         print("清理 Gurobi 资源...")
         try:
+            dispose_hybrid_solver_cache(solver_cache, solver_cache_env)
             gurobi_pool.cleanup()
         except Exception as cleanup_error:
             print(f"清理资源时发生错误: {cleanup_error}")
@@ -817,13 +1015,17 @@ if __name__ == "__main__":
     parser.add_argument("--model_family", type=str, default="mlp", choices=["mlp", "lr"],
                         help="Tabular prediction model used in the end-to-end pipeline")
     parser.add_argument("--feature_mode", type=str, default=None, choices=["full", "utility_cpra", "failure_context", "lr_small"],
-                        help="Tabular feature set. Defaults to lr_small for lr, full features for reg.")
+                        help="Tabular feature set. Defaults to utility_cpra for lr, full features for reg.")
     parser.add_argument(
         "--train_size",
         type=int,
         default=None,
         help="Number of graphs to use from the training split; default uses the full training split",
     )
+    parser.add_argument("--epsilon", type=float, default=None,
+                        help="FY perturbation epsilon. Defaults to 2.0 for tabular end-to-end training.")
+    parser.add_argument("--disable_solver_cache", action="store_true",
+                        help="Disable cached Gurobi model reuse for hybrid training/validation.")
     args = parser.parse_args()
     
     train_dfl(
@@ -834,4 +1036,6 @@ if __name__ == "__main__":
         model_family=args.model_family,
         feature_mode=args.feature_mode,
         train_size=args.train_size,
+        epsilon_init=args.epsilon,
+        use_solver_cache=not args.disable_solver_cache,
     )
