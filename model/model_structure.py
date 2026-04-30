@@ -141,7 +141,7 @@ class LinearRegressionBaseline(nn.Module):
         super(LinearRegressionBaseline, self).__init__()
         input_dim = input_dim if input_dim is not None else node_dim * 2 + edge_dim
         self.net = nn.Sequential(
-            nn.Linear(input_dim, 1)
+            nn.Linear(input_dim, 1, bias=False)
         )
 
     def forward(self, edge_features):

@@ -22,7 +22,7 @@ def normalize_feature_mode(feature_mode):
 def default_feature_mode_for_family(model_family, feature_mode=None):
     if feature_mode is not None:
         return normalize_feature_mode(feature_mode)
-    return "lr_small" if model_family == "lr" else "full"
+    return "utility_cpra" if model_family == "lr" else "full"
 
 
 def infer_feature_mode_from_input_dim(input_dim):
