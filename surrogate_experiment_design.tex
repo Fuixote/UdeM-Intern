@@ -92,6 +92,106 @@ Does the FY surrogate point toward the true low-regret region when the predictiv
 model is correctly specified?
 \end{quote}
 
+In the current Step~1 diagnostic, this question is tested on 1200 graph
+instances with the clean two-feature label \(w^{\mathrm{true}}_e =
+10u_e + 5c_e\). We track the full optimization trajectories of both the
+two-stage MSE objective and the end-to-end FY objective in the
+\((\theta_1,\theta_2)\) plane, and evaluate each point by true regret. The
+two-stage trajectory behaves as expected under correct specification: it
+recovers the ground-truth scale and direction, converging to approximately
+\((10,5)\), and its average true regret decreases from \(2.575\) to nearly
+zero.
+
+The FY trajectories show a different, decision-focused behavior. They do not
+need to recover the particular parameter vector \((10,5)\). Instead, they move
+toward regions that induce the same or nearly the same optimal KEP decision.
+For small perturbation scale, the FY trajectory reaches zero true regret early
+and then remains on a low-loss plateau. For larger perturbation scales, the
+trajectory tends to increase the magnitude of \(\theta\) along a similar
+direction, reflecting the margin effect of the perturbed FY surrogate: for a
+fixed noise scale, larger predicted weights make the optimal decision more
+stable under perturbations.
+
+\begin{center}
+\begin{tabular}{@{}cccc@{}}
+\toprule
+\(\epsilon\) & final \(\theta_{\mathrm{FY}}\) & final FY loss & final true regret \\
+\midrule
+0.01 & \((3.60,\,1.78)\) & \(6.35\times 10^{-4}\) & \(0\) \\
+0.2  & \((11.63,\,5.78)\) & \(5.12\times 10^{-2}\) & \(0\) \\
+1.0  & \((26.22,\,13.31)\) & \(5.16\times 10^{-1}\) & \(3.48\times 10^{-4}\) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+These results support the intended interpretation of the diagnostic. The
+two-stage method identifies the clean linear label, while the FY surrogate
+finds decision-equivalent low-regret regions whose scale depends on the
+perturbation level. Thus, in this clean setting, the FY surrogate is aligned
+with the true decision objective even though its optimizer need not coincide
+with the ground-truth reward parameter.
+
+This leads to the following practical observations.
+\begin{enumerate}
+    \item \textbf{The FY loss is decision-oriented rather than reward-fitting.}
+    Unlike the two-stage MSE trajectory, which recovers the numerical label
+    parameters, the FY trajectory quickly finds a direction that reduces true
+    regret and stabilizes the induced KEP decision. In other words, the
+    surrogate prioritizes decision quality over numerical recovery of
+    \(w^{\mathrm{true}}\).
+
+    \item \textbf{The perturbation scale controls decision stability and
+    parameter scale.}
+    With small \(\epsilon\), the perturbed decisions become stable after a
+    relatively small movement in parameter space, so the gradient signal can
+    flatten early. With larger \(\epsilon\), the same decision must remain
+    optimal under stronger perturbations, which encourages both a clearer
+    relative weighting between \(u_e\) and \(c_e\) and a larger prediction
+    scale. Empirically, the final FY endpoints are approximately
+    \((3.60,1.78)\), \((11.63,5.78)\), and \((26.22,13.31)\) for
+    \(\epsilon=0.01,0.2,1.0\), respectively. This is consistent with the FY
+    gradient form
+\[
+    \nabla_{\hat w} L_{\mathrm{FY}}(\hat w; y^\star)
+    =
+    \mathbb{E}_{z}\!\left[y^\star(\hat w + z)\right] - y^\star,
+\]
+    which penalizes deviations between the perturbation-averaged optimizer
+    output and the true-weight optimal decision.
+
+    \item \textbf{True regret can plateau before the FY loss has converged.}
+    For \(\epsilon=0.01\), the FY trajectory reaches zero true regret around
+    epoch 42, while the FY loss continues to decrease until near the end of
+    training. For \(\epsilon=0.2\), true regret reaches zero even earlier, around
+    epoch 19, while the surrogate loss continues to improve. This shows that
+    once the deterministic decision is already correct, the FY loss may still
+    optimize perturbation robustness or margin.
+
+    \item \textbf{The FY trajectory does not monotonically identify the exact
+    \(2{:}1\) parameter ratio.} For small and moderate perturbations, the ratio
+    \(\theta_1/\theta_2\) can temporarily overshoot the ground-truth ratio
+    before settling near a low-regret region. This confirms that FY is not
+    directly fitting the algebraic ratio of the clean label, but is instead
+    following a decision-induced surrogate geometry.
+
+    \item \textbf{The FY loss is not necessarily monotone along the observed
+    trajectory.} With \(\epsilon=0.01\), the loss exhibits small nonmonotone
+    fluctuations after reaching a very low value, whereas for
+    \(\epsilon=1.0\) the observed FY loss is essentially monotone decreasing.
+    Such behavior is expected because the training uses a finite-sample
+    perturbed optimizer and Adam updates over a piecewise-linear surrogate. The
+    number of epochs with a positive FY-loss increment decreases as the
+    perturbation scale grows:
+    \[
+    \begin{array}{c|ccc}
+    \epsilon & 0.01 & 0.2 & 1.0 \\
+    \hline
+    \#\{t : L_{\mathrm{FY}}(\theta_{t+1}) > L_{\mathrm{FY}}(\theta_t)\}
+    & 463 & 13 & 0
+    \end{array}
+    \]
+\end{enumerate}
+
 \subsection{Step 2: Controlled Model Misspecification}
 
 The second experiment should introduce a limited amount of misspecification.
