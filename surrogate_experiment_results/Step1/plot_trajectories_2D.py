@@ -9,6 +9,7 @@
 
 输出:
     trajectory_contour.png
+    true_regret_surface.npz
 """
 
 import os
@@ -260,6 +261,19 @@ def main():
 
         print("Computing True Regret landscape …")
         T1, T2, R = regret_landscape(graphs, t1g, t2g, env)
+        surface_path = os.path.join(args.out_dir, "true_regret_surface.npz")
+        np.savez_compressed(
+            surface_path,
+            T1=T1,
+            T2=T2,
+            true_regret=R,
+            theta_1_grid=t1g,
+            theta_2_grid=t2g,
+            n_total=args.n_total,
+            seed=args.seed,
+            grid_size=args.grid_size,
+        )
+        print(f"Saved: {surface_path}")
 
         out_path = os.path.join(args.out_dir, "trajectory_contour.png")
         plot(

@@ -31,6 +31,15 @@ def load_array(path, expected_cols, name):
     return arr
 
 
+def style_3d_axis(ax, title, z_label):
+    ax.set_title(title, fontsize=11, pad=10)
+    ax.set_xlabel(r"$\theta_1$", labelpad=7)
+    ax.set_ylabel(r"$\theta_2$", labelpad=7)
+    ax.set_zlabel(z_label, labelpad=7)
+    ax.view_init(elev=24, azim=-56)
+    ax.grid(True, alpha=0.35)
+
+
 def draw_3d_curve(ax, theta_1, theta_2, metric, title, z_label, cmap_name):
     cmap = plt.get_cmap(cmap_name)
     n = len(theta_1)
@@ -56,12 +65,7 @@ def draw_3d_curve(ax, theta_1, theta_2, metric, title, z_label, cmap_name):
         label="final",
     )
 
-    ax.set_title(title, fontsize=11, pad=10)
-    ax.set_xlabel(r"$\theta_1$", labelpad=7)
-    ax.set_ylabel(r"$\theta_2$", labelpad=7)
-    ax.set_zlabel(z_label, labelpad=7)
-    ax.view_init(elev=24, azim=-56)
-    ax.grid(True, alpha=0.35)
+    style_3d_axis(ax, title, z_label)
     ax.legend(fontsize=8, loc="upper left")
 
 
@@ -85,7 +89,9 @@ def main():
 
     mse = load_array(args.mse_path, 3, "MSE trajectory")
     fy = load_array(args.fy_path, 4, "FY trajectory")
-    os.makedirs(os.path.dirname(args.out_path), exist_ok=True)
+    out_dir = os.path.dirname(args.out_path)
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
 
     fig = plt.figure(figsize=(18, 6.2))
     ax_mse_regret = fig.add_subplot(1, 3, 1, projection="3d")
@@ -97,7 +103,7 @@ def main():
         mse[:, 0],
         mse[:, 1],
         mse[:, 2],
-        "2-stage MSE trajectory",
+        "2-stage MSE - True Regret",
         "True Regret",
         "Blues_r",
     )
@@ -106,7 +112,7 @@ def main():
         fy[:, 0],
         fy[:, 1],
         fy[:, 3],
-        "End-to-end FY trajectory",
+        "End-to-end FY - True Regret",
         "True Regret",
         "Oranges_r",
     )
@@ -115,15 +121,11 @@ def main():
         fy[:, 0],
         fy[:, 1],
         fy[:, 2],
-        "End-to-end FY trajectory",
+        "End-to-end FY - FY Loss",
         "FY Loss",
         "Greens_r",
     )
 
-    fig.suptitle(
-        r"Step1 trajectory metrics  ·  $\hat{w}_e = \theta_1 u_e + \theta_2 c_e$",
-        fontsize=13,
-    )
     plt.tight_layout()
     plt.savefig(args.out_path, dpi=180, bbox_inches="tight")
     print(f"Loaded MSE: {mse.shape} from {args.mse_path}")
