@@ -87,6 +87,14 @@ def load_trajectory(path, name):
     return traj, metrics, arr.shape
 
 
+def resolve_path(path, base_dir):
+    if os.path.isabs(path):
+        return path
+    if os.path.exists(path):
+        return path
+    return os.path.join(base_dir, path)
+
+
 def draw_contour_with_traj(ax, fig, T1, T2, R, traj, metrics, cmap_name, title, xl, yl,
                            show_ratio_line=True, n_milestones=5):
     """在 True Regret 等高线上叠加单条轨迹。"""
@@ -200,10 +208,8 @@ def main():
     # 读取轨迹
     mse_path = args.mse_traj_path
     fy_path = args.fy_traj_path
-    if not os.path.isabs(mse_path):
-        mse_path = os.path.join(args.traj_dir, mse_path)
-    if not os.path.isabs(fy_path):
-        fy_path = os.path.join(args.traj_dir, fy_path)
+    mse_path = resolve_path(mse_path, args.traj_dir)
+    fy_path = resolve_path(fy_path, args.traj_dir)
 
     traj_mse, metrics_mse, mse_shape = load_trajectory(mse_path, "MSE")
     traj_fy, metrics_fy, fy_shape = load_trajectory(fy_path, "FY")
