@@ -140,8 +140,8 @@ def main():
     parser.add_argument("--data_dir",
         default=str(ROOT / "dataset/processed/clean_linear_dataset"))
     parser.add_argument("--out_dir",    default=str(Path(__file__).parent))
-    parser.add_argument("--n_total",    type=int,   default=100)
-    parser.add_argument("--n_epochs",   type=int,   default=1000)
+    parser.add_argument("--n_total",    type=int,   default=5)
+    parser.add_argument("--n_epochs",   type=int,   default=100)
     parser.add_argument("--lr_mse",     type=float, default=0.05)
     parser.add_argument("--lr_fy",      type=float, default=0.1)
     parser.add_argument("--fy_epsilon", type=float, default=0.2)
