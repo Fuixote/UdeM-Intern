@@ -29,6 +29,7 @@ class CachedHybridKepModel:
         env=None,
         time_limit=None,
         name="KEP_CF_CYCLE_PIEF_CHAIN_CACHED",
+        threads=1,
     ):
         self.max_chain = max_chain
         self.cycle_candidates = cycle_candidates
@@ -54,12 +55,22 @@ class CachedHybridKepModel:
 
         self.model = gp.Model(name, env=env)
         self.model.Params.OutputFlag = 0
-        self.model.Params.Threads = 1
+        if threads is not None:
+            self.model.Params.Threads = threads
+        self.default_time_limit = time_limit
         if time_limit is not None:
             self.model.Params.TimeLimit = time_limit
 
         self.cycle_vars = self.model.addVars(len(self.cycle_candidates), vtype=GRB.BINARY, name="cycle")
         self.chain_vars = self.model.addVars(self.valid_chain_keys, vtype=GRB.BINARY, name="chain")
+        self.obj_vars = []
+        self.obj_edge_groups = []
+        for idx, candidate in enumerate(self.cycle_candidates):
+            self.obj_vars.append(self.cycle_vars[idx])
+            self.obj_edge_groups.append(tuple(candidate["edges"]))
+        for edge_idx, position in self.valid_chain_keys:
+            self.obj_vars.append(self.chain_vars[edge_idx, position])
+            self.obj_edge_groups.append((edge_idx,))
 
         self.model.setObjective(
             gp.quicksum(0.0 * self.cycle_vars[idx] for idx in range(len(self.cycle_candidates)))
@@ -107,12 +118,17 @@ class CachedHybridKepModel:
                 )
         self.model.update()
 
-    def solve(self, weights, id_map_rev=None):
+    def solve(self, weights, id_map_rev=None, time_limit=None, reset_before_solve=False):
         weights = to_numpy_weights(weights)
-        for idx, candidate in enumerate(self.cycle_candidates):
-            self.cycle_vars[idx].Obj = float(sum(weights[edge_idx] for edge_idx in candidate["edges"]))
-        for edge_idx, position in self.valid_chain_keys:
-            self.chain_vars[edge_idx, position].Obj = float(weights[edge_idx])
+        obj_values = [float(sum(weights[edge_idx] for edge_idx in edge_group)) for edge_group in self.obj_edge_groups]
+        self.model.setAttr(GRB.Attr.Obj, self.obj_vars, obj_values)
+        self.model.update()
+
+        active_time_limit = self.default_time_limit if time_limit is None else time_limit
+        if active_time_limit is not None:
+            self.model.Params.TimeLimit = active_time_limit
+        if reset_before_solve:
+            self.model.reset()
 
         self.model.optimize()
 

@@ -67,7 +67,11 @@ def enable_strict_reproducibility(seed):
     torch.use_deterministic_algorithms(True)
     torch.set_num_threads(1)
     if hasattr(torch, "set_num_interop_threads"):
-        torch.set_num_interop_threads(1)
+        try:
+            torch.set_num_interop_threads(1)
+        except RuntimeError as exc:
+            if "cannot set number of interop threads" not in str(exc):
+                raise
 
 
 enable_strict_reproducibility(SEED)
@@ -647,7 +651,7 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
         )
         if use_solver_cache:
             solver_cache, solver_cache_env = build_hybrid_solver_cache(
-                list(train_dataset) + list(val_dataset)
+                list(train_dataset) + list(val_dataset) + list(test_dataset)
             )
         else:
             print("Hybrid Gurobi model cache disabled; using one-shot solver path.", flush=True)
@@ -697,7 +701,12 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
             solver_cache=solver_cache,
         )
         epoch0_test = evaluate_reg_mlp_regret(
-            model, test_dataset, DEVICE, feature_mode=feature_mode, y_optimal_cache=y_optimal_cache
+            model,
+            test_dataset,
+            DEVICE,
+            feature_mode=feature_mode,
+            y_optimal_cache=y_optimal_cache,
+            solver_cache=solver_cache,
         )
         epoch0_eval_path = os.path.join(RESULTS_DIR, "epoch0_warmstart_eval.txt")
         with open(epoch0_eval_path, "w", encoding="utf-8") as f:
@@ -937,7 +946,8 @@ def train_dfl(pretrain_path=None, data_dir=None, results_root=None, solutions_ro
                 y_pred = get_expected_y(
                     w_preds, cycle_candidates, batch.edge_index, node_is_ndd,
                     batch.num_nodes_custom[0].item(),
-                    batch.num_edges, epsilon=0.0, M=1
+                    batch.num_edges, epsilon=0.0, M=1,
+                    cached_solver=solver_cache.get(graph_cache_key(batch)),
                 )
                 # 用真实 w 选边（Oracle 上界）
                 y_optimal = y_optimal_cache[graph_cache_key(batch)].to(DEVICE)
