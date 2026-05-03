@@ -1,8 +1,10 @@
 \documentclass{article}
 \usepackage{amsmath,amssymb}
 \usepackage{booktabs}
+\usepackage{graphicx}
 \usepackage{hyperref}
 \usepackage{natbib}
+\usepackage{pdflscape}
 
 \input{math-macros.tex}
 
@@ -34,6 +36,35 @@ misspecification or an overly complex label-generation process.
 
 We therefore separate the experimental study into several layers, moving from a
 clean surrogate-validity test to the full realistic synthetic benchmark.
+
+\clearpage
+\begin{landscape}
+\begin{figure}[p]
+    \centering
+    \begin{tabular}{@{}cc@{}}
+    \textbf{\(\epsilon=0.01\): 2D true-regret landscape} &
+    \textbf{\(\epsilon=0.01\): 3D trajectory metrics} \\
+    \includegraphics[width=0.34\linewidth]{surrogate_experiment_results/Step1/epsilon=0.01/trajectory_contour.png} &
+    \includegraphics[width=0.34\linewidth]{surrogate_experiment_results/Step1/epsilon=0.01/trajectory_3d_metrics.png} \\[0.25em]
+
+    \textbf{\(\epsilon=0.2\): 2D true-regret landscape} &
+    \textbf{\(\epsilon=0.2\): 3D trajectory metrics} \\
+    \includegraphics[width=0.34\linewidth]{surrogate_experiment_results/Step1/epsilon=0.2/trajectory_contour.png} &
+    \includegraphics[width=0.34\linewidth]{surrogate_experiment_results/Step1/epsilon=0.2/trajectory_3d_metrics.png} \\[0.25em]
+
+    \textbf{\(\epsilon=1.0\): 2D true-regret landscape} &
+    \textbf{\(\epsilon=1.0\): 3D trajectory metrics} \\
+    \includegraphics[width=0.34\linewidth]{surrogate_experiment_results/Step1/epsilon=1.0/trajectory_contour.png} &
+    \includegraphics[width=0.34\linewidth]{surrogate_experiment_results/Step1/epsilon=1.0/trajectory_3d_metrics.png}
+    \end{tabular}
+    \caption{Step~1 diagnostics under the clean linear label. The left column
+    shows sampled average true-regret landscapes and the corresponding MSE/FY
+    trajectories. The right column shows trajectory metrics: MSE true regret,
+    FY true regret, and FY loss. All panels use the same 100 graph instances.}
+    \label{fig:step1-diagnostics-all}
+\end{figure}
+\end{landscape}
+\clearpage
 
 \section{Experimental Roadmap}
 
@@ -92,7 +123,7 @@ Does the FY surrogate point toward the true low-regret region when the predictiv
 model is correctly specified?
 \end{quote}
 
-In the current Step~1 diagnostic, this question is tested on 1200 graph
+In the current Step~1 diagnostic, this question is tested on 100 graph
 instances with the clean two-feature label \(w^{\mathrm{true}}_e =
 10u_e + 5c_e\). We track the full optimization trajectories of both the
 two-stage MSE objective and the end-to-end FY objective in the
