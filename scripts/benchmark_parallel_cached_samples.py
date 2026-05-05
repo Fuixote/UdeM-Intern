@@ -296,17 +296,90 @@ def write_outputs(output_dir: Path, summary_rows: list[dict], per_solve_rows: li
         json.dump(summary_rows, handle, indent=2)
 
 
+def fmt_seconds(value: float) -> str:
+    return f"{float(value):.4f}s"
+
+
+def format_graph_header(row: dict) -> str:
+    return (
+        f"Graph {row['graph']}"
+        f" | samples={row['m_samples']}"
+        f" | nodes={row['num_nodes']}"
+        f" | edges={row['num_edges']}"
+        f" | cycles={row['num_cycles']}"
+    )
+
+
+def format_serial_baseline_line(row: dict) -> str:
+    return (
+        "  serial baseline"
+        f" | total={fmt_seconds(row['serial_total_time'])}"
+        f" | solve={fmt_seconds(row['serial_solve_time'])}"
+        f" | build={fmt_seconds(row['serial_build_time'])}"
+    )
+
+
+def format_speedup_line(row: dict) -> str:
+    sample_part = f" | samples={row['m_samples']}" if "m_samples" in row else ""
+    return (
+        "SPEEDUP"
+        f" | graph={row['graph']}"
+        f"{sample_part}"
+        f" | copies={row['parallel_copies']}"
+        f" | solve={row['speedup_solve_only']:.2f}x"
+        f" | total={row['speedup_including_build']:.2f}x"
+        f" | serial_solve={fmt_seconds(row['serial_solve_time'])}"
+        f" | parallel_solve={fmt_seconds(row['parallel_solve_wall_time'])}"
+        f" | parallel_build={fmt_seconds(row['parallel_build_time'])}"
+        f" | max_obj_diff={row['max_obj_diff']:.2e}"
+        f" | mismatches(obj={row['obj_mismatches']}, selection={row['selection_mismatches']})"
+    )
+
+
+def format_speedup_table_header() -> str:
+    return "  copies | solve x | total x | parallel solve | build    | check"
+
+
+def format_speedup_table_row(row: dict) -> str:
+    check = "ok"
+    if row["obj_mismatches"] or row["selection_mismatches"]:
+        check = f"mismatch obj={row['obj_mismatches']} sel={row['selection_mismatches']}"
+    return (
+        f"  {int(row['parallel_copies']):6d}"
+        f" | {row['speedup_solve_only']:6.2f}x"
+        f" | {row['speedup_including_build']:6.2f}x"
+        f" | {fmt_seconds(row['parallel_solve_wall_time']):>14}"
+        f" | {fmt_seconds(row['parallel_build_time']):>7}"
+        f" | {check}"
+    )
+
+
+def print_live(line: str) -> None:
+    print(line, flush=True)
+
+
 def print_summary(row: dict) -> None:
-    print(f"\nGraph {row['graph']} | parallel copies: {row['parallel_copies']}")
-    print(f"  serial build time       : {row['serial_build_time']:.4f} s")
-    print(f"  serial solve time       : {row['serial_solve_time']:.4f} s")
-    print(f"  parallel build time     : {row['parallel_build_time']:.4f} s")
-    print(f"  parallel solve wall time: {row['parallel_solve_wall_time']:.4f} s")
-    print(f"  speedup solve only      : {row['speedup_solve_only']:.2f}x")
-    print(f"  speedup incl. build     : {row['speedup_including_build']:.2f}x")
-    print(f"  max objective diff      : {row['max_obj_diff']:.6e}")
-    print(f"  objective mismatches    : {row['obj_mismatches']}")
-    print(f"  selection mismatches    : {row['selection_mismatches']}")
+    print_live(format_speedup_table_row(row))
+
+
+def print_overall_leaders(summary_rows: list[dict]) -> None:
+    if not summary_rows:
+        return
+    best_solve = max(summary_rows, key=lambda row: float(row["speedup_solve_only"]))
+    best_total = max(summary_rows, key=lambda row: float(row["speedup_including_build"]))
+    print_live("")
+    print_live(
+        "BEST solve-only"
+        f" | graph={best_solve['graph']}"
+        f" | copies={best_solve['parallel_copies']}"
+        f" | speedup={best_solve['speedup_solve_only']:.2f}x"
+    )
+    print_live(
+        "BEST total"
+        f" | graph={best_total['graph']}"
+        f" | copies={best_total['parallel_copies']}"
+        f" | speedup={best_total['speedup_including_build']:.2f}x"
+    )
 
 
 def benchmark_one_graph(
@@ -321,8 +394,6 @@ def benchmark_one_graph(
         num_weight_vectors=args.m_samples,
         rng=np.random.default_rng(args.seed),
     )
-
-    print(f"\n--- Graph: {graph_path} ---")
 
     serial_bundle = None
     parallel_bundles = []
@@ -346,6 +417,10 @@ def benchmark_one_graph(
             "serial_solve_time": float(serial_solve_time),
             "serial_total_time": float(serial_total_time),
         }
+        print_live("")
+        print_live(format_graph_header(graph_metadata))
+        print_live(format_serial_baseline_line(graph_metadata))
+        print_live(format_speedup_table_header())
 
         for copies in copy_counts:
             for bundle in parallel_bundles:
@@ -423,14 +498,14 @@ def main() -> int:
     data_dir = select_data_dir(args.data_dir)
     graph_paths = select_graph_paths(data_dir, args.graph_name, args.graph_index, args.num_graphs)
 
-    print("===== Parallel Cached Hybrid Solver Benchmark =====")
-    print(f"Data dir               : {data_dir}")
-    print(f"Graph start index      : {args.graph_index}")
-    print(f"Graphs selected        : {len(graph_paths)}")
-    print(f"M samples              : {args.m_samples}")
-    print(f"Parallel copy counts   : {copy_counts}")
-    print(f"Threads per Gurobi model: {args.threads}")
-    print(f"Output dir             : {output_dir}")
+    print_live("===== Parallel Cached Hybrid Solver Benchmark =====")
+    print_live(f"Data dir                : {data_dir}")
+    print_live(f"Graph start index       : {args.graph_index}")
+    print_live(f"Graphs selected         : {len(graph_paths)}")
+    print_live(f"M samples               : {args.m_samples}")
+    print_live(f"Parallel copy counts    : {copy_counts}")
+    print_live(f"Threads per Gurobi model: {args.threads}")
+    print_live(f"Output dir              : {output_dir}")
 
     summary_rows = []
     per_solve_rows = []
@@ -443,7 +518,8 @@ def main() -> int:
         return 0
 
     write_outputs(output_dir, summary_rows, per_solve_rows)
-    print(f"\nOutputs: {output_dir}")
+    print_overall_leaders(summary_rows)
+    print_live(f"\nOutputs: {output_dir}")
     return 0
 
 
