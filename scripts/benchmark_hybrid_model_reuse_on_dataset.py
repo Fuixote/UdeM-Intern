@@ -83,7 +83,7 @@ def parse_args():
         )
     )
     parser.add_argument("--data_dir", type=str, default=str(PROCESSED_DATA_DIR))
-    parser.add_argument("--num_graphs", type=int, default=1)
+    parser.add_argument("--num_graphs", type=int, default=5)
     parser.add_argument("--num_weight_vectors", type=int, default=100)
     parser.add_argument("--max_cycle", type=int, default=3)
     parser.add_argument("--max_chain", type=int, default=4)
