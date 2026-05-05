@@ -83,7 +83,7 @@ def parse_args():
         )
     )
     parser.add_argument("--data_dir", type=str, default=str(PROCESSED_DATA_DIR))
-    parser.add_argument("--num_graphs", type=int, default=5)
+    parser.add_argument("--num_graphs", type=int, default=1)
     parser.add_argument("--num_weight_vectors", type=int, default=100)
     parser.add_argument("--max_cycle", type=int, default=3)
     parser.add_argument("--max_chain", type=int, default=4)
@@ -172,18 +172,8 @@ def graph_filename(data):
     return str(filename)
 
 
-def benchmark_one_graph(data, args, rng, env):
-    graph = graph_filename(data)
-    node_is_ndd = infer_ndd_mask(data.x)
-    num_nodes = int(data.num_nodes_custom[0].item())
-    num_edges = int(data.edge_index.shape[1])
-    cycle_candidates = cycle_candidates_only(data.candidates)
-    weight_vectors = make_weight_vectors(
-        data,
-        num_weight_vectors=args.num_weight_vectors,
-        rng=rng,
-    )
-
+def solve_by_rebuilding(data, node_is_ndd, num_nodes, cycle_candidates, weight_vectors, args, env):
+    """Build and solve a fresh hybrid IP model for each objective vector."""
     rebuild_results = []
     rebuild_times = []
     for weights in weight_vectors:
@@ -200,7 +190,11 @@ def benchmark_one_graph(data, args, rng, env):
         )
         rebuild_times.append(time.perf_counter() - t0)
         rebuild_results.append(result)
+    return rebuild_results, rebuild_times
 
+
+def solve_by_reusing(data, node_is_ndd, num_nodes, cycle_candidates, weight_vectors, args, env, graph):
+    """Build one hybrid IP model, then update only its objective coefficients."""
     t_build0 = time.perf_counter()
     cached_model = CachedHybridKepModel(
         edge_index=data.edge_index,
@@ -229,6 +223,41 @@ def benchmark_one_graph(data, args, rng, env):
             reuse_results.append(result)
     finally:
         cached_model.dispose()
+    return reuse_results, reuse_times, reuse_build_time
+
+
+def benchmark_one_graph(data, args, rng, env):
+    graph = graph_filename(data)
+    node_is_ndd = infer_ndd_mask(data.x)
+    num_nodes = int(data.num_nodes_custom[0].item())
+    num_edges = int(data.edge_index.shape[1])
+    cycle_candidates = cycle_candidates_only(data.candidates)
+    weight_vectors = make_weight_vectors(
+        data,
+        num_weight_vectors=args.num_weight_vectors,
+        rng=rng,
+    )
+
+    rebuild_results, rebuild_times = solve_by_rebuilding(
+        data=data,
+        node_is_ndd=node_is_ndd,
+        num_nodes=num_nodes,
+        cycle_candidates=cycle_candidates,
+        weight_vectors=weight_vectors,
+        args=args,
+        env=env,
+    )
+
+    reuse_results, reuse_times, reuse_build_time = solve_by_reusing(
+        data=data,
+        node_is_ndd=node_is_ndd,
+        num_nodes=num_nodes,
+        cycle_candidates=cycle_candidates,
+        weight_vectors=weight_vectors,
+        args=args,
+        env=env,
+        graph=graph,
+    )
 
     per_solve_rows = []
     obj_diffs = []
