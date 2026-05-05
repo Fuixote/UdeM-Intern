@@ -32,6 +32,7 @@ GROUND_TRUTH_NOISE_SIGMA = 0.08
 GROUND_TRUTH_NOISE_MODE = "deterministic_per_edge"
 LABEL_MODE_REALISTIC_SYNTHETIC = "realistic_synthetic"
 LABEL_MODE_CLEAN_LINEAR_UTILITY_CPRA = "clean_linear_utility_cpra"
+LABEL_MODE_NOISY_CLEAN_LINEAR_UTILITY_CPRA = "noisy_clean_linear_utility_cpra"
 LEGACY_REALISTIC_LABEL_MODE = "nonlinear_medical_expected_qaly_with_scarcity_priority"
 GROUND_TRUTH_LABEL_MODE = LABEL_MODE_REALISTIC_SYNTHETIC
 DEFAULT_CLEAN_LINEAR_UTILITY_WEIGHT = 10.0
@@ -413,7 +414,11 @@ def compute_graph_context(raw_data):
 def normalize_label_mode(label_mode):
     if label_mode == LEGACY_REALISTIC_LABEL_MODE:
         return LABEL_MODE_REALISTIC_SYNTHETIC
-    if label_mode in {LABEL_MODE_REALISTIC_SYNTHETIC, LABEL_MODE_CLEAN_LINEAR_UTILITY_CPRA}:
+    if label_mode in {
+        LABEL_MODE_REALISTIC_SYNTHETIC,
+        LABEL_MODE_CLEAN_LINEAR_UTILITY_CPRA,
+        LABEL_MODE_NOISY_CLEAN_LINEAR_UTILITY_CPRA,
+    }:
         return label_mode
     raise ValueError(f"Unsupported label mode: {label_mode}")
 
@@ -423,6 +428,7 @@ def label_config_from_args(args):
         "label_mode": normalize_label_mode(args.label_mode),
         "clean_linear_utility_weight": float(args.clean_linear_utility_weight),
         "clean_linear_cpra_weight": float(args.clean_linear_cpra_weight),
+        "clean_linear_noise_sigma": float(args.clean_linear_noise_sigma),
     }
 
 
@@ -431,15 +437,18 @@ def processing_config(label_config=None):
         "label_mode": GROUND_TRUTH_LABEL_MODE,
         "clean_linear_utility_weight": DEFAULT_CLEAN_LINEAR_UTILITY_WEIGHT,
         "clean_linear_cpra_weight": DEFAULT_CLEAN_LINEAR_CPRA_WEIGHT,
+        "clean_linear_noise_sigma": GROUND_TRUTH_NOISE_SIGMA,
     }
     label_mode = normalize_label_mode(label_config["label_mode"])
     clean_utility_weight = float(label_config["clean_linear_utility_weight"])
     clean_cpra_weight = float(label_config["clean_linear_cpra_weight"])
+    clean_noise_sigma = float(label_config.get("clean_linear_noise_sigma", GROUND_TRUTH_NOISE_SIGMA))
     config = {
         "ground_truth_label_mode": label_mode,
         "available_label_modes": [
             LABEL_MODE_REALISTIC_SYNTHETIC,
             LABEL_MODE_CLEAN_LINEAR_UTILITY_CPRA,
+            LABEL_MODE_NOISY_CLEAN_LINEAR_UTILITY_CPRA,
         ],
         "ground_truth_noise_sigma": GROUND_TRUTH_NOISE_SIGMA,
         "ground_truth_noise_mode": GROUND_TRUTH_NOISE_MODE,
@@ -469,6 +478,19 @@ def processing_config(label_config=None):
                 "clean_linear_cpra_weight": clean_cpra_weight,
             }
         )
+    elif label_mode == LABEL_MODE_NOISY_CLEAN_LINEAR_UTILITY_CPRA:
+        config.update(
+            {
+                "label_formula": (
+                    "max(0, (utility_weight * (utility / 100) + cpra_weight * "
+                    "recipient_cPRA) * (1 + deterministic_noise))"
+                ),
+                "clean_linear_utility_weight": clean_utility_weight,
+                "clean_linear_cpra_weight": clean_cpra_weight,
+                "clean_linear_noise_sigma": clean_noise_sigma,
+                "clean_linear_noise_mode": "deterministic_multiplicative_per_edge",
+            }
+        )
     return config
 
 
@@ -482,7 +504,25 @@ def clean_linear_utility_cpra_label(utility, cpra, label_config):
     return round(max(0.0, value), 4)
 
 
-def compute_ground_truth_label(
+def noisy_clean_linear_utility_cpra_components(utility, cpra, label_config, source_key):
+    latent = clean_linear_utility_cpra_label(utility, cpra, label_config)
+    sigma = float(label_config.get("clean_linear_noise_sigma", GROUND_TRUTH_NOISE_SIGMA))
+    epsilon = get_deterministic_epsilon(f"{source_key}|clean_linear_noise", sigma)
+    noisy = round(max(0.0, latent * (1.0 + epsilon)), 4)
+    return latent, epsilon, noisy
+
+
+def noisy_clean_linear_utility_cpra_label(utility, cpra, label_config, source_key):
+    _, _, noisy = noisy_clean_linear_utility_cpra_components(
+        utility,
+        cpra,
+        label_config,
+        source_key,
+    )
+    return noisy
+
+
+def compute_ground_truth_label_fields(
     label_config,
     expected_transplant_count,
     qaly,
@@ -493,15 +533,51 @@ def compute_ground_truth_label(
 ):
     label_mode = normalize_label_mode(label_config["label_mode"])
     if label_mode == LABEL_MODE_REALISTIC_SYNTHETIC:
-        return get_ground_truth(
-            expected_transplant_count,
-            qaly,
-            priority_multiplier,
+        return {
+            "ground_truth_label": get_ground_truth(
+                expected_transplant_count,
+                qaly,
+                priority_multiplier,
+                source_key,
+            )
+        }
+    if label_mode == LABEL_MODE_CLEAN_LINEAR_UTILITY_CPRA:
+        return {
+            "ground_truth_label": clean_linear_utility_cpra_label(utility, cpra, label_config)
+        }
+    if label_mode == LABEL_MODE_NOISY_CLEAN_LINEAR_UTILITY_CPRA:
+        latent, epsilon, noisy = noisy_clean_linear_utility_cpra_components(
+            utility,
+            cpra,
+            label_config,
             source_key,
         )
-    if label_mode == LABEL_MODE_CLEAN_LINEAR_UTILITY_CPRA:
-        return clean_linear_utility_cpra_label(utility, cpra, label_config)
+        return {
+            "ground_truth_label": noisy,
+            "latent_clean_linear_label": latent,
+            "label_noise_epsilon": round(epsilon, 6),
+        }
     raise ValueError(f"Unsupported label mode: {label_mode}")
+
+
+def compute_ground_truth_label(
+    label_config,
+    expected_transplant_count,
+    qaly,
+    priority_multiplier,
+    source_key,
+    utility,
+    cpra,
+):
+    return compute_ground_truth_label_fields(
+        label_config,
+        expected_transplant_count,
+        qaly,
+        priority_multiplier,
+        source_key,
+        utility,
+        cpra,
+    )["ground_truth_label"]
 
 
 def build_match_payload(
@@ -562,8 +638,17 @@ def build_match_payload(
         donor_flexibility,
         has_reciprocal_edge,
     )
+    label_fields = compute_ground_truth_label_fields(
+        label_config,
+        expected_transplant_count,
+        qaly,
+        priority_multiplier,
+        source_key,
+        utility,
+        cpra,
+    )
 
-    return {
+    payload = {
         "donor_node_id": str(source_node_id),
         "recipient": target,
         "utility": utility,
@@ -581,21 +666,14 @@ def build_match_payload(
         "donor_flexibility": donor_flexibility,
         "has_reciprocal_edge": has_reciprocal_edge,
         "priority_multiplier": priority_multiplier,
-        "ground_truth_label": compute_ground_truth_label(
-            label_config,
-            expected_transplant_count,
-            qaly,
-            priority_multiplier,
-            source_key,
-            utility,
-            cpra,
-        ),
         "donor_age": d_age,
         "donor_bt": donor_bt,
         "recipient_age": recipient_age,
         "recipient_cpra": cpra,
         "recipient_bt": recipient_bt,
     }
+    payload.update(label_fields)
+    return payload
 
 
 def build_processed_payload(input_file, label_config):
@@ -698,7 +776,7 @@ def build_processed_payload(input_file, label_config):
                     < str(best_matches[target].get("donor_node_id", ""))
                 )
             ):
-                best_matches[target] = {
+                selected_match = {
                     "recipient": target,
                     "utility": match.get("utility"),
                     "graft_survival_time": match.get("graft_survival_time"),
@@ -722,6 +800,11 @@ def build_processed_payload(input_file, label_config):
                     "recipient_cpra": match.get("recipient_cpra"),
                     "recipient_bt": match.get("recipient_bt"),
                 }
+                if "latent_clean_linear_label" in match:
+                    selected_match["latent_clean_linear_label"] = match["latent_clean_linear_label"]
+                if "label_noise_epsilon" in match:
+                    selected_match["label_noise_epsilon"] = match["label_noise_epsilon"]
+                best_matches[target] = selected_match
                 if "donor_node_id" in match:
                     best_matches[target]["winning_donor_id"] = match["donor_node_id"]
 
@@ -1585,12 +1668,18 @@ def parse_args():
     )
     parser.add_argument(
         "--label_mode",
-        choices=[LABEL_MODE_REALISTIC_SYNTHETIC, LABEL_MODE_CLEAN_LINEAR_UTILITY_CPRA, LEGACY_REALISTIC_LABEL_MODE],
+        choices=[
+            LABEL_MODE_REALISTIC_SYNTHETIC,
+            LABEL_MODE_CLEAN_LINEAR_UTILITY_CPRA,
+            LABEL_MODE_NOISY_CLEAN_LINEAR_UTILITY_CPRA,
+            LEGACY_REALISTIC_LABEL_MODE,
+        ],
         default=LABEL_MODE_REALISTIC_SYNTHETIC,
         help=(
             "Ground-truth label generation mode. "
             "'realistic_synthetic' uses the nonlinear medical reward; "
-            "'clean_linear_utility_cpra' uses a linear utility+cPRA reward."
+            "'clean_linear_utility_cpra' uses a linear utility+cPRA reward; "
+            "'noisy_clean_linear_utility_cpra' applies deterministic multiplicative noise to that linear reward."
         ),
     )
     parser.add_argument(
@@ -1604,6 +1693,12 @@ def parse_args():
         type=float,
         default=DEFAULT_CLEAN_LINEAR_CPRA_WEIGHT,
         help="Coefficient b in clean label a*(utility/100)+b*cPRA.",
+    )
+    parser.add_argument(
+        "--clean_linear_noise_sigma",
+        type=float,
+        default=GROUND_TRUTH_NOISE_SIGMA,
+        help="Multiplicative deterministic noise sigma for noisy clean linear labels.",
     )
     parser.add_argument(
         "--output_as_batch_dir",

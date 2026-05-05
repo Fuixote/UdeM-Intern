@@ -1,4 +1,17 @@
 #!/usr/bin/env python
+"""Benchmark Gurobi model reuse for the hybrid KEP integer program.
+
+For one fixed KEP graph, we generate 100 random objective coefficient vectors.
+We compare:
+
+1. Rebuild mode:
+   build and solve 100 independent hybrid IP models.
+
+2. Reuse mode:
+   build the hybrid IP model once, then iteratively update only the objective
+   coefficients and re-optimize 100 times.
+"""
+
 import argparse
 import csv
 import os
@@ -63,13 +76,17 @@ def parse_args():
     default_output_dir = Path(RESULTS_ROOT) / "hybrid_gurobi_reuse_benchmark" / datetime.now().strftime(
         "%Y-%m-%d_%H%M%S"
     )
-    parser = argparse.ArgumentParser(description="Benchmark hybrid Gurobi model rebuild vs model reuse on KEP data.")
+    parser = argparse.ArgumentParser(
+        description=(
+            "Benchmark hybrid Gurobi model rebuild vs objective update reuse "
+            "on KEP data."
+        )
+    )
     parser.add_argument("--data_dir", type=str, default=str(PROCESSED_DATA_DIR))
-    parser.add_argument("--num_graphs", type=int, default=5)
+    parser.add_argument("--num_graphs", type=int, default=1)
     parser.add_argument("--num_weight_vectors", type=int, default=100)
     parser.add_argument("--max_cycle", type=int, default=3)
     parser.add_argument("--max_chain", type=int, default=4)
-    parser.add_argument("--noise_scale", type=float, default=0.2)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--threads", type=int, default=1)
     parser.add_argument("--time_limit", type=float, default=None)
@@ -84,17 +101,24 @@ def cycle_candidates_only(candidates):
     return [candidate for candidate in candidates if candidate.get("type") == "cycle"]
 
 
-def make_weight_vectors(data, num_weight_vectors, noise_scale, rng):
-    base_weights = data.y.detach().cpu().numpy().reshape(-1).astype(np.float32) * float(DEFAULT_Y_SCALE)
-    if base_weights.size == 0:
-        return np.empty((num_weight_vectors, 0), dtype=np.float32)
-    if np.allclose(base_weights, 0.0):
-        base_weights = data.edge_attr[:, 0].detach().cpu().numpy().reshape(-1).astype(np.float32)
-        base_weights = np.maximum(1e-6, base_weights)
+def make_weight_vectors(data, num_weight_vectors, rng):
+    """Generate pure random objective coefficients for one fixed KEP graph.
 
-    noise = rng.normal(0.0, noise_scale, size=(num_weight_vectors, base_weights.shape[0])).astype(np.float32)
-    weights = np.maximum(0.0, base_weights.reshape(1, -1) * (1.0 + noise))
-    return weights.astype(np.float32, copy=False)
+    This follows the advisor's benchmark suggestion: keep the graph and
+    feasible region fixed, then solve the same IP model under 100 random
+    objective coefficient vectors.
+
+    Each row is one objective vector over the graph's directed edges.
+    """
+    num_edges = int(data.edge_index.shape[1])
+    if num_edges == 0:
+        return np.empty((num_weight_vectors, 0), dtype=np.float32)
+
+    return rng.uniform(
+        low=0.0,
+        high=1.0,
+        size=(num_weight_vectors, num_edges),
+    ).astype(np.float32)
 
 
 def select_data_dir(data_dir):
@@ -157,7 +181,6 @@ def benchmark_one_graph(data, args, rng, env):
     weight_vectors = make_weight_vectors(
         data,
         num_weight_vectors=args.num_weight_vectors,
-        noise_scale=args.noise_scale,
         rng=rng,
     )
 
@@ -374,7 +397,7 @@ def main():
     print(f"Graphs requested     : {args.num_graphs}")
     print(f"Weight vectors/graph : {args.num_weight_vectors}")
     print(f"Max chain            : {args.max_chain}")
-    print(f"Noise scale          : {args.noise_scale}")
+    print("Objective mode       : iid random Uniform[0, 1] coefficients")
     print(f"Output dir           : {output_dir}")
 
     dataset = load_benchmark_dataset(args)[: args.num_graphs]

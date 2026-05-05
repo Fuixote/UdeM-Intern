@@ -1,6 +1,7 @@
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import numpy as np
 import torch
@@ -17,37 +18,41 @@ class HybridDatasetBenchmarkHelperTest(unittest.TestCase):
         self.assertEqual(bench.cycle_candidates_only(candidates), [candidates[0]])
         self.assertEqual(bench.cycle_candidates_only([candidates]), [candidates[0]])
 
-    def test_make_weight_vectors_uses_scaled_labels_and_nonnegative_noise(self):
+    def test_make_weight_vectors_generates_uniform_objective_coefficients(self):
         class Data:
-            y = torch.tensor([0.5, 1.0], dtype=torch.float32)
-            edge_attr = torch.tensor([[0.1], [0.2]], dtype=torch.float32)
+            edge_index = torch.zeros((2, 3), dtype=torch.long)
 
         rng = np.random.default_rng(123)
         weights = bench.make_weight_vectors(
             Data(),
             num_weight_vectors=4,
-            noise_scale=0.2,
             rng=rng,
         )
 
-        self.assertEqual(weights.shape, (4, 2))
+        expected = np.random.default_rng(123).uniform(0.0, 1.0, size=(4, 3)).astype(np.float32)
+        self.assertEqual(weights.shape, (4, 3))
         self.assertEqual(weights.dtype, np.float32)
-        self.assertTrue(np.all(weights >= 0.0))
-        self.assertTrue(np.all(weights.mean(axis=0) > np.array([5.0, 10.0], dtype=np.float32)))
+        np.testing.assert_allclose(weights, expected)
 
-    def test_make_weight_vectors_falls_back_to_edge_attr_when_labels_are_zero(self):
+    def test_make_weight_vectors_handles_empty_graph(self):
         class Data:
-            y = torch.zeros(2, dtype=torch.float32)
-            edge_attr = torch.tensor([[0.1], [0.2]], dtype=torch.float32)
+            edge_index = torch.zeros((2, 0), dtype=torch.long)
 
         weights = bench.make_weight_vectors(
             Data(),
             num_weight_vectors=2,
-            noise_scale=0.0,
             rng=np.random.default_rng(1),
         )
 
-        np.testing.assert_allclose(weights, np.array([[0.1, 0.2], [0.1, 0.2]], dtype=np.float32))
+        self.assertEqual(weights.shape, (2, 0))
+        self.assertEqual(weights.dtype, np.float32)
+
+    def test_parse_args_defaults_to_one_graph(self):
+        with mock.patch("sys.argv", ["benchmark_hybrid_model_reuse_on_dataset.py"]):
+            args = bench.parse_args()
+
+        self.assertEqual(args.num_graphs, 1)
+        self.assertFalse(hasattr(args, "noise_scale"))
 
     def test_save_outputs_writes_csvs_and_pngs(self):
         summary_rows = [
