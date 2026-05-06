@@ -32,7 +32,7 @@ echo "Output: $STEP1_OUT_DIR"
 echo "n_total=$N_TOTAL n_epochs=$N_EPOCHS fy_epsilon=$FY_EPSILON fy_M=$FY_M seed=$SEED"
 
 echo
-echo "[1/6] Generate MSE and FY parameter trajectories"
+echo "[1/7] Generate MSE and FY parameter trajectories"
 "$PYTHON_BIN" "$STEP1_SCRIPT_DIR/Step1.py" \
   --data_dir "$DATA_DIR" \
   --out_dir "$STEP1_OUT_DIR" \
@@ -45,7 +45,7 @@ echo "[1/6] Generate MSE and FY parameter trajectories"
   --seed "$SEED"
 
 echo
-echo "[2/6] Append True Regret to MSE trajectory"
+echo "[2/7] Append True Regret to MSE trajectory"
 "$PYTHON_BIN" "$STEP1_SCRIPT_DIR/add_true_regret_to_trajectory.py" \
   --data_dir "$DATA_DIR" \
   --traj_path "$STEP1_OUT_DIR/trajectory_mse.npy" \
@@ -54,7 +54,7 @@ echo "[2/6] Append True Regret to MSE trajectory"
   --seed "$SEED"
 
 echo
-echo "[3/6] Append FY Loss to FY trajectory"
+echo "[3/7] Append FY Loss to FY trajectory"
 "$PYTHON_BIN" "$STEP1_SCRIPT_DIR/add_FY_loss_to_trajectory.py" \
   --data_dir "$DATA_DIR" \
   --traj_path "$STEP1_OUT_DIR/trajectory_fy.npy" \
@@ -65,7 +65,7 @@ echo "[3/6] Append FY Loss to FY trajectory"
   --seed "$SEED"
 
 echo
-echo "[4/6] Append True Regret to FY trajectory with FY Loss"
+echo "[4/7] Append True Regret to FY trajectory with FY Loss"
 "$PYTHON_BIN" "$STEP1_SCRIPT_DIR/add_true_regret_to_trajectory.py" \
   --data_dir "$DATA_DIR" \
   --traj_path "$STEP1_OUT_DIR/trajectory_fy_with_fy_loss.npy" \
@@ -74,7 +74,7 @@ echo "[4/6] Append True Regret to FY trajectory with FY Loss"
   --seed "$SEED"
 
 echo
-echo "[5/6] Plot 2D True Regret landscape and trajectories"
+echo "[5/7] Plot 2D True Regret landscape and trajectories"
 "$PYTHON_BIN" "$STEP1_SCRIPT_DIR/plot_trajectories_2D.py" \
   --data_dir "$DATA_DIR" \
   --mse_traj_path "$STEP1_OUT_ABS_DIR/trajectory_mse_with_regret.npy" \
@@ -86,11 +86,18 @@ echo "[5/6] Plot 2D True Regret landscape and trajectories"
   --n_milestones "$N_MILESTONES"
 
 echo
-echo "[6/6] Plot 3D trajectory metrics"
+echo "[6/7] Plot 3D trajectory metrics"
 "$PYTHON_BIN" "$STEP1_SCRIPT_DIR/plot_trajectories_3D.py" \
   --mse_path "$STEP1_OUT_ABS_DIR/trajectory_mse_with_regret.npy" \
   --fy_path "$STEP1_OUT_ABS_DIR/trajectory_fy_with_fy_loss_and_regret.npy" \
   --out_path "$STEP1_OUT_ABS_DIR/trajectory_3d_metrics.png"
+
+echo
+echo "[7/7] Plot epoch-wise FY Loss and True Regret"
+"$PYTHON_BIN" "$STEP1_SCRIPT_DIR/plot_epoch_metrics.py" \
+  --fy_path "$STEP1_OUT_ABS_DIR/trajectory_fy_with_fy_loss_and_regret.npy" \
+  --out_path "$STEP1_OUT_ABS_DIR/trajectory_epoch_metrics.png" \
+  --title "Step1 metrics over epochs, epsilon=$FY_EPSILON"
 
 echo
 echo "Step1 complete. Outputs:"
@@ -101,3 +108,4 @@ echo "  $STEP1_OUT_DIR/trajectory_fy_with_fy_loss.npy"
 echo "  $STEP1_OUT_DIR/trajectory_fy_with_fy_loss_and_regret.npy"
 echo "  $STEP1_OUT_DIR/trajectory_contour.png"
 echo "  $STEP1_OUT_DIR/trajectory_3d_metrics.png"
+echo "  $STEP1_OUT_DIR/trajectory_epoch_metrics.png"
