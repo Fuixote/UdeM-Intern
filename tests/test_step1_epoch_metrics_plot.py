@@ -10,7 +10,7 @@ def load_plot_module():
     module_path = (
         Path(__file__).resolve().parents[1]
         / "surrogate_experiment_results"
-        / "Step1"
+        / "Step1a"
         / "plot_epoch_metrics.py"
     )
     spec = importlib.util.spec_from_file_location("plot_epoch_metrics", module_path)
