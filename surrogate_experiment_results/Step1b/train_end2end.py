@@ -50,6 +50,117 @@ def select_best_fy_loss_checkpoint(trajectory, validation_fy_loss):
     }
 
 
+class EarlyStoppingTracker:
+    def __init__(self, patience, min_delta=0.0):
+        if patience <= 0:
+            raise ValueError("early stopping patience must be positive")
+        self.patience = int(patience)
+        self.min_delta = float(min_delta)
+        self.best_epoch = None
+        self.best_value = None
+        self.stop_epoch = None
+        self.num_bad_checks = 0
+        self.should_stop = False
+
+    def update(self, epoch, value):
+        value = float(value)
+        if self.best_value is None or value < self.best_value - self.min_delta:
+            self.best_epoch = int(epoch)
+            self.best_value = value
+            self.num_bad_checks = 0
+            return False
+
+        self.num_bad_checks += 1
+        if self.num_bad_checks >= self.patience:
+            self.should_stop = True
+            self.stop_epoch = int(epoch)
+        return self.should_stop
+
+    def to_dict(self):
+        return {
+            "patience": self.patience,
+            "min_delta": self.min_delta,
+            "best_epoch": self.best_epoch,
+            "best_value": self.best_value,
+            "stop_epoch": self.stop_epoch,
+            "num_bad_checks": self.num_bad_checks,
+            "should_stop": self.should_stop,
+        }
+
+
+def run_fy_trajectory_with_early_stopping(
+    train_graphs,
+    validation_graphs,
+    theta_init,
+    n_epochs,
+    lr,
+    eps_abs,
+    M,
+    seed,
+    metric_stride,
+    patience,
+    min_delta,
+    env,
+):
+    if metric_stride <= 0:
+        raise ValueError("--metric_stride must be positive")
+
+    opt = common.Adam(lr)
+    rng = np.random.RandomState(seed)
+    theta = np.asarray(theta_init, dtype=float).copy()
+    trajectory = [theta.copy()]
+    tracker = EarlyStoppingTracker(patience=patience, min_delta=min_delta)
+    validation_perturbations = common.make_perturbations_by_graph(
+        validation_graphs, eps_abs, M, seed
+    )
+
+    validation_fy = common.average_fy_objective(
+        theta, validation_graphs, validation_perturbations, env
+    )
+    tracker.update(epoch=0, value=validation_fy)
+    print(
+        "  [early-stop] epoch    0 "
+        f"validation_fy_loss={validation_fy:.6f} best_epoch={tracker.best_epoch}"
+    )
+
+    for epoch in range(1, n_epochs + 1):
+        theta = opt.step(theta, common.grad_fy(train_graphs, theta, eps_abs, M, rng, env))
+        trajectory.append(theta.copy())
+        print(f"  [FY] epoch {epoch:>4} theta={np.round(theta, 4)}")
+
+        if epoch % metric_stride != 0 and epoch != n_epochs:
+            continue
+
+        validation_fy = common.average_fy_objective(
+            theta, validation_graphs, validation_perturbations, env
+        )
+        should_stop = tracker.update(epoch=epoch, value=validation_fy)
+        print(
+            f"  [early-stop] epoch {epoch:>4} "
+            f"validation_fy_loss={validation_fy:.6f} "
+            f"best_epoch={tracker.best_epoch} bad_checks={tracker.num_bad_checks}"
+        )
+        if should_stop:
+            print(
+                f"  [early-stop] stopping at epoch {epoch}; "
+                f"best validation_fy_loss={tracker.best_value:.6f} "
+                f"at epoch {tracker.best_epoch}"
+            )
+            break
+
+    summary = tracker.to_dict()
+    summary.update(
+        {
+            "enabled": True,
+            "metric": "validation_fy_loss",
+            "max_epochs": int(n_epochs),
+            "metric_stride": int(metric_stride),
+            "stopped_epoch": len(trajectory) - 1,
+        }
+    )
+    return np.asarray(trajectory, dtype=float), summary
+
+
 def write_csv(path, rows, fieldnames):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -114,6 +225,14 @@ def parse_args(argv=None):
     parser.add_argument("--fy_epsilon", type=float, default=1.0)
     parser.add_argument("--fy_M", type=int, default=4)
     parser.add_argument("--metric_stride", type=int, default=1)
+    parser.add_argument(
+        "--early_stop_metric",
+        choices=["validation_fy_loss"],
+        default=None,
+        help="Enable early stopping using the selected validation metric.",
+    )
+    parser.add_argument("--early_stop_patience", type=int, default=0)
+    parser.add_argument("--early_stop_min_delta", type=float, default=0.0)
     parser.add_argument("--gurobi_seed", type=int, default=42)
     parser.add_argument("--plot", action="store_true")
     return parser.parse_args(argv)
@@ -161,17 +280,41 @@ def main(argv=None):
         )
         print(f"e2e theta_init={np.round(theta_init, 4)}")
 
-        trajectory = common.run_fy_trajectory(
-            train_graphs,
-            theta_init=theta_init,
-            n_epochs=args.n_epochs,
-            lr=args.lr,
-            eps_abs=args.fy_epsilon,
-            M=args.fy_M,
-            seed=args.theta_seed,
-            env=env,
-        )
+        early_stopping_summary = {
+            "enabled": False,
+            "metric": args.early_stop_metric,
+            "max_epochs": int(args.n_epochs),
+            "metric_stride": int(args.metric_stride),
+            "stopped_epoch": int(args.n_epochs),
+        }
+        if args.early_stop_metric == "validation_fy_loss":
+            trajectory, early_stopping_summary = run_fy_trajectory_with_early_stopping(
+                train_graphs,
+                validation_graphs,
+                theta_init=theta_init,
+                n_epochs=args.n_epochs,
+                lr=args.lr,
+                eps_abs=args.fy_epsilon,
+                M=args.fy_M,
+                seed=args.theta_seed,
+                metric_stride=args.metric_stride,
+                patience=args.early_stop_patience,
+                min_delta=args.early_stop_min_delta,
+                env=env,
+            )
+        else:
+            trajectory = common.run_fy_trajectory(
+                train_graphs,
+                theta_init=theta_init,
+                n_epochs=args.n_epochs,
+                lr=args.lr,
+                eps_abs=args.fy_epsilon,
+                M=args.fy_M,
+                seed=args.theta_seed,
+                env=env,
+            )
         np.save(trajectories_dir / "trajectory_e2e.npy", trajectory)
+        write_json(metrics_dir / "early_stopping.json", early_stopping_summary)
 
         eval_indices = common.trajectory_epoch_indices(len(trajectory), args.metric_stride)
         trajectory_subset = trajectory[eval_indices]

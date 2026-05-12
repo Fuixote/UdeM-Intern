@@ -25,12 +25,27 @@ LR_E2E="${STEP1B_E2E_LR:-0.1}"
 FY_EPSILON="${STEP1B_FY_EPSILON:-1.0}"
 FY_M="${STEP1B_FY_M:-4}"
 METRIC_STRIDE="${STEP1B_METRIC_STRIDE:-1}"
+E2E_EARLY_STOP_METRIC="${STEP1B_E2E_EARLY_STOP_METRIC:-}"
+E2E_EARLY_STOP_PATIENCE="${STEP1B_E2E_EARLY_STOP_PATIENCE:-0}"
+E2E_EARLY_STOP_MIN_DELTA="${STEP1B_E2E_EARLY_STOP_MIN_DELTA:-0.0}"
 THETA_INIT="${STEP1B_THETA_INIT:-}"
 OUTPUT_ROOT="${STEP1B_OUTPUT_ROOT:-results/step1b_runs}"
 SPLIT_PATH="${STEP1B_SPLIT_PATH:-results/step1b_splits/master_split_seed=$SPLIT_SEED.json}"
 BOOTSTRAP_SAMPLES="${STEP1B_BOOTSTRAP_SAMPLES:-1000}"
 BOOTSTRAP_SEED="${STEP1B_BOOTSTRAP_SEED:-42}"
-DEFAULT_RUN_DIR="$OUTPUT_ROOT/train_size=$TRAIN_SIZE/split_seed=$SPLIT_SEED/subset_seed=$SUBSET_SEED/theta_seed=$THETA_SEED/eps=${FY_EPSILON}_M=${FY_M}_e2e_epochs=${N_EPOCHS_E2E}_stride=${METRIC_STRIDE}"
+
+EARLY_STOP_SUFFIX=""
+EARLY_STOP_ARGS=()
+if [[ -n "$E2E_EARLY_STOP_METRIC" ]]; then
+  EARLY_STOP_SUFFIX="_earlystop=${E2E_EARLY_STOP_METRIC}_patience=${E2E_EARLY_STOP_PATIENCE}_mindelta=${E2E_EARLY_STOP_MIN_DELTA}"
+  EARLY_STOP_ARGS=(
+    --early_stop_metric "$E2E_EARLY_STOP_METRIC"
+    --early_stop_patience "$E2E_EARLY_STOP_PATIENCE"
+    --early_stop_min_delta "$E2E_EARLY_STOP_MIN_DELTA"
+  )
+fi
+
+DEFAULT_RUN_DIR="$OUTPUT_ROOT/train_size=$TRAIN_SIZE/split_seed=$SPLIT_SEED/subset_seed=$SUBSET_SEED/theta_seed=$THETA_SEED/eps=${FY_EPSILON}_M=${FY_M}_e2e_epochs=${N_EPOCHS_E2E}_stride=${METRIC_STRIDE}${EARLY_STOP_SUFFIX}"
 RUN_DIR="${STEP1B_OUTPUT_DIR:-$DEFAULT_RUN_DIR}"
 
 echo "Step1b root: $ROOT_DIR"
@@ -42,6 +57,7 @@ echo "master split train_pool=$TRAIN_POOL_SIZE val=$VAL_SIZE test=$TEST_SIZE spl
 echo "train_size=$TRAIN_SIZE subset_seed=$SUBSET_SEED theta_seed=$THETA_SEED"
 echo "2stage epochs=$N_EPOCHS_2STAGE lr=$LR_2STAGE"
 echo "e2e epochs=$N_EPOCHS_E2E lr=$LR_E2E fy_epsilon=$FY_EPSILON M=$FY_M metric_stride=$METRIC_STRIDE"
+echo "e2e early_stop_metric=${E2E_EARLY_STOP_METRIC:-disabled} patience=$E2E_EARLY_STOP_PATIENCE min_delta=$E2E_EARLY_STOP_MIN_DELTA"
 echo "theta_init=${THETA_INIT:-seeded random}"
 echo "bootstrap_samples=$BOOTSTRAP_SAMPLES bootstrap_seed=$BOOTSTRAP_SEED"
 
@@ -69,6 +85,9 @@ config = {
     "fy_epsilon": float("$FY_EPSILON"),
     "fy_M": int("$FY_M"),
     "metric_stride": int("$METRIC_STRIDE"),
+    "early_stop_metric": "$E2E_EARLY_STOP_METRIC" or None,
+    "early_stop_patience": int("$E2E_EARLY_STOP_PATIENCE"),
+    "early_stop_min_delta": float("$E2E_EARLY_STOP_MIN_DELTA"),
     "theta_init": "$THETA_INIT" or None,
     "bootstrap_samples": int("$BOOTSTRAP_SAMPLES"),
     "bootstrap_seed": int("$BOOTSTRAP_SEED"),
@@ -118,6 +137,7 @@ MPLCONFIGDIR="${MPLCONFIGDIR:-/tmp/matplotlib}" \
   --fy_epsilon "$FY_EPSILON" \
   --fy_M "$FY_M" \
   --metric_stride "$METRIC_STRIDE" \
+  "${EARLY_STOP_ARGS[@]}" \
   --plot \
   "${COMMON_THETA_ARGS[@]}"
 
@@ -141,6 +161,7 @@ echo "  $RUN_DIR/model_weights/e2e_best_by_validation_fy_loss.npz"
 echo "  $RUN_DIR/run_config.json"
 echo "  $RUN_DIR/metrics/2stage_loss_curve.csv"
 echo "  $RUN_DIR/metrics/e2e_loss_curve.csv"
+echo "  $RUN_DIR/metrics/early_stopping.json"
 echo "  $RUN_DIR/metrics/test_summary.csv"
 echo "  $RUN_DIR/plots/2stage_mse_loss.png"
 echo "  $RUN_DIR/plots/e2e_fy_loss.png"

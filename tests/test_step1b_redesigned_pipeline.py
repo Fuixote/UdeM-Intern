@@ -97,6 +97,33 @@ class Step1bRedesignedPipelineTest(unittest.TestCase):
         self.assertEqual(checkpoint["selection_metric"], "validation_fy_loss")
         self.assertEqual(checkpoint["selection_value"], 0.1)
 
+    def test_early_stopping_tracker_stops_after_patience_without_improvement(self):
+        train_end2end = load_module("train_end2end.py", "step1b_train_end2end")
+        tracker = train_end2end.EarlyStoppingTracker(patience=2, min_delta=0.01)
+
+        self.assertFalse(tracker.update(epoch=0, value=1.0))
+        self.assertFalse(tracker.update(epoch=5, value=0.995))
+        self.assertTrue(tracker.update(epoch=10, value=0.994))
+
+        self.assertTrue(tracker.should_stop)
+        self.assertEqual(tracker.best_epoch, 0)
+        self.assertEqual(tracker.stop_epoch, 10)
+        self.assertEqual(tracker.num_bad_checks, 2)
+
+    def test_early_stopping_tracker_resets_after_large_enough_improvement(self):
+        train_end2end = load_module("train_end2end.py", "step1b_train_end2end")
+        tracker = train_end2end.EarlyStoppingTracker(patience=2, min_delta=0.01)
+
+        self.assertFalse(tracker.update(epoch=0, value=1.0))
+        self.assertFalse(tracker.update(epoch=5, value=0.995))
+        self.assertFalse(tracker.update(epoch=10, value=0.98))
+        self.assertFalse(tracker.update(epoch=15, value=0.979))
+        self.assertTrue(tracker.update(epoch=20, value=0.978))
+
+        self.assertEqual(tracker.best_epoch, 10)
+        self.assertEqual(tracker.best_value, 0.98)
+        self.assertEqual(tracker.stop_epoch, 20)
+
     def test_evaluation_summary_marks_train_size_and_method(self):
         evaluate_models = load_module("evaluate_models.py", "step1b_evaluate_models")
         evaluations = [
