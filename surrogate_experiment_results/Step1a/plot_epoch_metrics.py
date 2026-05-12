@@ -77,7 +77,7 @@ def plot_epoch_metrics(fy_path, out_path, title=None):
     ax_loss, ax_regret = axes
 
     ax_loss.plot(fy_epochs, fy_loss, color="tab:green", linewidth=2.0, label="Perturbed FY objective")
-    annotate_endpoint(ax_loss, fy_epochs, fy_loss, "FY obj.", "tab:green")
+    annotate_endpoint(ax_loss, fy_epochs, fy_loss, "FY objective", "tab:green")
     style_axis(ax_loss, "(a) Perturbed FY objective vs epoch", "Perturbed FY objective")
     ax_loss.legend(fontsize=8)
 

@@ -96,6 +96,17 @@ def resolve_path(path, base_dir):
     return os.path.join(base_dir, path)
 
 
+def best_gap_marker(metrics):
+    """Return the trajectory epoch with the smallest synthetic-label decision gap."""
+    if "decision_gap" not in metrics:
+        return None
+    gaps = np.asarray(metrics["decision_gap"], dtype=float)
+    if gaps.size == 0 or np.all(np.isnan(gaps)):
+        return None
+    epoch = int(np.nanargmin(gaps))
+    return {"epoch": epoch, "gap": float(gaps[epoch])}
+
+
 def draw_contour_with_traj(ax, fig, T1, T2, R, traj, metrics, cmap_name, title, xl, yl,
                            show_ratio_line=True, n_milestones=5):
     """Overlay one trajectory on the synthetic-label decision-gap landscape."""
@@ -107,15 +118,15 @@ def draw_contour_with_traj(ax, fig, T1, T2, R, traj, metrics, cmap_name, title, 
     cb = fig.colorbar(cf, ax=ax, shrink=0.82)
     cb.set_label("Avg. oracle objective gap", fontsize=8)
 
-    # 最优方向射线 θ_1/θ_2 = 2
+    # Noise-free linear coefficient direction θ_1/θ_2 = 2.
     if show_ratio_line:
         t1_max = float(T1.max())
         t2_max = float(T2.max())
-        # 射线：从原点出发，ratio=2，画到图的边界
         end_t1 = min(t1_max, t2_max * 2)
         end_t2 = end_t1 / 2
         ax.plot([0, end_t1], [0, end_t2], "--", color="white",
-                lw=1.4, alpha=0.7, label=r"optimal ray ($\theta_1/\theta_2=2$)")
+                lw=1.4, alpha=0.7,
+                label=r"noise-free coefficient ray ($\theta_1/\theta_2=2$)")
 
     # 轨迹：颜色由浅到深表示 epoch 进展
     cmap = plt.get_cmap(cmap_name)
@@ -138,17 +149,32 @@ def draw_contour_with_traj(ax, fig, T1, T2, R, traj, metrics, cmap_name, title, 
             markeredgecolor="white", markeredgewidth=1.5, label=f"start {np.round(traj[0], 2)}")
     final_label = f"final {np.round(traj[-1], 2)}"
     if "fy_objective" in metrics:
-        final_label += f", FY obj={metrics['fy_objective'][-1]:.4g}"
+        final_label += f", FY objective={metrics['fy_objective'][-1]:.4g}"
     if "decision_gap" in metrics:
         final_label += f", gap={metrics['decision_gap'][-1]:.4g}"
     ax.plot(*traj[-1], "*", color=cmap(1.0),   ms=14, zorder=8,
             markeredgecolor="white", markeredgewidth=1.2,
             label=final_label)
 
+    best_gap = best_gap_marker(metrics)
+    if best_gap is not None and best_gap["epoch"] < len(traj):
+        epoch = best_gap["epoch"]
+        theta_best = traj[epoch]
+        ax.plot(
+            *theta_best,
+            "X",
+            color="gold",
+            ms=11,
+            zorder=10,
+            markeredgecolor="black",
+            markeredgewidth=1.0,
+            label=f"best-gap iterate ep{epoch}, gap={best_gap['gap']:.4g}",
+        )
+
     # Clean signal coefficient used before multiplicative label noise.
     ax.plot(*TRUE_THETA, "D", color="lime", ms=10, zorder=9,
             markeredgecolor="black", markeredgewidth=1.2,
-            label=r"clean-signal coefficient $[10,5]$")
+            label=r"noise-free linear coefficient $[10,5]$")
 
     ax.set_xlabel(xl, fontsize=9)
     ax.set_ylabel(yl, fontsize=9)

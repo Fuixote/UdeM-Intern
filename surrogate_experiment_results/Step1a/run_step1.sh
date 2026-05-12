@@ -97,7 +97,7 @@ echo "[7/7] Plot epoch-wise FY objective and synthetic-label decision gap"
 "$PYTHON_BIN" "$STEP1_SCRIPT_DIR/plot_epoch_metrics.py" \
   --fy_path "$STEP1_OUT_ABS_DIR/trajectory_fy_with_fy_loss_and_regret.npy" \
   --out_path "$STEP1_OUT_ABS_DIR/trajectory_epoch_metrics.png" \
-  --title "Step1a FY diagnostics over epochs, epsilon=$FY_EPSILON"
+  --title "Step 1a FY diagnostics over epochs, epsilon=$FY_EPSILON"
 
 echo
 echo "Step1a complete. Outputs:"
