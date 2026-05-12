@@ -138,7 +138,7 @@ def run_fy(graphs, theta_init, n_epochs, lr, eps_abs, M, seed, env):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_dir",
-        default=str(ROOT / "dataset/processed/clean_linear_dataset"))
+        default=str(ROOT / "dataset/processed/step1_noisy_linear_sigma010"))
     parser.add_argument("--out_dir",    default=str(Path(__file__).parent))
     parser.add_argument("--n_total",    type=int,   default=5)
     parser.add_argument("--n_epochs",   type=int,   default=100)

@@ -108,7 +108,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--data_dir",
-        default=str(ROOT / "dataset/processed/clean_linear_dataset"),
+        default=str(ROOT / "dataset/processed/step1_noisy_linear_sigma010"),
     )
     parser.add_argument("--traj_path", default=str(here / "trajectory_fy.npy"))
     parser.add_argument(
