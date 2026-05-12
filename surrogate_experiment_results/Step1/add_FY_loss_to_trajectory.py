@@ -1,5 +1,6 @@
 """
-Append average Fenchel-Young surrogate loss to a saved 2D parameter trajectory.
+Append the average perturbed Fenchel-Young objective to a saved 2D parameter
+trajectory.
 
 Default input:
     trajectory_fy.npy                shape (n_epochs + 1, 2)
@@ -8,9 +9,10 @@ Default output:
     trajectory_fy_with_fy_loss.npy   shape (n_epochs + 1, 3)
 
 Columns for the default output:
-    theta_1, theta_2, fy_loss
+    theta_1, theta_2, fy_objective
 
-The loss matches the objective whose gradient is used by Step1.py::grad_fy:
+The value matches the training surrogate whose gradient is used by
+Step1.py::grad_fy:
 
     L_FY(theta) ~= E_z[max_y <w_hat(theta) + z, y>] - <w_hat(theta), y*>
 
@@ -142,7 +144,7 @@ def main():
         graphs = load_graphs(args.data_dir, args.n_total, seed=args.seed, env=env)
 
         print(
-            "Computing average FY loss for each trajectory point "
+            "Computing average perturbed FY objective for each trajectory point "
             f"with epsilon={args.fy_epsilon}, M={args.fy_M}, seed={args.seed} ..."
         )
         perturbations_by_graph = make_perturbations_by_graph(

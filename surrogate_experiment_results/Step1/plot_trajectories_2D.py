@@ -1,15 +1,15 @@
 """
-可视化 MSE 和 FY 训练轨迹在 True Regret 等高线上的运动
+Visualize MSE and FY trajectories on the synthetic-label decision-gap landscape.
 
 读取:
     trajectory_mse_with_regret.npy  shape (n_epochs+1, 3), columns:
-        theta_1, theta_2, true_regret
+        theta_1, theta_2, decision_gap  (legacy column name: true_regret)
     trajectory_fy_with_fy_loss_and_regret.npy  shape (n_epochs+1, 4), columns:
-        theta_1, theta_2, fy_loss, true_regret
+        theta_1, theta_2, fy_objective, decision_gap
 
 输出:
     trajectory_contour.png
-    true_regret_surface.npz
+    true_regret_surface.npz  (legacy filename; stores the decision-gap surface)
 """
 
 import os
@@ -75,16 +75,16 @@ def load_trajectory(path, name):
     metrics = {}
     if name == "MSE":
         if arr.shape[1] >= 3:
-            metrics["true_regret"] = arr[:, 2]
+            metrics["decision_gap"] = arr[:, 2]
         else:
-            print(f"Warning: {name} has no True Regret column: {path}")
+            print(f"Warning: {name} has no decision-gap column: {path}")
     elif name == "FY":
         if arr.shape[1] >= 3:
-            metrics["fy_loss"] = arr[:, 2]
+            metrics["fy_objective"] = arr[:, 2]
         if arr.shape[1] >= 4:
-            metrics["true_regret"] = arr[:, 3]
+            metrics["decision_gap"] = arr[:, 3]
         else:
-            print(f"Warning: {name} has no True Regret column: {path}")
+            print(f"Warning: {name} has no decision-gap column: {path}")
     return traj, metrics, arr.shape
 
 
@@ -98,14 +98,14 @@ def resolve_path(path, base_dir):
 
 def draw_contour_with_traj(ax, fig, T1, T2, R, traj, metrics, cmap_name, title, xl, yl,
                            show_ratio_line=True, n_milestones=5):
-    """在 True Regret 等高线上叠加单条轨迹。"""
+    """Overlay one trajectory on the synthetic-label decision-gap landscape."""
     # 景观
     lo, hi = R.min(), R.min() + (R.max() - R.min()) * 0.6
     Rc = np.clip(R, lo, hi)
     cf = ax.contourf(T1, T2, Rc, levels=40, cmap="viridis")
     ax.contour(T1, T2, Rc, levels=12, colors="white", linewidths=0.3, alpha=0.4)
     cb = fig.colorbar(cf, ax=ax, shrink=0.82)
-    cb.set_label("True Regret", fontsize=8)
+    cb.set_label("Avg. oracle objective gap", fontsize=8)
 
     # 最优方向射线 θ_1/θ_2 = 2
     if show_ratio_line:
@@ -137,18 +137,18 @@ def draw_contour_with_traj(ax, fig, T1, T2, R, traj, metrics, cmap_name, title, 
     ax.plot(*traj[0],  "o", color=cmap(0.2),  ms=10, zorder=8,
             markeredgecolor="white", markeredgewidth=1.5, label=f"start {np.round(traj[0], 2)}")
     final_label = f"final {np.round(traj[-1], 2)}"
-    if "fy_loss" in metrics:
-        final_label += f", FY loss={metrics['fy_loss'][-1]:.4g}"
-    if "true_regret" in metrics:
-        final_label += f", regret={metrics['true_regret'][-1]:.4g}"
+    if "fy_objective" in metrics:
+        final_label += f", FY obj={metrics['fy_objective'][-1]:.4g}"
+    if "decision_gap" in metrics:
+        final_label += f", gap={metrics['decision_gap'][-1]:.4g}"
     ax.plot(*traj[-1], "*", color=cmap(1.0),   ms=14, zorder=8,
             markeredgecolor="white", markeredgewidth=1.2,
             label=final_label)
 
-    # 真实参数
+    # Clean signal coefficient used before multiplicative label noise.
     ax.plot(*TRUE_THETA, "D", color="lime", ms=10, zorder=9,
             markeredgecolor="black", markeredgewidth=1.2,
-            label=r"$\theta^*=[10,5]$")
+            label=r"clean-signal coefficient $[10,5]$")
 
     ax.set_xlabel(xl, fontsize=9)
     ax.set_ylabel(yl, fontsize=9)
@@ -163,17 +163,17 @@ def plot(traj_mse, metrics_mse, traj_fy, metrics_fy, T1, T2, R,
 
     draw_contour_with_traj(
         ax_l, fig, T1, T2, R, traj_mse, metrics_mse, "Blues_r",
-        f"MSE (2-stage)  —  {n_epochs} epochs", xl, yl,
+        f"MSE reward-fitting baseline  —  {n_epochs} epochs", xl, yl,
         n_milestones=n_milestones,
     )
     draw_contour_with_traj(
         ax_r, fig, T1, T2, R, traj_fy, metrics_fy, "Oranges_r",
-        f"FY (end-to-end)  —  {n_epochs} epochs", xl, yl,
+        f"Decision-focused FY training  —  {n_epochs} epochs", xl, yl,
         n_milestones=n_milestones,
     )
 
     fig.suptitle(
-        r"True Regret landscape  ·  $\hat{w}_e = \theta_1 u_e + \theta_2 c_e$"
+        r"Synthetic-label Decision Gap Landscape  ·  $\hat{w}_e = \theta_1 u_e + \theta_2 c_e$"
         f"  ·  init={np.round(traj_mse[0], 2)}",
         fontsize=13,
     )
@@ -216,24 +216,24 @@ def main():
     traj_fy, metrics_fy, fy_shape = load_trajectory(fy_path, "FY")
     n_epochs = len(traj_mse) - 1
     print(f"Loaded trajectories: MSE raw {mse_shape}, FY raw {fy_shape}")
-    if "true_regret" in metrics_mse:
-        regret_mse = metrics_mse["true_regret"]
+    if "decision_gap" in metrics_mse:
+        regret_mse = metrics_mse["decision_gap"]
         print(
-            "Loaded MSE True Regret column: "
+            "Loaded MSE decision-gap column: "
             f"start={regret_mse[0]:.6f}, final={regret_mse[-1]:.6f}, "
             f"min={regret_mse.min():.6f}, max={regret_mse.max():.6f}"
         )
-    if "fy_loss" in metrics_fy:
-        fy_loss = metrics_fy["fy_loss"]
+    if "fy_objective" in metrics_fy:
+        fy_loss = metrics_fy["fy_objective"]
         print(
-            "Loaded FY Loss column: "
+            "Loaded FY objective column: "
             f"start={fy_loss[0]:.6f}, final={fy_loss[-1]:.6f}, "
             f"min={fy_loss.min():.6f}, max={fy_loss.max():.6f}"
         )
-    if "true_regret" in metrics_fy:
-        regret_fy = metrics_fy["true_regret"]
+    if "decision_gap" in metrics_fy:
+        regret_fy = metrics_fy["decision_gap"]
         print(
-            "Loaded FY True Regret column: "
+            "Loaded FY decision-gap column: "
             f"start={regret_fy[0]:.6f}, final={regret_fy[-1]:.6f}, "
             f"min={regret_fy.min():.6f}, max={regret_fy.max():.6f}"
         )
@@ -259,13 +259,15 @@ def main():
         graphs = load_graphs(args.data_dir, args.n_total, seed=args.seed, env=env)
         print(f"  total={len(graphs)}")
 
-        print("Computing True Regret landscape …")
+        print("Computing synthetic-label decision-gap landscape …")
         T1, T2, R = regret_landscape(graphs, t1g, t2g, env)
         surface_path = os.path.join(args.out_dir, "true_regret_surface.npz")
         np.savez_compressed(
             surface_path,
             T1=T1,
             T2=T2,
+            decision_gap=R,
+            # Legacy key kept so older notebooks/scripts can still load the surface.
             true_regret=R,
             theta_1_grid=t1g,
             theta_2_grid=t2g,

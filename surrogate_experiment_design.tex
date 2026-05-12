@@ -18,8 +18,8 @@
 
 The purpose of the experiments is not only to compare decision-focused learning
 (DFL) against a two-stage predict-then-optimize pipeline, but also to establish
-whether the Fenchel--Young (FY) perturbed-optimizer loss
-\citep{berthet2020learning} is a meaningful surrogate for the true decision
+whether the Fenchel--Young (FY) perturbed-optimizer objective
+\citep{berthet2020learning} is a meaningful surrogate for the target decision
 loss in our kidney exchange setting.
 
 This distinction matters because the realistic synthetic benchmark used in our
@@ -28,13 +28,13 @@ not a simple linear function of utility, but a nonlinear product of transplant
 success probability, QALY, scarcity priority, graph-structural variables, and
 deterministic edge-level noise. Therefore, a direct comparison between DFL and a
 two-stage baseline on this benchmark alone cannot isolate the behavior of the
-surrogate loss. If DFL improves the final matching score, the improvement may be
+FY objective. If DFL improves the final matching score, the improvement may be
 due to the surrogate, the choice of perturbation scale, the warm start, or model
 capacity. If DFL does not improve, the failure may instead be caused by model
 misspecification or an overly complex label-generation process.
 
 We therefore separate the experimental study into several layers, moving from a
-controlled noisy clean-linear surrogate-validity test to the full realistic
+controlled noisy-linear synthetic reward benchmark to the full realistic
 synthetic benchmark.
 
 \clearpage
@@ -44,11 +44,14 @@ synthetic benchmark.
     \includegraphics[width=0.90\textwidth]{surrogate_experiment_results/Step1/epsilon=0.2/trajectory_3d_metrics.png}\\[-0.45em]
     \includegraphics[width=0.90\textwidth]{surrogate_experiment_results/Step1/epsilon=1.0/trajectory_contour.png}\\[-0.45em]
     \includegraphics[width=0.90\textwidth]{surrogate_experiment_results/Step1/epsilon=1.0/trajectory_3d_metrics.png}\\[-0.35em]
-    \caption{Step~1 diagnostics under the current noisy clean-linear label. The
-    four panels, from top to bottom, show the \(\epsilon=0.2\) true-regret
-    landscape, \(\epsilon=0.2\) trajectory metrics, \(\epsilon=1.0\) true-regret
-    landscape, and \(\epsilon=1.0\) trajectory metrics. All panels use the same
-    100 graph instances from
+    \caption{Step~1 diagnostics on a controlled noisy-linear synthetic reward
+    benchmark with \(\sigma=0.10\). The four panels, from top to bottom, show
+    the \(\epsilon=0.2\) synthetic-label decision-gap landscape,
+    \(\epsilon=0.2\) trajectory metrics, the \(\epsilon=1.0\)
+    synthetic-label decision-gap landscape, and \(\epsilon=1.0\) trajectory
+    metrics. The decision gap is the oracle objective gap under the synthetic
+    label weights, not a clinical regret measure. All panels use the same 100
+    graph instances from
     \texttt{dataset/processed/step1\_noisy\_linear\_sigma010}.}
     \label{fig:step1-diagnostics-all}
 \end{figure}
@@ -56,13 +59,13 @@ synthetic benchmark.
 
 \section{Experimental Roadmap}
 
-\subsection{Step 1: Surrogate Validity Under a Noisy Clean Linear Label}
+\subsection{Step 1: Surrogate Validity Under a Noisy Linear Synthetic Reward}
 
-The first experiment should validate whether the FY loss is directionally aligned
-with the true regret in a controlled setting. The current Step~1 run uses a
-noisy clean-linear label:
+The first experiment should validate whether the perturbed FY objective is
+directionally aligned with downstream decision quality in a controlled setting.
+The current Step~1 run uses a noisy linear synthetic reward:
 \[
-    w^{\mathrm{true}}_e
+    w^{\mathrm{syn}}_e
     =
     \max\left\{
         0,\,
@@ -80,19 +83,38 @@ two-feature linear probe
 \]
 
 This setting preserves a transparent two-feature signal while adding controlled
-edge-level variation that the two-feature probe cannot perfectly fit. If the FY
-surrogate is appropriate, its trajectory should still move toward low-regret
-regions of the true decision landscape, even though exact reward recovery is no
+edge-level variation that the two-feature probe cannot perfectly fit. We
+therefore evaluate parameters by the \emph{synthetic-label decision gap}:
+\[
+    G(\theta)
+    =
+    \frac{1}{N}
+    \sum_{i=1}^{N}
+    \left[
+        (w_i^{\mathrm{syn}})^\top y_i^\star
+        -
+        (w_i^{\mathrm{syn}})^\top S(\hat w_i(\theta))
+    \right],
+\]
+where \(y_i^\star=S(w_i^{\mathrm{syn}})\) is the KEP solution optimized under
+the synthetic label weights. This is an oracle objective gap under the synthetic
+reward labels; it should not be read as regret with respect to real transplant
+outcomes, clinical utility, or patient welfare. If the FY surrogate is
+appropriate, its trajectory should still move toward low decision-gap regions
+under the synthetic reward labels, even though exact reward recovery is no
 longer possible.
 
 The main diagnostic objects are:
 \begin{itemize}
-    \item the true regret landscape \(R(\theta_1,\theta_2)\);
-    \item the FY surrogate landscape \(L_{\mathrm{FY}}(\theta_1,\theta_2)\);
+    \item the synthetic-label decision-gap landscape \(G(\theta_1,\theta_2)\);
+    \item the perturbed FY objective landscape \(L_{\mathrm{FY}}(\theta_1,\theta_2)\);
     \item the two-stage MSE solution \(\theta^\star_{\mathrm{2s}}\);
-    \item the true oracle set
+    \item the synthetic-label oracle solution \(y^\star=S(w^{\mathrm{syn}})\);
+    \item the best probe parameter on the grid
     \[
-        \Theta^\star = \arg\min_{\theta} R(\theta);
+        \theta_{\mathrm{gap\text{-}min}}
+        =
+        \arg\min_{\theta \in \mathrm{grid}} G(\theta);
     \]
     \item the FY minimizer
     \[
@@ -102,77 +124,80 @@ The main diagnostic objects are:
     \]
 \end{itemize}
 
-The primary metric should be regret gap rather than parameter distance:
+The primary metric should be decision gap rather than parameter distance:
 \[
-    \Delta R(\epsilon)
+    \Delta G(\epsilon)
     =
-    R(\theta^\star_{\mathrm{FY}}(\epsilon))
+    G(\theta^\star_{\mathrm{FY}}(\epsilon))
     -
-    \min_{\theta} R(\theta).
+    \min_{\theta} G(\theta).
 \]
-This is important because the KEP solver is piecewise constant, so the true
-regret landscape often has an optimal plateau rather than a unique isolated
-minimizer. In such cases, parameter-space distance to one selected oracle point
-is not well-defined, whereas \(\Delta R\) remains meaningful.
+This is important because the KEP solver is piecewise constant, so the
+decision-gap landscape often has a low-gap plateau rather than a unique isolated
+minimizer. In such cases, parameter-space distance to one selected grid point is
+not well-defined, whereas \(\Delta G\) remains meaningful.
 
 This step answers the question:
 
 \begin{quote}
-Does the FY surrogate point toward the true low-regret region when the predictive
-model captures the main clean signal but cannot represent deterministic
-edge-level noise?
+Does the FY surrogate point toward low synthetic-label decision-gap regions when
+the predictive model captures the main noise-free linear signal but cannot represent
+deterministic edge-level noise?
 \end{quote}
 
 In the current Step~1 diagnostic, this question is tested on 100 graph
 instances, using the same sampled instances for the MSE and FY trajectories. We
 track the full optimization trajectories of both the two-stage MSE objective and
-the end-to-end FY objective in the \((\theta_1,\theta_2)\) plane, and evaluate
-each point by true regret. The saved trajectories contain \(1001\) points
+the decision-focused FY objective in the \((\theta_1,\theta_2)\) plane, and
+evaluate each point by synthetic-label decision gap. The saved trajectories
+contain \(1001\) points
 \((1000\) training epochs plus the initialization\()\). The initial parameter
-has average true regret \(3.5402\).
+has average decision gap \(3.5402\).
 
-The two-stage MSE trajectory still recovers the clean component of the noisy
+The two-stage MSE trajectory still recovers the noise-free linear component of the noisy
 label, converging to approximately \((10.00,5.01)\). However, because of the
 deterministic multiplicative noise, the final MSE solution does not reach zero
-true regret; its final average true regret is \(0.8759\). The FY trajectories
+decision gap; its final average decision gap is \(0.8759\). The FY trajectories
 show a different, decision-focused behavior. They do not need to recover the
-clean parameter vector \((10,5)\). Instead, they move through regions that
-improve the induced KEP decisions under the noisy label. For
-\(\epsilon=0.2\), the trajectory reaches its best observed true regret early,
-at epoch \(42\), before continuing to reduce the FY loss. For
+noise-free linear coefficient \((10,5)\). Instead, they move through regions
+that improve the induced KEP decisions under the synthetic label weights. For
+\(\epsilon=0.2\), the trajectory reaches its best observed decision gap early,
+at epoch \(42\), before continuing to reduce the perturbed FY objective. For
 \(\epsilon=1.0\), the trajectory grows to a larger parameter scale and reaches
-its best observed true regret later, around epoch \(781\).
+its best observed decision gap later, around epoch \(781\).
 
 \begin{center}
 \small
-\begin{tabular}{@{}ccccc@{}}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}cccccc@{}}
 \toprule
-method & \(\epsilon\) & final \(\theta\) & final loss/regret & best regret \\
+method & \(\epsilon\) & final \(\theta\) & final FY objective & final decision gap & best decision gap \\
 \midrule
-MSE & -- & \((10.0017,\,5.0147)\) & \(R=0.8759\) & \(0.8759\) \\
-FY & \(0.2\) & \((2.8135,\,1.3589)\) & \(L_{\mathrm{FY}}=0.3609,\ R=0.8714\) & \(0.7183\) (ep. \(42\)) \\
-FY & \(1.0\) & \((13.9796,\,6.7825)\) & \(L_{\mathrm{FY}}=1.8042,\ R=0.8714\) & \(0.8668\) (ep. \(781\)) \\
+MSE & -- & \((10.0017,\,5.0147)\) & -- & \(0.8759\) & \(0.8759\) \\
+FY & \(0.2\) & \((2.8135,\,1.3589)\) & \(0.3609\) & \(0.8714\) & \(0.7183\) (ep. \(42\)) \\
+FY & \(1.0\) & \((13.9796,\,6.7825)\) & \(1.8042\) & \(0.8714\) & \(0.8668\) (ep. \(781\)) \\
 \bottomrule
 \end{tabular}
+}
 \end{center}
 
 These results support the intended interpretation of the diagnostic. The
-two-stage method identifies the clean linear component of the noisy label, while
+two-stage method identifies the noise-free linear signal in the noisy label, while
 the FY surrogate searches in a decision-induced geometry. In this noisy
-controlled setting, the FY trajectory can visit lower-regret regions than the
-MSE endpoint, but the final FY endpoint is not necessarily the best-regret
+controlled setting, the FY trajectory can visit lower-gap regions than the
+MSE endpoint, but the final FY endpoint is not necessarily the best-gap
 iterate. This distinction is important for interpreting FY optimization: the
-surrogate loss may continue to optimize perturbation robustness even after the
-deterministic KEP decision has already reached a low-regret region.
+perturbed FY objective may continue to optimize perturbation robustness even
+after the deterministic KEP decision has already reached a low-gap region.
 
 This leads to the following practical observations.
 \begin{enumerate}
-    \item \textbf{The FY loss is decision-oriented rather than reward-fitting.}
-    Unlike the two-stage MSE trajectory, which recovers the clean component
+    \item \textbf{The FY objective is decision-oriented rather than reward-fitting.}
+    Unlike the two-stage MSE trajectory, which recovers the noise-free linear component
     \((10,5)\), the FY trajectory moves according to changes in the induced KEP
-    decision. With \(\epsilon=0.2\), the best observed FY point has true regret
-    \(0.7183\), below the final MSE regret \(0.8759\), despite being far from
-    \((10,5)\) in parameter space.
+    decision. With \(\epsilon=0.2\), the best observed FY point has decision gap
+    \(0.7183\), below the final MSE decision gap \(0.8759\), despite being far
+    from \((10,5)\) in parameter space.
 
     \item \textbf{The perturbation scale controls decision stability and
     parameter scale.}
@@ -187,34 +212,35 @@ This leads to the following practical observations.
     \mathbb{E}_{z}\!\left[y^\star(\hat w + z)\right] - y^\star,
 \]
     which penalizes deviations between the perturbation-averaged optimizer
-    output and the true-weight optimal decision.
+    output and the synthetic-label oracle decision.
 
-    \item \textbf{The best-regret point need not be the final FY endpoint.}
-    For \(\epsilon=0.2\), the minimum observed true regret is \(0.7183\) at
-    epoch \(42\), while the final true regret is \(0.8714\). For
-    \(\epsilon=1.0\), the best observed true regret is \(0.8668\) at epoch
-    \(781\), and the final true regret is \(0.8714\). This shows that in the
-    noisy setting, early stopping or model selection by true regret can matter.
+    \item \textbf{The best-gap point need not be the final FY endpoint.}
+    For \(\epsilon=0.2\), the minimum observed decision gap is \(0.7183\) at
+    epoch \(42\), while the final decision gap is \(0.8714\). For
+    \(\epsilon=1.0\), the best observed decision gap is \(0.8668\) at epoch
+    \(781\), and the final decision gap is \(0.8714\). This shows that in the
+    noisy setting, early stopping or model selection by decision gap can matter.
 
-    \item \textbf{Zero regret is unrealistic for this two-feature probe.}
-    The MSE endpoint is close to \((10,5)\), but its final regret remains
-    \(0.8759\). Thus the current Step~1 is no longer a pure
-    ``recover-the-clean-parameter'' sanity check; it is a controlled
+    \item \textbf{Zero decision gap is unrealistic for this two-feature probe.}
+    The MSE endpoint is close to \((10,5)\), but its final decision gap remains
+    \(0.8759\). Thus the current Step~1 is no longer a pure sanity check for
+    recovering the noise-free coefficient; it is a controlled
     decision-quality diagnostic under mild label noise.
 \end{enumerate}
 
 \subsection{Step 2: Controlled Model Misspecification}
 
 The second experiment should introduce a limited amount of misspecification.
-For example, the true reward may include an additional feature or interaction:
+For example, the synthetic label reward may include an additional feature or
+interaction:
 \[
-    w^{\mathrm{true}}_e
+    w^{\mathrm{syn}}_e
     =
     a u_e + b c_e + d\,\mathrm{age}^{\mathrm{donor}}_e,
 \]
 or
 \[
-    w^{\mathrm{true}}_e
+    w^{\mathrm{syn}}_e
     =
     a u_e + b c_e + d\,u_e c_e.
 \]
@@ -225,23 +251,24 @@ The prediction model can then be kept deliberately simpler:
 
 This setting tests whether FY optimization is robust when the model cannot
 perfectly recover the edge rewards. The question is no longer whether FY can
-recover the true label function, but whether it can still produce better
+recover the synthetic label function, but whether it can still produce better
 decisions than an MSE-trained predictor.
 
 The same landscape diagnostics should be reported:
 \[
-    R(\theta), \quad
+    G(\theta), \quad
     L_{\mathrm{FY},\epsilon}(\theta), \quad
-    R(\theta^\star_{\mathrm{2s}}), \quad
-    R(\theta^\star_{\mathrm{FY}}), \quad
-    \Delta R.
+    G(\theta^\star_{\mathrm{2s}}), \quad
+    G(\theta^\star_{\mathrm{FY}}), \quad
+    \Delta G.
 \]
 
 This step answers the question:
 
 \begin{quote}
 When the predictive model is misspecified, does the FY surrogate still move the
-parameters toward lower true regret than the two-stage MSE solution?
+parameters toward lower synthetic-label decision gap than the two-stage MSE
+solution?
 \end{quote}
 
 \subsection{Step 3: Training-Level DFL vs Two-Stage Comparison}
@@ -254,7 +281,7 @@ The two-stage baseline first minimizes prediction error:
 \[
     \min_{\theta}
     \sum_{e}
-    \left(\hat w_e(\theta)-w^{\mathrm{true}}_e\right)^2,
+    \left(\hat w_e(\theta)-w^{\mathrm{syn}}_e\right)^2,
 \]
 then solves the KEP using the predicted weights \(\hat \bw(\theta)\).
 
@@ -276,34 +303,34 @@ where
     z^{(m)}\sim \mathcal{N}(0,I).
 \]
 
-The primary evaluation metric should be final achieved ground-truth score, or
-equivalently average regret:
+The primary evaluation metric should be final achieved synthetic-reward score,
+or equivalently average synthetic-label decision gap:
 \[
-    R(\theta)
+    G(\theta)
     =
     \frac{1}{N}
     \sum_{i=1}^{N}
     \left[
-        (\bw^i)^\top y^\star(\bw^i)
+        (\bw_{\mathrm{syn}}^i)^\top y^\star(\bw_{\mathrm{syn}}^i)
         -
-        (\bw^i)^\top S(\hat \bw^i(\theta))
+        (\bw_{\mathrm{syn}}^i)^\top S(\hat \bw^i(\theta))
     \right].
 \]
 
 This step answers the question:
 
 \begin{quote}
-Does the landscape-level alignment between FY and true regret translate into a
-training-level improvement over the two-stage baseline?
+Does the landscape-level alignment between FY and synthetic-label decision gap
+translate into a training-level improvement over the two-stage baseline?
 \end{quote}
 
 \subsection{Step 4: Realistic Synthetic Benchmark}
 
 The final main benchmark should use the currently processed dataset, now named
 \texttt{dataset/processed/realistic\_synthetic\_benchmark}. This benchmark uses
-the nonlinear medical reward:
+the nonlinear synthetic medical reward:
 \[
-    w^{\mathrm{true}}_e
+    w^{\mathrm{syn}}_e
     =
     E[\mathrm{transplant}]_e
     \cdot
@@ -318,7 +345,7 @@ type context, arc failure probability, vertex failure probability, scarcity,
 donor flexibility, reciprocal edges, and deterministic edge-level noise.
 
 This benchmark should be described as a realistic synthetic benchmark rather
-than a clean surrogate-identification experiment. Its role is to test whether
+than a simple surrogate-identification experiment. Its role is to test whether
 the DFL pipeline improves exchange-plan quality in a richer synthetic
 environment.
 
@@ -363,14 +390,14 @@ by the relative scale of the perturbation:
 \]
 Thus, \(\epsilon\) should be interpreted relative to the scale of
 \(\hat \bw\). In the landscape plots, \(\epsilon\) may be calibrated relative to
-the MSE weight scale, while in end-to-end training it may be used as an absolute
+the MSE weight scale, while in FY training it may be used as an absolute
 noise standard deviation. This difference should be reported explicitly.
 
 \section{Recommended Presentation Order}
 
 The final paper should present the experiments in the following order:
 \begin{enumerate}
-    \item noisy clean-linear surrogate-validity benchmark;
+    \item noisy-linear synthetic reward surrogate-validity benchmark;
     \item controlled misspecification benchmark;
     \item training-level DFL versus two-stage comparison on controlled labels;
     \item realistic synthetic benchmark;
@@ -379,7 +406,7 @@ The final paper should present the experiments in the following order:
 
 This ordering separates mechanism validation from final empirical performance.
 It allows the paper to make precise claims: first, whether the FY surrogate is
-aligned with true regret under controlled conditions; second, whether this
+aligned with synthetic-label decision gap under controlled conditions; second, whether this
 alignment survives moderate misspecification; and finally, whether it yields
 practical improvements on the realistic synthetic KEP benchmark.
 

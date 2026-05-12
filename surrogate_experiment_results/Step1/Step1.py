@@ -1,5 +1,5 @@
 """
-Step 1 — 记录 2-stage (MSE) 和 end-to-end (FY) 训练过程中每个 epoch 的 θ 参数
+Step 1 — record theta per epoch for MSE reward fitting and decision-focused FY.
 
 输出:
     trajectory_mse.npy  shape (n_epochs+1, 2)  — MSE 每 epoch 的 (θ_1, θ_2)

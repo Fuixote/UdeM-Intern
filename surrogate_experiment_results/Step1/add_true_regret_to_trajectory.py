@@ -1,5 +1,5 @@
 """
-Append average True Regret to a saved parameter trajectory.
+Append the average synthetic-label decision gap to a saved parameter trajectory.
 
 Default input:
     trajectory_mse.npy             shape (n_epochs + 1, 2)
@@ -8,9 +8,13 @@ Default output:
     trajectory_mse_with_regret.npy shape (n_epochs + 1, 3)
 
 Columns for the default output:
-    theta_1, theta_2, true_regret
+    theta_1, theta_2, decision_gap
 
-If the input has extra columns, they are preserved and True Regret is appended.
+The legacy filename still says "regret" for compatibility. The appended value is
+the oracle objective gap under the synthetic label weights, not clinical regret.
+
+If the input has extra columns, they are preserved and the decision gap is
+appended.
 """
 
 import argparse
@@ -79,7 +83,7 @@ def append_true_regret(trajectory, graphs, env):
         if (idx + 1) % 25 == 0 or idx + 1 == len(trajectory):
             print(
                 f"  evaluated {idx + 1}/{len(trajectory)}  "
-                f"theta={np.round(theta, 4)}  regret={regrets[idx]:.6f}",
+                f"theta={np.round(theta, 4)}  decision_gap={regrets[idx]:.6f}",
                 flush=True,
             )
     return np.column_stack([trajectory, regrets])
@@ -120,7 +124,7 @@ def main():
         print(f"Loading graphs from {args.data_dir} with n_total={args.n_total}")
         graphs = load_graphs(args.data_dir, args.n_total, seed=args.seed, env=env)
 
-        print("Computing average True Regret for each trajectory point ...")
+        print("Computing average synthetic-label decision gap for each trajectory point ...")
         with_regret = append_true_regret(trajectory, graphs, env)
         np.save(args.out_path, with_regret)
 

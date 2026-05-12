@@ -3,9 +3,9 @@ Plot Step1 trajectories as three 3D curves in one figure.
 
 Inputs:
     trajectory_mse_with_regret.npy
-        columns: theta_1, theta_2, true_regret
+        columns: theta_1, theta_2, decision_gap
     trajectory_fy_with_fy_loss_and_regret.npy
-        columns: theta_1, theta_2, fy_loss, true_regret
+        columns: theta_1, theta_2, fy_objective, decision_gap
 
 Output:
     trajectory_3d_metrics.png
@@ -103,8 +103,8 @@ def main():
         mse[:, 0],
         mse[:, 1],
         mse[:, 2],
-        "2-stage MSE - True Regret",
-        "True Regret",
+        "MSE trajectory - decision gap",
+        "Decision gap",
         "Blues_r",
     )
     draw_3d_curve(
@@ -112,8 +112,8 @@ def main():
         fy[:, 0],
         fy[:, 1],
         fy[:, 3],
-        "End-to-end FY - True Regret",
-        "True Regret",
+        "FY trajectory - decision gap",
+        "Decision gap",
         "Oranges_r",
     )
     draw_3d_curve(
@@ -121,8 +121,8 @@ def main():
         fy[:, 0],
         fy[:, 1],
         fy[:, 2],
-        "End-to-end FY - FY Loss",
-        "FY Loss",
+        "FY trajectory - perturbed FY objective",
+        "Perturbed FY objective",
         "Greens_r",
     )
 

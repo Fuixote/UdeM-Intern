@@ -1,8 +1,9 @@
 """
 Linear Probe Landscape Experiment
 ==================================
-Visualize true Regret and Fenchel-Young surrogate loss landscapes over the full
-2D parameter space (theta_1, theta_2) for the utility-plus-cPRA probe:
+Visualize synthetic-label decision-gap and perturbed Fenchel-Young objective
+landscapes over the full 2D parameter space (theta_1, theta_2) for the
+utility-plus-cPRA probe:
 
     w_hat_e = theta_1 * utility_e + theta_2 * recipient_cPRA_e
 
@@ -277,7 +278,7 @@ def assert_cached_solver_matches_original(graph, env):
 
 
 def compute_regret(y_pred, y_optimal, w_true):
-    """Regret = optimal_obj - achieved_obj under true weights."""
+    """Oracle objective gap under synthetic label weights."""
     achieved = np.dot(w_true, y_pred)
     optimal = np.dot(w_true, y_optimal)
     return optimal - achieved
@@ -290,7 +291,7 @@ def compute_regret(y_pred, y_optimal, w_true):
 def make_antithetic_perturbations(rng, M, num_edges, eps_abs):
     """Create fixed perturbations with paired +/- samples to reduce MC noise."""
     if M <= 0:
-        raise ValueError("M must be positive for FY loss")
+        raise ValueError("M must be positive for the FY objective")
     half = M // 2
     samples = rng.normal(0, eps_abs, size=(half, num_edges)).astype(np.float32)
     perturbations = [samples, -samples]
@@ -300,7 +301,7 @@ def make_antithetic_perturbations(rng, M, num_edges, eps_abs):
 
 
 def regret_landscape(graphs_data, theta_x_grid, theta_y_grid, env):
-    """Compute average true Regret(theta) over the full 2D probe space."""
+    """Compute average synthetic-label decision gap over the 2D probe space."""
     T1, T2 = np.meshgrid(theta_x_grid, theta_y_grid)
     regret = np.zeros_like(T1)
     total = T1.size
@@ -312,23 +313,23 @@ def regret_landscape(graphs_data, theta_x_grid, theta_y_grid, env):
             y_pred = solve_once(w_hat, gd["graph"], env)
             regret[i, j] += compute_regret(y_pred, gd["y_optimal"], gd["w_true"])
         if (idx + 1) % 50 == 0 or idx + 1 == total:
-            print(f"  Regret grid: {idx + 1}/{total}", flush=True)
+            print(f"  Decision-gap grid: {idx + 1}/{total}", flush=True)
     regret /= len(graphs_data)
     return T1, T2, regret
 
 
 def fy_loss_landscape(graphs_data, theta_x_grid, theta_y_grid, env,
                       epsilon=0.2, M=8, theta_mse=None):
-    """Compute the Fenchel-Young surrogate loss landscape over the 2D probe.
+    """Compute the perturbed Fenchel-Young objective landscape over the 2D probe.
 
-    At each grid point, approximates the perturbed FY loss:
+    At each grid point, approximates the perturbed FY objective:
 
         L_FY(theta) ≈ (1/M) sum_m [
             max_y <w_hat(theta) + z_m, y> - <w_hat(theta), y*>
         ]
 
     where y_perturbed_m = argmax_{y in Y} (w_hat + epsilon * z_m)^T y,
-    z_m ~ N(0, I), and y* is the true-weight optimal solution. The omitted
+    z_m ~ N(0, I), and y* is the synthetic-label oracle solution. The omitted
     conjugate term is constant with respect to theta, so it does not affect
     the landscape minimizer. With common perturbation samples this finite-M
     estimate is convex in theta; the perturbation expectation gives the
@@ -361,7 +362,7 @@ def fy_loss_landscape(graphs_data, theta_x_grid, theta_y_grid, env,
             w_hat = X @ theta
             y_optimal = gd["y_optimal"]
 
-            # FY loss, up to a theta-independent constant:
+            # FY objective, up to a theta-independent constant:
             # E_z[max_y <w_hat + z, y>] - <w_hat, y*>.
             loss_sum = 0.0
             target_score = np.dot(w_hat, y_optimal)
@@ -372,7 +373,7 @@ def fy_loss_landscape(graphs_data, theta_x_grid, theta_y_grid, env,
             fy_loss[i, j] += loss_sum / M
 
         if (idx + 1) % 25 == 0 or idx + 1 == total:
-            print(f"  FY loss grid: {idx + 1}/{total}", flush=True)
+            print(f"  FY objective grid: {idx + 1}/{total}", flush=True)
 
     fy_loss /= len(graphs_data)
     return T1, T2, fy_loss
@@ -430,7 +431,7 @@ def clipped_contour(ax, fig, data, title, markers, x_label, y_label,
                 label=name, zorder=10)
         if regret_at_markers is not None:
             ax.annotate(
-                f"R={regret_at_markers[k]:.2f}",
+                f"gap={regret_at_markers[k]:.2f}",
                 xy=(theta_xy[0], theta_xy[1]),
                 xytext=marker_label_offset(theta_xy, T1, T2),
                 textcoords="offset points",
@@ -502,15 +503,15 @@ def plot_landscape(result, output_path, probe, num_graphs=0, graph_label=None):
     ]
 
     markers = [
-        (r"$\theta^*_{\mathrm{2s}}$  (MSE/OLS)", result["theta_mse_xy"], "red", "*"),
-        (r"$\theta^*_{\mathrm{oracle}}$ (Regret min)", result["theta_oracle_xy"], "lime", "D"),
-        (r"$\theta^*_{\mathrm{e2e}}$  (FY min)", result["theta_fy_xy"], "cyan", "o"),
+        (r"MSE/OLS anchor", result["theta_mse_xy"], "red", "*"),
+        (r"best grid point by decision gap", result["theta_gap_min_xy"], "lime", "D"),
+        (r"FY objective minimizer", result["theta_fy_xy"], "cyan", "o"),
     ]
     clipped_contour(
         axes[0],
         fig,
         result["regret_data"],
-        "True Regret — contour",
+        "Synthetic-label decision gap - contour",
         markers,
         probe["feature_labels"][0],
         probe["feature_labels"][1],
@@ -520,7 +521,7 @@ def plot_landscape(result, output_path, probe, num_graphs=0, graph_label=None):
         axes[1],
         fig,
         result["fy_data"],
-        "Fenchel-Young Surrogate — contour",
+        "Perturbed FY objective - contour",
         markers,
         probe["feature_labels"][0],
         probe["feature_labels"][1],
@@ -529,7 +530,7 @@ def plot_landscape(result, output_path, probe, num_graphs=0, graph_label=None):
         axes[2],
         fig,
         result["regret_data"],
-        "True Regret — 3D surface",
+        "Synthetic-label decision gap - 3D surface",
         markers,
         probe["feature_labels"][0],
         probe["feature_labels"][1],
@@ -538,7 +539,7 @@ def plot_landscape(result, output_path, probe, num_graphs=0, graph_label=None):
         axes[3],
         fig,
         result["fy_data"],
-        "Fenchel-Young Surrogate — 3D surface",
+        "Perturbed FY objective - 3D surface",
         markers,
         probe["feature_labels"][0],
         probe["feature_labels"][1],
@@ -571,13 +572,13 @@ def plot_axis_summary(result, output_path, probe, axis, num_graphs=0, graph_labe
 
     fig, axes = plt.subplots(1, 2, figsize=(14, 4.8), sharex=False)
     panels = [
-        (axes[0], theta_grid_r, T1_r, T2_r, R, "True Regret"),
-        (axes[1], theta_grid_f, T1_f, T2_f, F, "Fenchel-Young Surrogate"),
+        (axes[0], theta_grid_r, T1_r, T2_r, R, "Synthetic-label decision gap"),
+        (axes[1], theta_grid_f, T1_f, T2_f, F, "Perturbed FY objective"),
     ]
     marker_specs = [
-        (r"$\theta^*_{\mathrm{2s}}$", result["theta_mse_xy"], "red", "*"),
-        (r"$\theta^*_{\mathrm{oracle}}$", result["theta_oracle_xy"], "lime", "D"),
-        (r"$\theta^*_{\mathrm{e2e}}$", result["theta_fy_xy"], "cyan", "o"),
+        (r"MSE/OLS anchor", result["theta_mse_xy"], "red", "*"),
+        (r"grid gap-min", result["theta_gap_min_xy"], "lime", "D"),
+        (r"FY obj. min", result["theta_fy_xy"], "cyan", "o"),
     ]
 
     for ax, theta_grid, T1, T2, Z, title in panels:
@@ -674,18 +675,18 @@ def build_metrics(result, probe_key, probe, args, base_graphs):
         "fy_M": int(args.fy_M),
         "margin": float(args.margin),
         "theta_mse": as_float_list(result["theta_mse_xy"]),
-        "theta_oracle": as_float_list(result["theta_oracle_xy"]),
+        "theta_gap_min": as_float_list(result["theta_gap_min_xy"]),
         "theta_fy": as_float_list(result["theta_fy_xy"]),
-        "R_mse": r_mse,
-        "R_oracle": r_oracle,
-        "R_fy": r_fy,
-        "delta_R_mse": r_mse - r_oracle,
-        "delta_R_fy": r_fy - r_oracle,
+        "gap_mse": r_mse,
+        "gap_min_grid": r_oracle,
+        "gap_fy": r_fy,
+        "delta_gap_mse": r_mse - r_oracle,
+        "delta_gap_fy": r_fy - r_oracle,
         "FY_mse": f_mse,
-        "FY_oracle": f_oracle,
+        "FY_gap_min": f_oracle,
         "FY_fy": f_fy,
-        "R_min_grid": float(np.min(R)),
-        "R_max_grid": float(np.max(R)),
+        "gap_min_grid_value": float(np.min(R)),
+        "gap_max_grid_value": float(np.max(R)),
         "FY_min_grid": float(np.min(F)),
         "FY_max_grid": float(np.max(F)),
     }
@@ -701,10 +702,14 @@ def save_probe_artifacts(result, output_dir, probe_key, probe, args, base_graphs
         npz_path,
         theta1_grid=T1_r[0, :],
         theta2_grid=T2_r[:, 0],
+        decision_gap=R,
+        # Legacy aliases kept so older notebooks/scripts can still load the arrays.
         true_regret=R,
+        fy_objective=F,
         fy_loss=F,
         theta_mse=result["theta_mse_xy"],
-        theta_oracle=result["theta_oracle_xy"],
+        theta_gap_min=result["theta_gap_min_xy"],
+        theta_oracle=result["theta_gap_min_xy"],
         theta_fy=result["theta_fy_xy"],
         regret_at_markers=np.asarray(result["regret_at_markers"], dtype=float),
         fy_at_markers=np.asarray(result["fy_at_markers"], dtype=float),
@@ -728,11 +733,11 @@ def update_epsilon_sweep_csv(metrics, plot_root):
     fieldnames = [
         "epsilon", "probe_key", "num_graphs", "grid_size", "fy_M",
         "theta_mse_1", "theta_mse_2",
-        "theta_oracle_1", "theta_oracle_2",
+        "theta_gap_min_1", "theta_gap_min_2",
         "theta_fy_1", "theta_fy_2",
-        "R_mse", "R_oracle", "R_fy",
-        "delta_R_mse", "delta_R_fy",
-        "FY_mse", "FY_oracle", "FY_fy",
+        "gap_mse", "gap_min_grid", "gap_fy",
+        "delta_gap_mse", "delta_gap_fy",
+        "FY_mse", "FY_gap_min", "FY_fy",
         "graph_filenames",
     ]
     row = {
@@ -743,17 +748,17 @@ def update_epsilon_sweep_csv(metrics, plot_root):
         "fy_M": metrics["fy_M"],
         "theta_mse_1": metrics["theta_mse"][0],
         "theta_mse_2": metrics["theta_mse"][1],
-        "theta_oracle_1": metrics["theta_oracle"][0],
-        "theta_oracle_2": metrics["theta_oracle"][1],
+        "theta_gap_min_1": metrics["theta_gap_min"][0],
+        "theta_gap_min_2": metrics["theta_gap_min"][1],
         "theta_fy_1": metrics["theta_fy"][0],
         "theta_fy_2": metrics["theta_fy"][1],
-        "R_mse": metrics["R_mse"],
-        "R_oracle": metrics["R_oracle"],
-        "R_fy": metrics["R_fy"],
-        "delta_R_mse": metrics["delta_R_mse"],
-        "delta_R_fy": metrics["delta_R_fy"],
+        "gap_mse": metrics["gap_mse"],
+        "gap_min_grid": metrics["gap_min_grid"],
+        "gap_fy": metrics["gap_fy"],
+        "delta_gap_mse": metrics["delta_gap_mse"],
+        "delta_gap_fy": metrics["delta_gap_fy"],
         "FY_mse": metrics["FY_mse"],
-        "FY_oracle": metrics["FY_oracle"],
+        "FY_gap_min": metrics["FY_gap_min"],
         "FY_fy": metrics["FY_fy"],
         "graph_filenames": json.dumps(metrics["graph_filenames"]),
     }
@@ -762,6 +767,7 @@ def update_epsilon_sweep_csv(metrics, plot_root):
     if csv_path.exists():
         with open(csv_path) as f:
             rows = list(csv.DictReader(f))
+            rows = [{key: row.get(key, "") for key in fieldnames} for row in rows]
 
     def same_run(existing):
         return (
@@ -870,7 +876,7 @@ def select_graph_by_id(data_dir, graph_id, test_files_path=None):
 
 
 def compute_probe_result(base_graphs, probe_key, env, args):
-    """Compute OLS anchor, true regret, and FY landscapes for one probe."""
+    """Compute OLS anchor, decision-gap, and FY landscapes for one probe."""
     probe = PROBES[probe_key]
     graphs_data = []
     all_X = []
@@ -886,12 +892,12 @@ def compute_probe_result(base_graphs, probe_key, env, args):
         all_X.append(X)
         all_w.append(item["graph"]["w_true"])
 
-    # Utility probe OLS solution, used for grid anchoring and theta*_2s marker.
+    # Utility probe OLS solution, used for grid anchoring and the MSE marker.
     X_pool = np.concatenate(all_X, axis=0)
     w_pool = np.concatenate(all_w, axis=0)
     theta_mse = np.linalg.lstsq(X_pool, w_pool, rcond=None)[0]
     print(f"\nProbe: {probe['title']}")
-    print("OLS anchor (theta*_2s):")
+    print("OLS anchor (theta_2s_anchor):")
     for name, value in zip(probe["feature_names"], theta_mse):
         print(f"  {name}: {value:.4f}")
 
@@ -908,11 +914,11 @@ def compute_probe_result(base_graphs, probe_key, env, args):
     theta_x_grid = theta_grids[0]
     theta_y_grid = theta_grids[1]
 
-    print(f"Computing {probe['title']} True Regret landscape "
+    print(f"Computing {probe['title']} synthetic-label decision-gap landscape "
           f"({args.grid_size}x{args.grid_size} x {len(graphs_data)} graphs)...")
     regret_data = regret_landscape(graphs_data, theta_x_grid, theta_y_grid, env)
 
-    print(f"Computing {probe['title']} FY Loss landscape "
+    print(f"Computing {probe['title']} perturbed FY objective landscape "
           f"({args.grid_size}x{args.grid_size} x {len(graphs_data)} graphs x M={args.fy_M}, "
           f"epsilon={args.fy_epsilon})...")
     fy_data = fy_loss_landscape(
@@ -923,7 +929,7 @@ def compute_probe_result(base_graphs, probe_key, env, args):
 
     T1_r, T2_r, R = regret_data
     min_idx_r = np.unravel_index(np.argmin(R), R.shape)
-    theta_oracle = np.array([T1_r[min_idx_r], T2_r[min_idx_r]])
+    theta_gap_min = np.array([T1_r[min_idx_r], T2_r[min_idx_r]])
 
     T1_f, T2_f, F = fy_data
     min_idx_f = np.unravel_index(np.argmin(F), F.shape)
@@ -933,25 +939,25 @@ def compute_probe_result(base_graphs, probe_key, env, args):
     r_oracle = float(R[min_idx_r])
     r_fy = nearest_grid_value(regret_data, theta_fy)
     f_mse = nearest_grid_value(fy_data, theta_mse)
-    f_oracle = nearest_grid_value(fy_data, theta_oracle)
+    f_oracle = nearest_grid_value(fy_data, theta_gap_min)
     f_fy = float(F[min_idx_f])
 
     print("Full 2D probe results:")
-    print(f"  theta*_2s    (OLS/MSE anchor) : {np.array2string(theta_mse, precision=4)}")
-    print(f"  theta*_oracle (Regret min)    : {np.array2string(theta_oracle, precision=4)}")
-    print(f"  theta*_e2e   (FY min)         : {np.array2string(theta_fy, precision=4)}")
-    regret_label = "Regret" if len(graphs_data) == 1 else "Avg Regret"
-    print(f"  {regret_label} at theta*_2s       : {r_mse:.4f}")
-    print(f"  {regret_label} at theta*_oracle   : {r_oracle:.4f}")
-    print(f"  {regret_label} at theta*_e2e      : {r_fy:.4f}")
-    print(f"  Regret range on full 2D grid  : [{R.min():.4f}, {R.max():.4f}]")
-    print(f"  FY range on full 2D grid      : [{F.min():.4f}, {F.max():.4f}]")
+    print(f"  theta_2s_anchor     (OLS/MSE)      : {np.array2string(theta_mse, precision=4)}")
+    print(f"  theta_gap_min       (grid gap min) : {np.array2string(theta_gap_min, precision=4)}")
+    print(f"  theta_fy_min        (FY obj. min)  : {np.array2string(theta_fy, precision=4)}")
+    gap_label = "Decision gap" if len(graphs_data) == 1 else "Avg decision gap"
+    print(f"  {gap_label} at theta_2s_anchor : {r_mse:.4f}")
+    print(f"  {gap_label} at theta_gap_min   : {r_oracle:.4f}")
+    print(f"  {gap_label} at theta_fy_min    : {r_fy:.4f}")
+    print(f"  Decision-gap range on grid     : [{R.min():.4f}, {R.max():.4f}]")
+    print(f"  FY objective range on grid     : [{F.min():.4f}, {F.max():.4f}]")
 
     return {
         "regret_data": regret_data,
         "fy_data": fy_data,
         "theta_mse_xy": theta_mse,
-        "theta_oracle_xy": theta_oracle,
+        "theta_gap_min_xy": theta_gap_min,
         "theta_fy_xy": theta_fy,
         "regret_at_markers": [r_mse, r_oracle, r_fy],
         "fy_at_markers": [f_mse, f_oracle, f_fy],
@@ -972,11 +978,11 @@ def main():
     parser.add_argument("--test_files", type=str, default=None,
                         help="Path to test_files.txt to select from test set only")
     parser.add_argument("--grid_size", type=int, default=25,
-                        help="Grid resolution for Regret and FY landscapes")
+                        help="Grid resolution for decision-gap and FY-objective landscapes")
     parser.add_argument("--fy_M", type=int, default=8,
-                        help="Number of perturbation samples for FY loss")
+                        help="Number of perturbation samples for the FY objective")
     parser.add_argument("--fy_epsilon", type=float, default=0.2,
-                        help="Perturbation scale for FY loss (relative to weight std)")
+                        help="Perturbation scale for the FY objective (relative to weight std)")
     parser.add_argument("--plot_root", type=str, default="plot_results",
                         help="Root directory for epsilon-grouped landscape plots")
     parser.add_argument("--margin", type=float, default=0.5,

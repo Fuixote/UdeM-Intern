@@ -3,7 +3,7 @@ Plot Step1 training metrics over epochs.
 
 Inputs:
     trajectory_fy_with_fy_loss_and_regret.npy
-        columns: theta_1, theta_2, fy_loss, true_regret
+        columns: theta_1, theta_2, fy_objective, decision_gap
 
 Output:
     trajectory_epoch_metrics.png
@@ -76,9 +76,9 @@ def plot_epoch_metrics(fy_path, out_path, title=None):
     fig, axes = plt.subplots(1, 2, figsize=(13.5, 4.8))
     ax_loss, ax_regret = axes
 
-    ax_loss.plot(fy_epochs, fy_loss, color="tab:green", linewidth=2.0, label="Surrogate Loss")
-    annotate_endpoint(ax_loss, fy_epochs, fy_loss, "Surrogate Loss", "tab:green")
-    style_axis(ax_loss, "(a) Surrogate Loss vs Epoch", "Surrogate Loss")
+    ax_loss.plot(fy_epochs, fy_loss, color="tab:green", linewidth=2.0, label="Perturbed FY objective")
+    annotate_endpoint(ax_loss, fy_epochs, fy_loss, "FY obj.", "tab:green")
+    style_axis(ax_loss, "(a) Perturbed FY objective vs epoch", "Perturbed FY objective")
     ax_loss.legend(fontsize=8)
 
     ax_regret.plot(
@@ -86,10 +86,10 @@ def plot_epoch_metrics(fy_path, out_path, title=None):
         fy_regret,
         color="tab:orange",
         linewidth=2.0,
-        label="True Regret",
+        label="Synthetic-label decision gap",
     )
-    annotate_endpoint(ax_regret, fy_epochs, fy_regret, "True Regret", "tab:orange")
-    style_axis(ax_regret, "(b) True Regret vs Epoch", "True Regret")
+    annotate_endpoint(ax_regret, fy_epochs, fy_regret, "Decision gap", "tab:orange")
+    style_axis(ax_regret, "(b) Synthetic-label decision gap vs epoch", "Decision gap")
     ax_regret.legend(fontsize=8)
 
     if title:
