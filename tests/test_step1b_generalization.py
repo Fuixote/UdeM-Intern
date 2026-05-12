@@ -5,83 +5,88 @@ from pathlib import Path
 import numpy as np
 
 
-def load_step1b_module():
-    module_path = (
-        Path(__file__).resolve().parents[1]
-        / "surrogate_experiment_results"
-        / "Step1b"
-        / "generalization_experiment.py"
-    )
-    spec = importlib.util.spec_from_file_location("step1b_generalization", module_path)
+STEP1B_DIR = (
+    Path(__file__).resolve().parents[1]
+    / "surrogate_experiment_results"
+    / "Step1b"
+)
+
+
+def load_module(filename, name):
+    module_path = STEP1B_DIR / filename
+    spec = importlib.util.spec_from_file_location(name, module_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
 
 
 class Step1bGeneralizationHelpersTest(unittest.TestCase):
-    def test_make_split_is_deterministic_and_disjoint(self):
-        step1b = load_step1b_module()
+    def test_master_split_is_deterministic_and_disjoint(self):
+        split_step1b = load_module("split_dataset.py", "step1b_split_dataset")
         files = [Path(f"G-{idx}.json") for idx in range(20)]
 
-        first = step1b.make_split(files, train_size=4, val_size=3, test_size=5, seed=7)
-        second = step1b.make_split(files, train_size=4, val_size=3, test_size=5, seed=7)
+        first = split_step1b.make_master_split(
+            files, train_pool_size=4, val_size=3, test_size=5, seed=7
+        )
+        second = split_step1b.make_master_split(
+            files, train_pool_size=4, val_size=3, test_size=5, seed=7
+        )
 
         self.assertEqual(first, second)
-        self.assertEqual(len(first["train"]), 4)
+        self.assertEqual(len(first["train_pool"]), 4)
         self.assertEqual(len(first["validation"]), 3)
         self.assertEqual(len(first["test"]), 5)
 
-        train = set(first["train"])
-        validation = set(first["validation"])
-        test = set(first["test"])
+        train = {item["path"] for item in first["train_pool"]}
+        validation = {item["path"] for item in first["validation"]}
+        test = {item["path"] for item in first["test"]}
         self.assertFalse(train & validation)
         self.assertFalse(train & test)
         self.assertFalse(validation & test)
 
-    def test_make_split_rejects_insufficient_files(self):
-        step1b = load_step1b_module()
-        files = [Path(f"G-{idx}.json") for idx in range(3)]
+    def test_train_subset_rejects_oversized_request(self):
+        split_step1b = load_module("split_dataset.py", "step1b_split_dataset")
+        train_pool = [{"index": idx, "graph_id": idx, "path": f"G-{idx}.json"} for idx in range(3)]
 
-        with self.assertRaisesRegex(ValueError, "Need 4 graphs"):
-            step1b.make_split(files, train_size=2, val_size=1, test_size=1, seed=1)
+        with self.assertRaisesRegex(ValueError, "exceeds train pool size"):
+            split_step1b.select_train_subset(train_pool, train_size=4, seed=1)
 
-    def test_select_checkpoint_uses_minimum_metric(self):
-        step1b = load_step1b_module()
+    def test_run_mse_trajectory_starts_from_given_theta(self):
+        train_2stage = load_module("train_2stage.py", "step1b_train_2stage")
+        theta_init = np.array([0.5, 0.5])
+        graphs = [{"X": np.eye(2), "w_true": np.array([3.0, 1.0])}]
+
+        trajectory = train_2stage.run_mse_trajectory(
+            graphs, theta_init=theta_init, n_epochs=2, lr=0.1
+        )
+
+        self.assertEqual(trajectory.shape, (3, 2))
+        np.testing.assert_allclose(trajectory[0], theta_init)
+        self.assertFalse(np.allclose(trajectory[-1], theta_init))
+
+    def test_2stage_checkpoint_uses_validation_mse_loss(self):
+        train_2stage = load_module("train_2stage.py", "step1b_train_2stage")
         trajectory = np.array([[0.0, 0.0], [1.0, 1.0], [2.0, 2.0]])
         metrics = np.array([3.0, 0.5, 0.8])
 
-        selected = step1b.select_checkpoint(trajectory, metrics)
+        selected = train_2stage.select_best_mse_checkpoint(trajectory, metrics)
 
         self.assertEqual(selected["epoch"], 1)
+        self.assertEqual(selected["selection_metric"], "validation_mse_loss")
         np.testing.assert_allclose(selected["theta"], np.array([1.0, 1.0]))
-        self.assertEqual(selected["metric"], 0.5)
 
-    def test_summarize_test_metrics_reports_normalized_gap_and_pairing(self):
-        step1b = load_step1b_module()
-        mse = [
-            {"graph": "G-1.json", "gap": 2.0, "normalized_gap": 0.20, "ratio": 0.80},
-            {"graph": "G-2.json", "gap": 1.0, "normalized_gap": 0.10, "ratio": 0.90},
-        ]
-        fy = [
-            {"graph": "G-1.json", "gap": 1.5, "normalized_gap": 0.15, "ratio": 0.85},
-            {"graph": "G-2.json", "gap": 0.8, "normalized_gap": 0.08, "ratio": 0.92},
-        ]
+    def test_e2e_checkpoint_uses_validation_decision_gap(self):
+        train_end2end = load_module("train_end2end.py", "step1b_train_end2end")
+        trajectory = np.array([[0.0, 0.0], [1.0, 1.0], [2.0, 2.0]])
+        metrics = np.array([3.0, 0.5, 0.8])
 
-        summary = step1b.summarize_test_metrics(
-            method="fy_warm",
-            checkpoint_rule="validation_decision_gap",
-            checkpoint={"epoch": 3, "theta": np.array([2.0, 1.0]), "metric": 0.4},
-            evaluations=fy,
-            baseline_evaluations=mse,
+        selected = train_end2end.select_best_decision_gap_checkpoint(
+            trajectory, metrics
         )
 
-        self.assertEqual(summary["method"], "fy_warm")
-        self.assertEqual(summary["checkpoint_epoch"], 3)
-        self.assertAlmostEqual(summary["test_mean_decision_gap"], 1.15)
-        self.assertAlmostEqual(summary["test_mean_normalized_gap"], 0.115)
-        self.assertAlmostEqual(summary["test_median_normalized_gap"], 0.115)
-        self.assertAlmostEqual(summary["test_mean_achieved_oracle_ratio"], 0.885)
-        self.assertAlmostEqual(summary["paired_gap_improvement_over_mse"], 0.35)
+        self.assertEqual(selected["epoch"], 1)
+        self.assertEqual(selected["selection_metric"], "validation_decision_gap")
+        np.testing.assert_allclose(selected["theta"], np.array([1.0, 1.0]))
 
 
 if __name__ == "__main__":

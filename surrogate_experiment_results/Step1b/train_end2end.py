@@ -1,0 +1,245 @@
+"""Train the Step1b end-to-end FY decision-focused model."""
+
+from __future__ import annotations
+
+import argparse
+import csv
+import json
+import sys
+from pathlib import Path
+
+import numpy as np
+
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+import step1b_common as common
+from split_dataset import read_json, select_train_subset
+from plot_training_curves import plot_loss_curve
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_SPLIT_PATH = PROJECT_ROOT / "results" / "step1b_splits" / "master_split_seed42.json"
+DEFAULT_OUT_DIR = PROJECT_ROOT / "results" / "step1b_runs" / "train_size=50"
+MODEL_FORMULA = "w_hat_e = theta_1 * utility_e + theta_2 * recipient_cPRA_e"
+
+
+def select_best_decision_gap_checkpoint(trajectory, validation_decision_gap):
+    validation_decision_gap = np.asarray(validation_decision_gap, dtype=float)
+    best_idx = int(np.nanargmin(validation_decision_gap))
+    return {
+        "method": "e2e",
+        "epoch": best_idx,
+        "theta": np.asarray(trajectory[best_idx], dtype=float).copy(),
+        "selection_metric": "validation_decision_gap",
+        "selection_value": float(validation_decision_gap[best_idx]),
+    }
+
+
+def write_csv(path, rows, fieldnames):
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def write_json(path, payload):
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as handle:
+        json.dump(payload, handle, indent=2)
+
+
+def write_model_weights(out_dir, checkpoint, train_size):
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    theta = np.asarray(checkpoint["theta"], dtype=float)
+    stem = "e2e_best_by_validation_decision_gap"
+    npz_path = out_dir / f"{stem}.npz"
+    np.savez_compressed(
+        npz_path,
+        theta=theta,
+        method=np.asarray("e2e"),
+        model_type=np.asarray("linear_probe"),
+        model_formula=np.asarray(MODEL_FORMULA),
+        feature_names=np.asarray(common.PROBE["feature_names"]),
+        train_size=np.asarray(int(train_size)),
+        selected_epoch=np.asarray(int(checkpoint["epoch"])),
+        selection_metric=np.asarray(checkpoint["selection_metric"]),
+        selection_value=np.asarray(float(checkpoint["selection_value"])),
+    )
+    write_json(
+        out_dir / f"{stem}.json",
+        {
+            "method": "e2e",
+            "model_type": "linear_probe",
+            "model_formula": MODEL_FORMULA,
+            "feature_names": common.PROBE["feature_names"],
+            "train_size": int(train_size),
+            "selected_epoch": int(checkpoint["epoch"]),
+            "selection_metric": checkpoint["selection_metric"],
+            "selection_value": float(checkpoint["selection_value"]),
+            "theta": theta.tolist(),
+        },
+    )
+    return npz_path
+
+
+def parse_args(argv=None):
+    parser = argparse.ArgumentParser(description="Train Step1b end-to-end FY model.")
+    parser.add_argument("--split_path", default=str(DEFAULT_SPLIT_PATH))
+    parser.add_argument("--out_dir", default=str(DEFAULT_OUT_DIR))
+    parser.add_argument("--train_size", type=int, default=50)
+    parser.add_argument("--subset_seed", type=int, default=42)
+    parser.add_argument("--theta_seed", type=int, default=42)
+    parser.add_argument("--theta_init", type=float, nargs=2, default=None)
+    parser.add_argument("--n_epochs", type=int, default=100)
+    parser.add_argument("--lr", type=float, default=0.1)
+    parser.add_argument("--fy_epsilon", type=float, default=1.0)
+    parser.add_argument("--fy_M", type=int, default=4)
+    parser.add_argument("--metric_stride", type=int, default=1)
+    parser.add_argument("--gurobi_seed", type=int, default=42)
+    parser.add_argument("--plot", action="store_true")
+    return parser.parse_args(argv)
+
+
+def main(argv=None):
+    import gurobipy as gp
+
+    args = parse_args(argv)
+    out_dir = Path(args.out_dir)
+    metrics_dir = out_dir / "metrics"
+    trajectories_dir = out_dir / "trajectories"
+    model_weights_dir = out_dir / "model_weights"
+    plots_dir = out_dir / "plots"
+    trajectories_dir.mkdir(parents=True, exist_ok=True)
+
+    split = read_json(args.split_path)
+    train_entries = select_train_subset(
+        split["train_pool"], train_size=args.train_size, seed=args.subset_seed
+    )
+    validation_entries = split["validation"]
+
+    env = gp.Env(empty=True)
+    env.setParam("OutputFlag", 0)
+    env.setParam("Seed", args.gurobi_seed)
+    env.start()
+
+    train_graphs = []
+    validation_graphs = []
+    try:
+        print(f"Loading e2e train subset: n={len(train_entries)}")
+        train_graphs = common.load_graph_records(
+            [entry["path"] for entry in train_entries], env
+        )
+        print(f"Loading e2e validation split: n={len(validation_entries)}")
+        validation_graphs = common.load_graph_records(
+            [entry["path"] for entry in validation_entries], env
+        )
+
+        rng = np.random.RandomState(args.theta_seed)
+        theta_init = (
+            np.asarray(args.theta_init, dtype=float)
+            if args.theta_init is not None
+            else rng.uniform(0.5, 3.5, size=2)
+        )
+        print(f"e2e theta_init={np.round(theta_init, 4)}")
+
+        trajectory = common.run_fy_trajectory(
+            train_graphs,
+            theta_init=theta_init,
+            n_epochs=args.n_epochs,
+            lr=args.lr,
+            eps_abs=args.fy_epsilon,
+            M=args.fy_M,
+            seed=args.theta_seed,
+            env=env,
+        )
+        np.save(trajectories_dir / "trajectory_e2e.npy", trajectory)
+
+        eval_indices = common.trajectory_epoch_indices(len(trajectory), args.metric_stride)
+        trajectory_subset = trajectory[eval_indices]
+        train_gaps = common.evaluate_trajectory_decision_gap(
+            trajectory, train_graphs, env, indices=eval_indices
+        )
+        validation_gaps = common.evaluate_trajectory_decision_gap(
+            trajectory, validation_graphs, env, indices=eval_indices
+        )
+        train_perturbations = common.make_perturbations_by_graph(
+            train_graphs, args.fy_epsilon, args.fy_M, args.theta_seed
+        )
+        validation_perturbations = common.make_perturbations_by_graph(
+            validation_graphs, args.fy_epsilon, args.fy_M, args.theta_seed
+        )
+        train_fy = common.evaluate_trajectory_fy_objective(
+            trajectory, train_graphs, train_perturbations, env, indices=eval_indices
+        )
+        validation_fy = common.evaluate_trajectory_fy_objective(
+            trajectory,
+            validation_graphs,
+            validation_perturbations,
+            env,
+            indices=eval_indices,
+        )
+
+        rows = []
+        for row_idx, epoch in enumerate(eval_indices):
+            theta = trajectory_subset[row_idx]
+            rows.append(
+                {
+                    "epoch": int(epoch),
+                    "theta_1": float(theta[0]),
+                    "theta_2": float(theta[1]),
+                    "train_fy_loss": float(train_fy[row_idx]),
+                    "validation_fy_loss": float(validation_fy[row_idx]),
+                    "train_decision_gap": float(train_gaps[row_idx]),
+                    "validation_decision_gap": float(validation_gaps[row_idx]),
+                }
+            )
+        loss_csv = metrics_dir / "e2e_loss_curve.csv"
+        write_csv(
+            loss_csv,
+            rows,
+            [
+                "epoch",
+                "theta_1",
+                "theta_2",
+                "train_fy_loss",
+                "validation_fy_loss",
+                "train_decision_gap",
+                "validation_decision_gap",
+            ],
+        )
+
+        checkpoint = select_best_decision_gap_checkpoint(
+            trajectory_subset, validation_gaps
+        )
+        checkpoint["epoch"] = int(eval_indices[checkpoint["epoch"]])
+        weights_path = write_model_weights(model_weights_dir, checkpoint, args.train_size)
+        print(
+            "Saved e2e model weights "
+            f"{weights_path} at epoch {checkpoint['epoch']} "
+            f"validation_decision_gap={checkpoint['selection_value']:.6f}"
+        )
+
+        if args.plot:
+            plot_loss_curve(
+                loss_csv,
+                plots_dir / "e2e_fy_loss.png",
+                train_column="train_fy_loss",
+                validation_column="validation_fy_loss",
+                ylabel="Perturbed FY objective",
+                title="End-to-end FY surrogate loss",
+            )
+    finally:
+        common.dispose_graph_records(train_graphs)
+        common.dispose_graph_records(validation_graphs)
+        env.dispose()
+
+
+if __name__ == "__main__":
+    main()

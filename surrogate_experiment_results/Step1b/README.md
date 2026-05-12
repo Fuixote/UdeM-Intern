@@ -1,43 +1,76 @@
-# Step1b: Sample-Size Generalization Smoke Experiment
+# Step1b: Sample-Size Generalization Study
 
-This folder starts the held-out generalization layer for the Step1 noisy-linear
-synthetic reward benchmark.
+Step1b evaluates how the number of training graph instances affects held-out
+decision quality.
 
-The current minimal protocol is intentionally small:
+The pipeline uses a fixed master split from
+`dataset/processed/step1_noisy_linear_sigma010`:
 
-- train split: 2 graphs by default
-- validation split: 2 graphs by default
-- test split: 2 graphs by default
-- methods: `mse` and `fy_warm` by default
-- FY training: 1 epoch, `M=2` perturbations by default
-- checkpoint rule: `validation_decision_gap`
+- train pool: 1200 graphs
+- validation: 400 graphs
+- test: 400 graphs
 
-Run the smoke test from the repo root:
+For each run, `STEP1B_TRAIN_SIZE=n` selects a reproducible subset from the
+1200-graph train pool. The intended sweep is:
 
-```bash
-surrogate_experiment_results/Step1b/run_step1b_smoke.sh
+```text
+n in {50, 200, 600, 1200}
 ```
 
-Scale it by overriding environment variables:
+## Methods
+
+`2stage`:
+
+1. Stage 1 trains the linear reward model with MSE.
+2. The checkpoint is selected by validation MSE loss.
+3. Stage 2 is the downstream Gurobi KEP solve used during test evaluation.
+
+`e2e`:
+
+1. Trains the same linear model with the perturbed FY surrogate.
+2. The checkpoint is selected by validation synthetic-label decision gap.
+3. The selected model is evaluated on the same 400-graph test split.
+
+Both methods can share an explicit initialization via:
+
+```bash
+STEP1B_THETA_INIT="2.0 1.0"
+```
+
+If omitted, the initialization is drawn reproducibly from `STEP1B_THETA_SEED`.
+
+## One-Shot Run
+
+Run one train size from the repo root:
 
 ```bash
 STEP1B_TRAIN_SIZE=50 \
-STEP1B_VAL_SIZE=200 \
-STEP1B_TEST_SIZE=500 \
-STEP1B_N_EPOCHS=50 \
+STEP1B_2STAGE_N_EPOCHS=100 \
+STEP1B_E2E_N_EPOCHS=100 \
 STEP1B_FY_M=4 \
-STEP1B_METHODS="mse fy_random fy_warm" \
-STEP1B_CHECKPOINT_RULES="validation_decision_gap validation_fy_objective" \
-surrogate_experiment_results/Step1b/run_step1b_smoke.sh
+surrogate_experiment_results/Step1b/run_step1b.sh
 ```
 
-Outputs are written under `results/step1b_runs/smoke/` unless
-`STEP1B_OUTPUT_DIR` is set. The key files are:
+The script runs:
 
-- `split.json`
-- `config.json`
-- `trajectories/trajectory_mse.npy`
-- `trajectories/trajectory_fy_warm.npy`
-- `metrics/validation_trajectory_metrics.csv`
+1. `split_dataset.py`
+2. `train_2stage.py`
+3. `train_end2end.py`
+4. `evaluate_models.py`
+
+Key outputs are under:
+
+```text
+results/step1b_runs/train_size=<n>/seed=<seed>/
+```
+
+including:
+
+- `train_subset.json`
+- `model_weights/2stage_best_by_validation_mse_loss.npz`
+- `model_weights/e2e_best_by_validation_decision_gap.npz`
+- `metrics/2stage_loss_curve.csv`
+- `metrics/e2e_loss_curve.csv`
 - `metrics/test_summary.csv`
-- `metrics/test_per_graph.csv`
+- `plots/2stage_mse_loss.png`
+- `plots/e2e_fy_loss.png`
