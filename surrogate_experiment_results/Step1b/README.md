@@ -28,8 +28,9 @@ n in {50, 200, 600, 1200}
 `e2e`:
 
 1. Trains the same linear model with the perturbed FY surrogate.
-2. The checkpoint is selected by validation synthetic-label decision gap.
-3. The selected model is evaluated on the same 400-graph test split.
+2. Two checkpoints are saved: best validation synthetic-label decision gap and
+   best validation FY loss.
+3. Both selected models are evaluated on the same 400-graph test split.
 
 Both methods can share an explicit initialization via:
 
@@ -61,16 +62,32 @@ The script runs:
 Key outputs are under:
 
 ```text
-results/step1b_runs/train_size=<n>/seed=<seed>/
+results/step1b_runs/
+  train_size=<n>/
+    split_seed=<seed>/
+      subset_seed=<seed>/
+        theta_seed=<seed>/
+          eps=<epsilon>_M=<M>_e2e_epochs=<epochs>_stride=<stride>/
 ```
 
 including:
 
 - `train_subset.json`
+- `run_config.json`
 - `model_weights/2stage_best_by_validation_mse_loss.npz`
 - `model_weights/e2e_best_by_validation_decision_gap.npz`
+- `model_weights/e2e_best_by_validation_fy_loss.npz`
 - `metrics/2stage_loss_curve.csv`
 - `metrics/e2e_loss_curve.csv`
 - `metrics/test_summary.csv`
 - `plots/2stage_mse_loss.png`
 - `plots/e2e_fy_loss.png`
+
+`metrics/test_summary.csv` includes paired e2e-vs-2stage statistics on the same
+test graphs:
+
+- `paired_mean_improvement_over_2stage`
+- `paired_median_improvement_over_2stage`
+- `fraction_improved_over_2stage`
+- `paired_mean_improvement_ci_low`
+- `paired_mean_improvement_ci_high`

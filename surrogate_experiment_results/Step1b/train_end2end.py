@@ -38,6 +38,18 @@ def select_best_decision_gap_checkpoint(trajectory, validation_decision_gap):
     }
 
 
+def select_best_fy_loss_checkpoint(trajectory, validation_fy_loss):
+    validation_fy_loss = np.asarray(validation_fy_loss, dtype=float)
+    best_idx = int(np.nanargmin(validation_fy_loss))
+    return {
+        "method": "e2e",
+        "epoch": best_idx,
+        "theta": np.asarray(trajectory[best_idx], dtype=float).copy(),
+        "selection_metric": "validation_fy_loss",
+        "selection_value": float(validation_fy_loss[best_idx]),
+    }
+
+
 def write_csv(path, rows, fieldnames):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -58,7 +70,7 @@ def write_model_weights(out_dir, checkpoint, train_size):
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     theta = np.asarray(checkpoint["theta"], dtype=float)
-    stem = "e2e_best_by_validation_decision_gap"
+    stem = f"e2e_best_by_{checkpoint['selection_metric']}"
     npz_path = out_dir / f"{stem}.npz"
     np.savez_compressed(
         npz_path,
@@ -215,15 +227,29 @@ def main(argv=None):
             ],
         )
 
-        checkpoint = select_best_decision_gap_checkpoint(
+        gap_checkpoint = select_best_decision_gap_checkpoint(
             trajectory_subset, validation_gaps
         )
-        checkpoint["epoch"] = int(eval_indices[checkpoint["epoch"]])
-        weights_path = write_model_weights(model_weights_dir, checkpoint, args.train_size)
+        gap_checkpoint["epoch"] = int(eval_indices[gap_checkpoint["epoch"]])
+        gap_weights_path = write_model_weights(
+            model_weights_dir, gap_checkpoint, args.train_size
+        )
+        fy_checkpoint = select_best_fy_loss_checkpoint(
+            trajectory_subset, validation_fy
+        )
+        fy_checkpoint["epoch"] = int(eval_indices[fy_checkpoint["epoch"]])
+        fy_weights_path = write_model_weights(
+            model_weights_dir, fy_checkpoint, args.train_size
+        )
         print(
             "Saved e2e model weights "
-            f"{weights_path} at epoch {checkpoint['epoch']} "
-            f"validation_decision_gap={checkpoint['selection_value']:.6f}"
+            f"{gap_weights_path} at epoch {gap_checkpoint['epoch']} "
+            f"validation_decision_gap={gap_checkpoint['selection_value']:.6f}"
+        )
+        print(
+            "Saved e2e model weights "
+            f"{fy_weights_path} at epoch {fy_checkpoint['epoch']} "
+            f"validation_fy_loss={fy_checkpoint['selection_value']:.6f}"
         )
 
         if args.plot:

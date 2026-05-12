@@ -46,12 +46,13 @@ def summarize_model_evaluations(
     evaluations,
     selected_epoch=None,
     model_path=None,
+    paired_stats=None,
 ):
     gaps = np.asarray([row["gap"] for row in evaluations], dtype=float)
     normalized = np.asarray([row["normalized_gap"] for row in evaluations], dtype=float)
     ratios = np.asarray([row["ratio"] for row in evaluations], dtype=float)
     theta = np.asarray(theta, dtype=float)
-    return {
+    row = {
         "method": method,
         "train_size": int(train_size),
         "selected_epoch": "" if selected_epoch is None else int(selected_epoch),
@@ -64,6 +65,45 @@ def summarize_model_evaluations(
         "test_median_normalized_gap": float(np.median(normalized)),
         "test_mean_achieved_oracle_ratio": float(np.nanmean(ratios)),
         "model_path": "" if model_path is None else str(model_path),
+    }
+    if paired_stats is not None:
+        row.update(paired_stats)
+    return row
+
+
+def paired_improvement_stats(candidate_evaluations, baseline_evaluations, n_bootstrap=1000, seed=42):
+    baseline_by_graph = {row["graph"]: float(row["gap"]) for row in baseline_evaluations}
+    improvements = np.asarray(
+        [
+            baseline_by_graph[row["graph"]] - float(row["gap"])
+            for row in candidate_evaluations
+            if row["graph"] in baseline_by_graph
+        ],
+        dtype=float,
+    )
+    if len(improvements) == 0:
+        return {
+            "paired_mean_improvement_over_2stage": np.nan,
+            "paired_median_improvement_over_2stage": np.nan,
+            "fraction_improved_over_2stage": np.nan,
+            "paired_mean_improvement_ci_low": np.nan,
+            "paired_mean_improvement_ci_high": np.nan,
+        }
+
+    rng = np.random.RandomState(seed)
+    boot_means = np.asarray(
+        [
+            float(np.mean(rng.choice(improvements, size=len(improvements), replace=True)))
+            for _ in range(n_bootstrap)
+        ],
+        dtype=float,
+    )
+    return {
+        "paired_mean_improvement_over_2stage": float(np.mean(improvements)),
+        "paired_median_improvement_over_2stage": float(np.median(improvements)),
+        "fraction_improved_over_2stage": float(np.mean(improvements > 0)),
+        "paired_mean_improvement_ci_low": float(np.percentile(boot_means, 2.5)),
+        "paired_mean_improvement_ci_high": float(np.percentile(boot_means, 97.5)),
     }
 
 
@@ -79,8 +119,48 @@ def write_csv(path, rows, fieldnames=None):
         writer.writerows(rows)
 
 
-def prefixed_evaluations(method, evaluations):
-    return [{"method": method, **row} for row in evaluations]
+def prefixed_evaluations(model, evaluations):
+    return [
+        {
+            "method": model["method"],
+            "selection_metric": model["selection_metric"],
+            **row,
+        }
+        for row in evaluations
+    ]
+
+
+def summarize_evaluated_models(models_and_evaluations, bootstrap_samples=1000, bootstrap_seed=42):
+    baseline_evaluations = None
+    for model, evaluations in models_and_evaluations:
+        if model["method"] == "2stage":
+            baseline_evaluations = evaluations
+            break
+
+    summary_rows = []
+    for model, evaluations in models_and_evaluations:
+        paired_stats = None
+        if model["method"] != "2stage" and baseline_evaluations is not None:
+            paired_stats = paired_improvement_stats(
+                evaluations,
+                baseline_evaluations,
+                n_bootstrap=bootstrap_samples,
+                seed=bootstrap_seed,
+            )
+        summary_rows.append(
+            summarize_model_evaluations(
+                method=model["method"],
+                train_size=model["train_size"],
+                theta=model["theta"],
+                selection_metric=model["selection_metric"],
+                selection_value=model["selection_value"],
+                evaluations=evaluations,
+                selected_epoch=model["selected_epoch"],
+                model_path=model["path"],
+                paired_stats=paired_stats,
+            )
+        )
+    return summary_rows
 
 
 def parse_args(argv=None):
@@ -94,6 +174,8 @@ def parse_args(argv=None):
         help="One or more .npz model weight files to evaluate.",
     )
     parser.add_argument("--gurobi_seed", type=int, default=42)
+    parser.add_argument("--bootstrap_samples", type=int, default=1000)
+    parser.add_argument("--bootstrap_seed", type=int, default=42)
     return parser.parse_args(argv)
 
 
@@ -115,24 +197,20 @@ def main(argv=None):
         print(f"Loading test split: n={len(split['test'])}")
         test_graphs = common.load_graph_records([entry["path"] for entry in split["test"]], env)
 
-        summary_rows = []
-        per_graph_rows = []
+        models_and_evaluations = []
         for weight_path in args.weights:
             model = load_model_weight(weight_path)
             evaluations = common.evaluate_theta(model["theta"], test_graphs, env)
-            summary_rows.append(
-                summarize_model_evaluations(
-                    method=model["method"],
-                    train_size=model["train_size"],
-                    theta=model["theta"],
-                    selection_metric=model["selection_metric"],
-                    selection_value=model["selection_value"],
-                    evaluations=evaluations,
-                    selected_epoch=model["selected_epoch"],
-                    model_path=weight_path,
-                )
-            )
-            per_graph_rows.extend(prefixed_evaluations(model["method"], evaluations))
+            models_and_evaluations.append((model, evaluations))
+
+        summary_rows = summarize_evaluated_models(
+            models_and_evaluations,
+            bootstrap_samples=args.bootstrap_samples,
+            bootstrap_seed=args.bootstrap_seed,
+        )
+        per_graph_rows = []
+        for model, evaluations in models_and_evaluations:
+            per_graph_rows.extend(prefixed_evaluations(model, evaluations))
 
         summary_fields = [
             "method",
@@ -146,6 +224,11 @@ def main(argv=None):
             "test_mean_normalized_gap",
             "test_median_normalized_gap",
             "test_mean_achieved_oracle_ratio",
+            "paired_mean_improvement_over_2stage",
+            "paired_median_improvement_over_2stage",
+            "fraction_improved_over_2stage",
+            "paired_mean_improvement_ci_low",
+            "paired_mean_improvement_ci_high",
             "model_path",
         ]
         write_csv(metrics_dir / "test_summary.csv", summary_rows, summary_fields)
