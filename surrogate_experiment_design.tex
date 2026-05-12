@@ -40,11 +40,11 @@ synthetic benchmark.
 \clearpage
 \begin{figure}[p]
     \centering
-    \includegraphics[width=0.90\textwidth]{surrogate_experiment_results/Step1/epsilon=0.2/trajectory_contour.png}\\[-0.45em]
-    \includegraphics[width=0.90\textwidth]{surrogate_experiment_results/Step1/epsilon=0.2/trajectory_3d_metrics.png}\\[-0.45em]
-    \includegraphics[width=0.90\textwidth]{surrogate_experiment_results/Step1/epsilon=1.0/trajectory_contour.png}\\[-0.45em]
-    \includegraphics[width=0.90\textwidth]{surrogate_experiment_results/Step1/epsilon=1.0/trajectory_3d_metrics.png}\\[-0.35em]
-    \caption{Step~1 diagnostics on a controlled noisy-linear synthetic reward
+    \includegraphics[width=0.90\textwidth]{surrogate_experiment_results/Step1a/epsilon=0.2/trajectory_contour.png}\\[-0.45em]
+    \includegraphics[width=0.90\textwidth]{surrogate_experiment_results/Step1a/epsilon=0.2/trajectory_3d_metrics.png}\\[-0.45em]
+    \includegraphics[width=0.90\textwidth]{surrogate_experiment_results/Step1a/epsilon=1.0/trajectory_contour.png}\\[-0.45em]
+    \includegraphics[width=0.90\textwidth]{surrogate_experiment_results/Step1a/epsilon=1.0/trajectory_3d_metrics.png}\\[-0.35em]
+    \caption{Step~1a diagnostics on a controlled noisy-linear synthetic reward
     benchmark with \(\sigma=0.10\). The four panels, from top to bottom, show
     the \(\epsilon=0.2\) synthetic-label decision-gap landscape,
     \(\epsilon=0.2\) trajectory metrics, the \(\epsilon=1.0\)
@@ -59,11 +59,11 @@ synthetic benchmark.
 
 \section{Experimental Roadmap}
 
-\subsection{Step 1: Surrogate Validity Under a Noisy Linear Synthetic Reward}
+\subsection{Step 1a: Surrogate Validity Under a Noisy Linear Synthetic Reward}
 
 The first experiment should validate whether the perturbed FY objective is
 directionally aligned with downstream decision quality in a controlled setting.
-The current Step~1 run uses a noisy linear synthetic reward:
+The current Step~1a run uses a noisy linear synthetic reward:
 \[
     w^{\mathrm{syn}}_e
     =
@@ -145,7 +145,7 @@ the predictive model captures the main noise-free linear signal but cannot repre
 deterministic edge-level noise?
 \end{quote}
 
-In the current Step~1 diagnostic, this question is tested on 100 graph
+In the current Step~1a diagnostic, this question is tested on 100 graph
 instances, using the same sampled instances for the MSE and FY trajectories. We
 track the full optimization trajectories of both the two-stage MSE objective and
 the decision-focused FY objective in the \((\theta_1,\theta_2)\) plane, and
@@ -223,12 +223,12 @@ This leads to the following practical observations.
 
     \item \textbf{Zero decision gap is unrealistic for this two-feature probe.}
     The MSE endpoint is close to \((10,5)\), but its final decision gap remains
-    \(0.8759\). Thus the current Step~1 is no longer a pure sanity check for
+    \(0.8759\). Thus the current Step~1a is no longer a pure sanity check for
     recovering the noise-free coefficient; it is a controlled
     decision-quality diagnostic under mild label noise.
 \end{enumerate}
 
-\subsection{Step 2: Controlled Model Misspecification}
+\subsection{Step 1b: Controlled Model Misspecification}
 
 The second experiment should introduce a limited amount of misspecification.
 For example, the synthetic label reward may include an additional feature or
@@ -271,7 +271,7 @@ parameters toward lower synthetic-label decision gap than the two-stage MSE
 solution?
 \end{quote}
 
-\subsection{Step 3: Training-Level DFL vs Two-Stage Comparison}
+\subsection{Step 2: Training-Level DFL vs Two-Stage Comparison}
 
 After the landscape-level surrogate diagnostics, we should run actual training
 experiments on the same controlled settings. Both methods should use the same
@@ -324,7 +324,7 @@ Does the landscape-level alignment between FY and synthetic-label decision gap
 translate into a training-level improvement over the two-stage baseline?
 \end{quote}
 
-\subsection{Step 4: Realistic Synthetic Benchmark}
+\subsection{Step 3: Realistic Synthetic Benchmark}
 
 The final main benchmark should use the currently processed dataset, now named
 \texttt{dataset/processed/realistic\_synthetic\_benchmark}. This benchmark uses
@@ -365,7 +365,7 @@ Under a medically motivated synthetic reward model, does FY-based DFL improve
 the final kidney exchange objective compared with the two-stage pipeline?
 \end{quote}
 
-\subsection{Step 5: Sensitivity and Ablation Studies}
+\subsection{Step 4: Sensitivity and Ablation Studies}
 
 The last layer should quantify which design choices affect the result. The most
 important ablations are:

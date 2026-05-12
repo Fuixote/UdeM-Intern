@@ -1,5 +1,5 @@
 """
-Plot Step1 training metrics over epochs.
+Plot Step1a training metrics over epochs.
 
 Inputs:
     trajectory_fy_with_fy_loss_and_regret.npy

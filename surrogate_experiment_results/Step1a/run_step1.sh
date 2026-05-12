@@ -19,13 +19,13 @@ FY_M="${STEP1_FY_M:-16}"
 SEED="${STEP1_SEED:-42}"
 GRID_SIZE="${STEP1_GRID_SIZE:-25}"
 N_MILESTONES="${STEP1_N_MILESTONES:-5}"
-STEP1_SCRIPT_DIR="surrogate_experiment_results/Step1"
+STEP1_SCRIPT_DIR="surrogate_experiment_results/Step1a"
 STEP1_OUT_DIR="${STEP1_OUTPUT_DIR:-$STEP1_SCRIPT_DIR/epsilon=$FY_EPSILON}"
 STEP1_OUT_ABS_DIR="$ROOT_DIR/$STEP1_OUT_DIR"
 
 mkdir -p "$STEP1_OUT_DIR"
 
-echo "Step1 root: $ROOT_DIR"
+echo "Step1a root: $ROOT_DIR"
 echo "Python: $PYTHON_BIN"
 echo "Data: $DATA_DIR"
 echo "Output: $STEP1_OUT_DIR"
@@ -97,10 +97,10 @@ echo "[7/7] Plot epoch-wise FY objective and synthetic-label decision gap"
 "$PYTHON_BIN" "$STEP1_SCRIPT_DIR/plot_epoch_metrics.py" \
   --fy_path "$STEP1_OUT_ABS_DIR/trajectory_fy_with_fy_loss_and_regret.npy" \
   --out_path "$STEP1_OUT_ABS_DIR/trajectory_epoch_metrics.png" \
-  --title "Step1 FY diagnostics over epochs, epsilon=$FY_EPSILON"
+  --title "Step1a FY diagnostics over epochs, epsilon=$FY_EPSILON"
 
 echo
-echo "Step1 complete. Outputs:"
+echo "Step1a complete. Outputs:"
 echo "  $STEP1_OUT_DIR/trajectory_mse.npy"
 echo "  $STEP1_OUT_DIR/trajectory_fy.npy"
 echo "  $STEP1_OUT_DIR/trajectory_mse_with_regret.npy"

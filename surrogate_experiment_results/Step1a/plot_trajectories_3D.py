@@ -1,5 +1,5 @@
 """
-Plot Step1 trajectories as three 3D curves in one figure.
+Plot Step1a trajectories as three 3D curves in one figure.
 
 Inputs:
     trajectory_mse_with_regret.npy

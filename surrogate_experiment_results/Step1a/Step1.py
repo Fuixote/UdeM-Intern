@@ -1,5 +1,5 @@
 """
-Step 1 — record theta per epoch for MSE reward fitting and decision-focused FY.
+Step 1a — record theta per epoch for MSE reward fitting and decision-focused FY.
 
 输出:
     trajectory_mse.npy  shape (n_epochs+1, 2)  — MSE 每 epoch 的 (θ_1, θ_2)
