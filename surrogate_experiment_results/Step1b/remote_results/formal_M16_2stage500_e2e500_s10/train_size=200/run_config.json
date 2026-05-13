@@ -1,0 +1,23 @@
+{
+  "data_dir": "dataset/processed/step1_noisy_linear_sigma010",
+  "split_path": "results/step1b_splits/master_split_seed=42.json",
+  "run_dir": "results/step1b_runs/train_size=200/split_seed=42/subset_seed=42/theta_seed=42/eps=1.0_M=16_2stage_epochs=500_e2e_epochs=500_stride=10",
+  "split_seed": 42,
+  "subset_seed": 42,
+  "theta_seed": 42,
+  "gurobi_seed": 42,
+  "train_pool_size": 1200,
+  "validation_size": 400,
+  "test_size": 400,
+  "train_size": 200,
+  "n_epochs_2stage": 500,
+  "n_epochs_e2e": 500,
+  "lr_2stage": 0.05,
+  "lr_e2e": 0.1,
+  "fy_epsilon": 1.0,
+  "fy_M": 16,
+  "metric_stride": 10,
+  "theta_init": null,
+  "bootstrap_samples": 1000,
+  "bootstrap_seed": 42
+}

@@ -568,9 +568,9 @@ Local clean archive path for completed synced runs:
 surrogate_experiment_results/Step1b/remote_results/formal_M16_2stage500_e2e500_s10/train_size=<n>/
 ```
 
-As of 2026-05-12 21:07 EDT, `train_size=50` had completed end to end; `200`,
-`600`, and `1200` were running in e2e training. The 2stage validation-MSE
-checkpoints available at that point were:
+As of 2026-05-12 23:40 EDT, `train_size=50` and `train_size=200` had completed
+end to end; `600` and `1200` were still running in e2e training. The 2stage
+validation-MSE checkpoints available at that point were:
 
 | train_size | selected epoch | theta_1 | theta_2 | validation MSE |
 |---:|---:|---:|---:|---:|
@@ -584,19 +584,24 @@ coefficient `[10, 5]` than the 100-epoch preliminary checkpoints. However,
 because the best validation MSE is still at epoch 500, a future 2stage-only
 check with more epochs or MSE early stopping may be useful.
 
-Completed `train_size=50` test metrics:
+Completed test metrics:
 
 | method | selected by | epoch | theta_1 | theta_2 | test mean gap | test norm gap | paired improvement over 2stage | 95% CI |
 |---|---|---:|---:|---:|---:|---:|---:|---|
-| 2stage | val MSE | 500 | 9.8707 | 5.1130 | 0.8480 | 0.00611 | -- | -- |
-| e2e | val decision gap | 50 | 5.4807 | 2.8132 | 0.8220 | 0.00592 | 0.0260 | [-0.0096, 0.0805] |
-| e2e | val FY loss | 440 | 11.8304 | 5.0208 | 0.7587 | 0.00547 | 0.0894 | [-0.0057, 0.1908] |
+| 50 / 2stage | val MSE | 500 | 9.8707 | 5.1130 | 0.8480 | 0.00611 | -- | -- |
+| 50 / e2e | val decision gap | 50 | 5.4807 | 2.8132 | 0.8220 | 0.00592 | 0.0260 | [-0.0096, 0.0805] |
+| 50 / e2e | val FY loss | 440 | 11.8304 | 5.0208 | 0.7587 | 0.00547 | 0.0894 | [-0.0057, 0.1908] |
+| 200 / 2stage | val MSE | 500 | 9.8848 | 5.1038 | 0.8451 | 0.00610 | -- | -- |
+| 200 / e2e | val decision gap | 150 | 8.8078 | 4.5582 | 0.8480 | 0.00611 | -0.0029 | [-0.0088, 0.0000] |
+| 200 / e2e | val FY loss | 500 | 12.2682 | 6.0649 | 0.7730 | 0.00563 | 0.0721 | [0.0126, 0.1505] |
 
 For `train_size=50`, both e2e checkpoints improve the mean test decision gap
-relative to 2stage, and the FY-loss-selected checkpoint is the best of the
-three by mean test gap. The paired bootstrap confidence intervals still cross
-zero on the 400-graph test split, so this should be treated as a promising
-single-size result rather than a final statistical conclusion.
+relative to 2stage, but the paired bootstrap confidence intervals still cross
+zero. For `train_size=200`, the validation-decision-gap-selected e2e checkpoint
+does not improve over 2stage on test, while the validation-FY-loss-selected
+checkpoint has a lower mean test gap and a positive paired bootstrap interval.
+This makes the FY-loss-selected checkpoint especially important for the final
+sample-size comparison.
 
 Expected runtime:
 
