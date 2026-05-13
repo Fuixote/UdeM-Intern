@@ -83,3 +83,12 @@ If the smoke fails before loading data, check missing Python packages in the
 - Keep runtime environment files small and explicit.
 - Do not store passwords, private keys, or tokens in the repo.
 - Generated datasets and experiment outputs should remain ignored by git.
+
+## Experiment Documentation
+
+- When an experiment gains an important or iconic result, new artifact, changed
+  protocol, or interpretation that future work will rely on, update the
+  experiment's README before finishing the task. The README should stay current
+  enough that a future AI agent can understand the experiment purpose, setup,
+  outputs, and latest known results without reconstructing the context from chat
+  history.
