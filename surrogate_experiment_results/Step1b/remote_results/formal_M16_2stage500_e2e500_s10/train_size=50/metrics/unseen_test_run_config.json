@@ -1,0 +1,17 @@
+{
+  "generated_at": "2026-05-13T07:58:34",
+  "script": "surrogate_experiment_results/Step1b/evaluate_unseen_run.py",
+  "run_dir": "results/step1b_runs/train_size=50/split_seed=42/subset_seed=42/theta_seed=42/eps=1.0_M=16_2stage_epochs=500_e2e_epochs=500_stride=10",
+  "dataset_dir": "/local1/fuweik/UdeM-Intern/dataset/processed/step1_noisy_linear_sigma010_unseen_test1000_seed20260513",
+  "graph_count": 1000,
+  "graph_limit": null,
+  "weights": [
+    "results/step1b_runs/train_size=50/split_seed=42/subset_seed=42/theta_seed=42/eps=1.0_M=16_2stage_epochs=500_e2e_epochs=500_stride=10/model_weights/2stage_best_by_validation_mse_loss.npz",
+    "results/step1b_runs/train_size=50/split_seed=42/subset_seed=42/theta_seed=42/eps=1.0_M=16_2stage_epochs=500_e2e_epochs=500_stride=10/model_weights/e2e_best_by_validation_decision_gap.npz",
+    "results/step1b_runs/train_size=50/split_seed=42/subset_seed=42/theta_seed=42/eps=1.0_M=16_2stage_epochs=500_e2e_epochs=500_stride=10/model_weights/e2e_best_by_validation_fy_loss.npz"
+  ],
+  "output_stem": "unseen_test",
+  "gurobi_seed": 42,
+  "bootstrap_samples": 1000,
+  "bootstrap_seed": 42
+}

@@ -111,6 +111,264 @@ Current runs focus on:
 n in {50, 200, 600, 1200}
 ```
 
+## Unseen Test Dataset
+
+On 2026-05-13, a separate 1000-graph unseen test batch was generated locally
+for later out-of-split model evaluation. It keeps the same graph-generation
+regime and the same synthetic label-processing regime as
+`dataset/processed/step1_noisy_linear_sigma010`, but uses a different raw
+generator seed and a different processed directory.
+
+Raw batch:
+
+```text
+dataset/raw/2026-05-13_073333__step1_noisy_linear_sigma010_unseen_test1000_seed20260513
+```
+
+Processed batch:
+
+```text
+dataset/processed/step1_noisy_linear_sigma010_unseen_test1000_seed20260513
+```
+
+Remote synced processed copy on garnet:
+
+```text
+/local1/fuweik/UdeM-Intern/dataset/processed/step1_noisy_linear_sigma010_unseen_test1000_seed20260513
+```
+
+The raw unseen batch was intentionally removed from garnet after syncing,
+because Step1b evaluation only consumes processed `G-*.json` files. The local
+raw batch remains available for provenance.
+
+Generation command:
+
+```bash
+python3 0-data-generation.py \
+  --instances 1000 \
+  --seed 20260513 \
+  --run_name step1_noisy_linear_sigma010_unseen_test1000_seed20260513 \
+  --output_root dataset/raw
+```
+
+Processing command:
+
+```bash
+python3 1-data-processing.py \
+  dataset/raw/2026-05-13_073333__step1_noisy_linear_sigma010_unseen_test1000_seed20260513 \
+  dataset/processed/step1_noisy_linear_sigma010_unseen_test1000_seed20260513 \
+  --all \
+  --label_mode noisy_clean_linear_utility_cpra \
+  --clean_linear_utility_weight 10 \
+  --clean_linear_cpra_weight 5 \
+  --clean_linear_noise_sigma 0.1 \
+  --output_as_batch_dir
+```
+
+Verification:
+
+```text
+raw genjson-*.json count: 1000
+processed G-*.json count: 1000
+old raw config seed/instances: 42 / 2000
+new raw config seed/instances: 20260513 / 1000
+changed raw config keys excluding seed and numberOfInstances: none
+processed label mode: noisy_clean_linear_utility_cpra
+processed label weights/noise: utility=10, recipient_cPRA=5, sigma=0.1
+garnet processed count: 1000, size: 235M
+```
+
+Note: the raw generation run created the 1000 JSON files plus
+`config.json` and `effective_config.json`, but the raw post-generation report
+step returned a Python serialization warning under local Python 3.13 because an
+internal argparse field was not JSON-serializable. The generator script was
+patched afterward to omit internal argparse fields from JSON metadata, and a
+1-instance smoke run verified that future raw reports write normally. This
+specific raw batch still lacks raw `run_info.json` unless regenerated, but the
+processed dataset completed normally and contains `run_info.json`,
+`batch_summary.json`, and `batch_report.md`.
+
+## Unseen Evaluation Script
+
+Use `evaluate_unseen_run.py` to evaluate one completed Step1b training run
+directory on the 1000-graph unseen processed dataset. This script is not a
+sweep driver: it takes one `--run_dir`, automatically finds the three standard
+model checkpoints under `model_weights/`, evaluates all three on the same
+unseen graphs, and writes the summary back under that same run directory.
+
+Expected model weights per run:
+
+```text
+model_weights/2stage_best_by_validation_mse_loss.npz
+model_weights/e2e_best_by_validation_decision_gap.npz
+model_weights/e2e_best_by_validation_fy_loss.npz
+```
+
+Example for the local copied `train_size=50` result:
+
+```bash
+python surrogate_experiment_results/Step1b/evaluate_unseen_run.py \
+  --run_dir surrogate_experiment_results/Step1b/remote_results/formal_M16_2stage500_e2e500_s10/train_size=50
+```
+
+Example on garnet, using the live remote result directory:
+
+```bash
+cd /local1/fuweik/UdeM-Intern
+source configs/runtime/garnet.env
+python surrogate_experiment_results/Step1b/evaluate_unseen_run.py \
+  --run_dir results/step1b_runs/train_size=50/split_seed=42/subset_seed=42/theta_seed=42/eps=1.0_M=16_2stage_epochs=500_e2e_epochs=500_stride=10
+```
+
+Outputs are written under `RUN_DIR/metrics/`:
+
+```text
+unseen_test_summary.csv
+unseen_test_summary.json
+unseen_test_per_graph.csv
+unseen_test_run_config.json
+```
+
+For a tiny smoke test, add:
+
+```text
+--graph_limit 2 --output_stem unseen_test_smoke2 --bootstrap_samples 10
+```
+
+### 1000-graph unseen results
+
+On 2026-05-13, the completed `train_size=50`, `200`, and `600` formal runs were
+evaluated on the 1000-graph unseen processed dataset. The unseen evaluation ran
+quickly because it only evaluates three fixed two-parameter models per
+train-size directory; it does not perform FY training.
+
+Local archived output paths:
+
+```text
+surrogate_experiment_results/Step1b/remote_results/formal_M16_2stage500_e2e500_s10/train_size=<n>/metrics/unseen_test_summary.csv
+surrogate_experiment_results/Step1b/remote_results/formal_M16_2stage500_e2e500_s10/train_size=<n>/metrics/unseen_test_per_graph.csv
+```
+
+Unseen test summary:
+
+| train_size | method | selected by | epoch | theta_1 | theta_2 | unseen mean gap | unseen norm gap | paired improvement over 2stage | 95% CI |
+|---:|---|---|---:|---:|---:|---:|---:|---:|---|
+| 50 | 2stage | val MSE | 500 | 9.8707 | 5.1130 | 0.7311 | 0.00531 | -- | -- |
+| 50 | e2e | val decision gap | 50 | 5.4807 | 2.8132 | 0.7352 | 0.00534 | -0.0041 | [-0.0114, 0.0006] |
+| 50 | e2e | val FY loss | 440 | 11.8304 | 5.0208 | 0.7591 | 0.00550 | -0.0280 | [-0.0878, 0.0319] |
+| 200 | 2stage | val MSE | 500 | 9.8848 | 5.1038 | 0.7313 | 0.00532 | -- | -- |
+| 200 | e2e | val decision gap | 150 | 8.8078 | 4.5582 | 0.7313 | 0.00532 | 0.0000 | [0.0000, 0.0000] |
+| 200 | e2e | val FY loss | 500 | 12.2682 | 6.0649 | 0.7262 | 0.00528 | 0.0050 | [-0.0200, 0.0320] |
+| 600 | 2stage | val MSE | 500 | 9.8899 | 5.0963 | 0.7309 | 0.00531 | -- | -- |
+| 600 | e2e | val decision gap | 110 | 7.7838 | 4.0153 | 0.7329 | 0.00533 | -0.0019 | [-0.0078, 0.0000] |
+| 600 | e2e | val FY loss | 490 | 12.2328 | 5.8586 | 0.7488 | 0.00545 | -0.0179 | [-0.0564, 0.0219] |
+
+Interpretation:
+
+- The 1000-graph unseen results do not replicate the stronger FY-loss-selected
+  improvements seen on the original 400 held-out test split.
+- The 2stage baseline is very stable across train sizes on this unseen dataset:
+  mean gap stays near `0.731` and normalized gap near `0.00531`.
+- The validation-FY-loss-selected e2e checkpoint is slightly better than 2stage
+  only for `train_size=200`, and its paired bootstrap interval still crosses
+  zero.
+- More than half of unseen graphs have zero decision gap for each model, and
+  many method pairs produce identical decisions on most graphs. For example,
+  e2e selected by validation decision gap is identical to 2stage on all 1000
+  unseen graphs for `train_size=200`, and identical on 999/1000 graphs for
+  `train_size=600`. Therefore small mean differences are driven by a small
+  subset of graphs where the induced KEP solution changes.
+
+### Realistic-synthetic label stress test
+
+On 2026-05-13, the same completed `train_size=50`, `200`, and `600` formal
+runs were also evaluated on:
+
+```text
+dataset/processed/realistic_synthetic_dataset
+```
+
+This dataset has 2000 processed graphs and uses the more complex
+`realistic_synthetic` label regime:
+
+```text
+expected_transplant_count * qaly * priority_multiplier * (1 + deterministic_noise)
+```
+
+Important caveat: this is best described as a label-regime or distribution-shift
+stress test, not as a fully graph-unseen test. Both
+`step1_noisy_linear_sigma010` and `realistic_synthetic_dataset` were processed
+from the same raw batch:
+
+```text
+raw_batch_name = 2026-04-17_135607
+```
+
+Therefore graph structures may overlap with the original Step1b train,
+validation, and held-out test split. What changes is the reward-label mechanism:
+models trained on the noisy-linear synthetic rewards are evaluated under the
+more complex realistic-synthetic rewards.
+
+The remote processed copy is:
+
+```text
+/local1/fuweik/UdeM-Intern/dataset/processed/realistic_synthetic_dataset
+```
+
+It contains:
+
+```text
+G-*.json count: 2000
+size on garnet: 451M
+```
+
+Evaluation command pattern on garnet:
+
+```bash
+cd /local1/fuweik/UdeM-Intern
+source configs/runtime/garnet.env
+python surrogate_experiment_results/Step1b/evaluate_unseen_run.py \
+  --run_dir results/step1b_runs/train_size=50/split_seed=42/subset_seed=42/theta_seed=42/eps=1.0_M=16_2stage_epochs=500_e2e_epochs=500_stride=10 \
+  --dataset_dir dataset/processed/realistic_synthetic_dataset \
+  --output_stem realistic_unseen_test
+```
+
+Local archived output paths:
+
+```text
+surrogate_experiment_results/Step1b/remote_results/formal_M16_2stage500_e2e500_s10/train_size=<n>/metrics/realistic_unseen_test_summary.csv
+surrogate_experiment_results/Step1b/remote_results/formal_M16_2stage500_e2e500_s10/train_size=<n>/metrics/realistic_unseen_test_per_graph.csv
+```
+
+Realistic-synthetic stress-test summary:
+
+| train_size | method | selected by | epoch | theta_1 | theta_2 | mean gap | norm gap | achieved/oracle | paired improvement over 2stage | 95% CI |
+|---:|---|---|---:|---:|---:|---:|---:|---:|---:|---|
+| 50 | 2stage | val MSE | 500 | 9.8707 | 5.1130 | 12.1103 | 0.06603 | 0.93397 | -- | -- |
+| 50 | e2e | val decision gap | 50 | 5.4807 | 2.8132 | 12.1314 | 0.06613 | 0.93387 | -0.0210 | [-0.0750, 0.0239] |
+| 50 | e2e | val FY loss | 440 | 11.8304 | 5.0208 | 12.3439 | 0.06718 | 0.93282 | -0.2335 | [-0.4036, -0.0678] |
+| 200 | 2stage | val MSE | 500 | 9.8848 | 5.1038 | 12.0837 | 0.06588 | 0.93412 | -- | -- |
+| 200 | e2e | val decision gap | 150 | 8.8078 | 4.5582 | 12.0879 | 0.06591 | 0.93409 | -0.0041 | [-0.0118, 0.0000] |
+| 200 | e2e | val FY loss | 500 | 12.2682 | 6.0649 | 12.1739 | 0.06631 | 0.93369 | -0.0902 | [-0.1674, -0.0198] |
+| 600 | 2stage | val MSE | 500 | 9.8899 | 5.0963 | 12.1108 | 0.06606 | 0.93394 | -- | -- |
+| 600 | e2e | val decision gap | 110 | 7.7838 | 4.0153 | 12.1108 | 0.06606 | 0.93394 | 0.0000 | [0.0000, 0.0000] |
+| 600 | e2e | val FY loss | 490 | 12.2328 | 5.8586 | 12.1670 | 0.06618 | 0.93382 | -0.0562 | [-0.1618, 0.0471] |
+
+Interpretation:
+
+- Under this shifted realistic-synthetic reward label, the noisy-linear-trained
+  2stage model is slightly better than or tied with e2e for the completed
+  `train_size=50`, `200`, and `600` runs.
+- The e2e checkpoint selected by validation decision gap is almost tied with
+  2stage, but does not show a positive paired improvement.
+- The e2e checkpoint selected by validation FY loss is worse than 2stage for
+  `train_size=50` and `200` with a negative paired bootstrap interval; for
+  `train_size=600` the interval crosses zero.
+- This result should not be read as a failure of FY on its original benchmark.
+  It mainly says that training on the controlled noisy-linear labels does not
+  transfer cleanly to a different, more complex synthetic reward definition
+  within the same two-feature linear probe class.
+
 ## Methods
 
 ### 2stage: reward fitting plus downstream optimization
@@ -568,8 +826,8 @@ Local clean archive path for completed synced runs:
 surrogate_experiment_results/Step1b/remote_results/formal_M16_2stage500_e2e500_s10/train_size=<n>/
 ```
 
-As of 2026-05-12 23:40 EDT, `train_size=50` and `train_size=200` had completed
-end to end; `600` and `1200` were still running in e2e training. The 2stage
+As of 2026-05-13 06:15 EDT, `train_size=50`, `200`, and `600` had completed
+end to end; `1200` was still running in e2e training. The 2stage
 validation-MSE checkpoints available at that point were:
 
 | train_size | selected epoch | theta_1 | theta_2 | validation MSE |
@@ -594,14 +852,17 @@ Completed test metrics:
 | 200 / 2stage | val MSE | 500 | 9.8848 | 5.1038 | 0.8451 | 0.00610 | -- | -- |
 | 200 / e2e | val decision gap | 150 | 8.8078 | 4.5582 | 0.8480 | 0.00611 | -0.0029 | [-0.0088, 0.0000] |
 | 200 / e2e | val FY loss | 500 | 12.2682 | 6.0649 | 0.7730 | 0.00563 | 0.0721 | [0.0126, 0.1505] |
+| 600 / 2stage | val MSE | 500 | 9.8899 | 5.0963 | 0.8223 | 0.00591 | -- | -- |
+| 600 / e2e | val decision gap | 110 | 7.7838 | 4.0153 | 0.8223 | 0.00591 | 0.0000 | [0.0000, 0.0000] |
+| 600 / e2e | val FY loss | 490 | 12.2328 | 5.8586 | 0.7507 | 0.00550 | 0.0716 | [0.0137, 0.1347] |
 
 For `train_size=50`, both e2e checkpoints improve the mean test decision gap
 relative to 2stage, but the paired bootstrap confidence intervals still cross
-zero. For `train_size=200`, the validation-decision-gap-selected e2e checkpoint
-does not improve over 2stage on test, while the validation-FY-loss-selected
-checkpoint has a lower mean test gap and a positive paired bootstrap interval.
-This makes the FY-loss-selected checkpoint especially important for the final
-sample-size comparison.
+zero. For `train_size=200` and `600`, the validation-decision-gap-selected e2e
+checkpoint does not improve over 2stage on test, while the
+validation-FY-loss-selected checkpoint has a lower mean test gap and a positive
+paired bootstrap interval. This makes the FY-loss-selected checkpoint especially
+important for the final sample-size comparison.
 
 Expected runtime:
 

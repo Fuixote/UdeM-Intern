@@ -566,6 +566,14 @@ def build_effective_config_snapshot(effective_config):
     return snapshot
 
 
+def serializable_cli_args(args):
+    return {
+        key: value
+        for key, value in vars(args).items()
+        if not key.startswith("_")
+    }
+
+
 def summarize_generated_batch(output_dir, args, requested_config, effective_config, batch_timestamp, started_at, finished_at):
     raw_files = sorted(output_dir.glob("genjson-*.json"))
     recipient_bt_counter = Counter()
@@ -796,7 +804,7 @@ def summarize_generated_batch(output_dir, args, requested_config, effective_conf
             "generated_files": [path.name for path in raw_files],
         },
         "parameters": {
-            "cli_args": vars(args),
+            "cli_args": serializable_cli_args(args),
             "requested_generator_config": requested_config,
             "effective_generator_config": effective_config_snapshot,
         },
@@ -1240,7 +1248,7 @@ def build_run_metadata(args, output_dir, config_dict, batch_timestamp, started_a
         "batch_name": output_dir.name,
         "output_dir": str(output_dir),
         "seed": args.seed,
-        "cli_args": vars(args),
+        "cli_args": serializable_cli_args(args),
         "generator_config": config_dict,
         "artifacts": {},
     }
