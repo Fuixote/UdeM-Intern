@@ -1,0 +1,652 @@
+
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{pdflscape}
+
+\title{Step1b: Sample-Size Generalization Study for the Perturbed Fenchel--Young Surrogate}
+\author{Weikang}
+\date{May 2026}
+
+% Change these paths if figures/results are generated elsewhere.
+\newcommand{\StepOneBPlotRoot}{surrogate_experiment_results/Step1b/plot_results}
+\newcommand{\StepOneBArchive}{surrogate_experiment_results/Step1b/remote_results/formal_M16_2stage500_e2e500_s10}
+
+\begin{document}
+\maketitle
+
+\section{Purpose of Step1b}
+
+Step1b is the held-out generalization companion to the Step1a landscape
+diagnostic. Step1a asks an in-sample visualization question: on a fixed batch of
+synthetic KEP instances, how do MSE and perturbed Fenchel--Young (FY) training
+trajectories move in the two-dimensional parameter space? Step1b asks the
+standard ML-style question:
+
+\begin{quote}
+As the number of training graph instances increases, do the learned reward
+models improve held-out kidney exchange decision quality on validation and test
+graphs that were not used for training?
+\end{quote}
+
+The experiment is designed to make this question reproducible through a fixed
+train/validation/test split, validation-based checkpoint selection, and paired
+test-set comparisons between the two-stage baseline and decision-focused FY
+training.
+
+\paragraph{Language.}
+This is a synthetic benchmark. The evaluation labels are synthetic reward
+weights, not clinical outcomes. Therefore the main metric is called
+\emph{synthetic-label decision gap} or \emph{oracle objective gap}, not ``true
+regret''.
+
+\section{Synthetic Benchmark and Model Class}
+
+The default Step1b benchmark is the same controlled noisy-linear label regime as
+Step1a:
+\[
+    w^{\mathrm{syn}}_e
+    =
+    \max\left\{0,\,
+    (10u_e + 5c_e)(1+\xi_e)
+    \right\},
+\]
+where \(u_e\) is the edge utility, \(c_e\) is the recipient cPRA feature, and
+the multiplicative noise scale is \(\sigma=0.10\).
+
+Both methods use the same two-feature linear probe:
+\[
+    \hat w_e(\theta)
+    =
+    \theta_1 u_e + \theta_2 c_e.
+\]
+The vector \([10,5]\) is the noise-free linear coefficient, not an exact
+noise-corrupted label parameter.
+
+\section{Data Splitting Design}
+
+Step1b uses a fixed master split from
+\[
+\texttt{dataset/processed/step1\_noisy\_linear\_sigma010}.
+\]
+The default split sizes are shown in Table~\ref{tab:step1b-split}.
+
+\begin{table}[h]
+\centering
+\caption{Step1b master split design.}
+\label{tab:step1b-split}
+\begin{tabular}{ll}
+\toprule
+Split component & Number of graphs \\
+\midrule
+Train pool & 1200 \\
+Validation split & 400 \\
+Held-out test split & 400 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+For each run, a training subset of size
+\[
+    n \in \{50, 200, 600, 1200\}
+\]
+is selected reproducibly from the 1200-graph train pool. With the same subset
+seed, larger training sizes are selected by reshuffling the same train pool and
+taking a longer prefix. This makes train-size comparisons stable.
+
+\paragraph{Current archive status.}
+The current formal archive used in this report contains completed runs for
+\(n=50,200,600\). The \(n=1200\) run is planned and can be added to the same
+figures/tables once completed.
+
+\section{Training Methods}
+
+\subsection{Two-stage reward-fitting baseline}
+
+The two-stage method first trains \(\theta\) by MSE reward fitting:
+\[
+    \min_{\theta}
+    \frac{1}{N}\sum_i
+    \frac{1}{|E_i|}
+    \sum_{e\in E_i}
+    \left(\hat w^i_e(\theta)-w^{i,\mathrm{syn}}_e\right)^2.
+\]
+The checkpoint is selected by validation MSE loss. During evaluation, the KEP
+solver is run with the learned predicted weights \(\hat w(\theta)\), and the
+resulting decision is scored under the synthetic label weights.
+
+\subsection{Decision-focused FY training}
+
+The e2e model uses the same linear probe but trains with the perturbed FY
+surrogate. For each training graph, the gradient estimate compares the average
+perturbed optimizer solution with the synthetic-label oracle solution:
+\[
+    \nabla_{\theta} L_{\mathrm{FY}}(\theta)
+    \approx
+    X^\top
+    \left(
+        \bar y_\epsilon(\hat w(\theta)) - y^\star
+    \right),
+\]
+where \(y^\star = S(w^{\mathrm{syn}})\) and
+\[
+    \bar y_\epsilon(\hat w)
+    =
+    \frac{1}{M}\sum_{m=1}^{M}
+    S(\hat w + z^{(m)}).
+\]
+
+Step1b saves two e2e checkpoints:
+\begin{enumerate}
+    \item \textbf{e2e selected by validation decision gap}: this asks whether
+    the FY trajectory produces a model with good held-out downstream decision
+    quality.
+    \item \textbf{e2e selected by validation FY loss}: this asks whether the FY
+    surrogate itself can serve as a validation/model-selection loss.
+\end{enumerate}
+
+These two checkpoints are conceptually different and should both be reported.
+
+\section{Evaluation Metrics}
+
+For a graph \(i\), the synthetic-label decision gap is
+\[
+    G_i(\theta)
+    =
+    (w^{i,\mathrm{syn}})^\top y_i^\star
+    -
+    (w^{i,\mathrm{syn}})^\top S(\hat w^i(\theta)).
+\]
+The reported mean decision gap is \(\frac{1}{N}\sum_i G_i(\theta)\). The
+normalized decision gap is
+\[
+    \frac{G_i(\theta)}
+    {|(w^{i,\mathrm{syn}})^\top y_i^\star|+\varepsilon},
+\]
+averaged over graphs.
+
+Step1b also reports the achieved/oracle objective ratio:
+\[
+    \frac{(w^{i,\mathrm{syn}})^\top S(\hat w^i(\theta))}
+    {(w^{i,\mathrm{syn}})^\top y_i^\star}.
+\]
+
+For paired e2e-vs-2stage comparison, the per-graph improvement is
+\[
+    \Delta_i
+    =
+    G_i(\theta_{\mathrm{2stage}})
+    -
+    G_i(\theta_{\mathrm{e2e}}).
+\]
+Positive \(\Delta_i\) means that e2e has a smaller decision gap than 2stage on
+the same test graph. Step1b reports the paired mean improvement and a bootstrap
+95\% confidence interval.
+
+\section{Formal Run Configuration}
+
+The current formal run used the configuration in Table~\ref{tab:step1b-config}.
+
+\begin{table}[h]
+\centering
+\caption{Formal Step1b configuration used for the current archive.}
+\label{tab:step1b-config}
+\begin{tabular}{ll}
+\toprule
+Item & Value \\
+\midrule
+Dataset & \texttt{dataset/processed/step1\_noisy\_linear\_sigma010} \\
+Train sizes completed & \(50, 200, 600\) \\
+Train size planned & \(1200\) \\
+Split seed / subset seed / theta seed & 42 / 42 / 42 \\
+2stage epochs & 500 \\
+e2e epochs & 500 \\
+FY perturbation scale \(\epsilon\) & 1.0 \\
+FY perturbation samples \(M\) & 16 \\
+Metric stride & 10 \\
+Held-out test size & 400 \\
+Unseen noisy-linear test size & 1000 \\
+Realistic-synthetic stress test size & 2000 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Evaluation Sets}
+
+Step1b currently evaluates models on three datasets.
+
+\begin{table}[h]
+\centering
+\caption{Evaluation datasets used in the current Step1b report.}
+\label{tab:evaluation-datasets}
+\begin{tabular}{lll}
+\toprule
+Dataset & Size & Purpose \\
+\midrule
+Held-out noisy-linear test & 400 & Standard test split from the original master split \\
+Unseen noisy-linear test & 1000 & Newly generated graph instances with same label regime \\
+Realistic-synthetic stress test & 2000 & Different reward-label regime / distribution-shift stress test \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The realistic-synthetic stress test should not be described as a fully
+graph-unseen test, because it may share graph structures with the original raw
+batch. It is better described as a label-regime or distribution-shift stress
+test.
+
+\section{Result Tables}
+
+\subsection{Held-out 400-graph noisy-linear test}
+
+Table~\ref{tab:heldout400-results} shows the formal held-out test results from
+the current archive. This is the standard test split associated with the
+train/validation/test master split.
+
+\begin{table}[h]
+\centering
+\caption{Held-out 400-graph noisy-linear test results. Positive paired
+improvement means e2e has a smaller decision gap than 2stage on the same test
+graphs.}
+\label{tab:heldout400-results}
+\resizebox{\textwidth}{!}{
+\begin{tabular}{rllrrrrrr}
+\toprule
+Train size & Method & Selected by & Epoch & \(\theta_1\) & \(\theta_2\)
+& Mean gap & Norm. gap & Paired improvement \\
+\midrule
+50 & 2stage & val MSE & 500 & 9.8707 & 5.1130 & 0.8480 & 0.00611 & -- \\
+50 & e2e & val gap & 50 & 5.4807 & 2.8132 & 0.8220 & 0.00592 & 0.0260 \\
+50 & e2e & val FY & 440 & 11.8304 & 5.0208 & 0.7587 & 0.00547 & 0.0894 \\
+\midrule
+200 & 2stage & val MSE & 500 & 9.8848 & 5.1038 & 0.8451 & 0.00610 & -- \\
+200 & e2e & val gap & 150 & 8.8078 & 4.5582 & 0.8480 & 0.00611 & -0.0029 \\
+200 & e2e & val FY & 500 & 12.2682 & 6.0649 & 0.7730 & 0.00563 & 0.0721 \\
+\midrule
+600 & 2stage & val MSE & 500 & 9.8899 & 5.0963 & 0.8223 & 0.00591 & -- \\
+600 & e2e & val gap & 110 & 7.7838 & 4.0153 & 0.8223 & 0.00591 & 0.0000 \\
+600 & e2e & val FY & 490 & 12.2328 & 5.8586 & 0.7507 & 0.00550 & 0.0716 \\
+\bottomrule
+\end{tabular}
+}
+\end{table}
+
+\paragraph{Reading Table~\ref{tab:heldout400-results}.}
+On the original 400-graph held-out split, the e2e checkpoint selected by
+validation FY loss is better than the 2stage baseline for the completed
+train sizes. The e2e checkpoint selected by validation decision gap is not
+consistently better; it is slightly better at \(n=50\), worse at \(n=200\), and
+tied at \(n=600\). This distinction is important: the FY-loss-selected model is
+the stronger evidence that the FY surrogate can sometimes serve as a useful
+model-selection objective on the original noisy-linear split.
+
+\subsection{1000-graph unseen noisy-linear test}
+
+Table~\ref{tab:unseen1000-results} evaluates the same trained models on a
+separately generated unseen 1000-graph noisy-linear dataset.
+
+\begin{table}[h]
+\centering
+\caption{1000-graph unseen noisy-linear test results.}
+\label{tab:unseen1000-results}
+\resizebox{\textwidth}{!}{
+\begin{tabular}{rllrrrrrrl}
+\toprule
+Train size & Method & Selected by & Epoch & \(\theta_1\) & \(\theta_2\)
+& Mean gap & Norm. gap & Paired improvement & 95\% CI \\
+\midrule
+50 & 2stage & val MSE & 500 & 9.8707 & 5.1130 & 0.7311 & 0.00531 & -- & -- \\
+50 & e2e & val gap & 50 & 5.4807 & 2.8132 & 0.7352 & 0.00534 & -0.0041 & [-0.0114, 0.0006] \\
+50 & e2e & val FY & 440 & 11.8304 & 5.0208 & 0.7591 & 0.00550 & -0.0280 & [-0.0878, 0.0319] \\
+\midrule
+200 & 2stage & val MSE & 500 & 9.8848 & 5.1038 & 0.7313 & 0.00532 & -- & -- \\
+200 & e2e & val gap & 150 & 8.8078 & 4.5582 & 0.7313 & 0.00532 & 0.0000 & [0.0000, 0.0000] \\
+200 & e2e & val FY & 500 & 12.2682 & 6.0649 & 0.7262 & 0.00528 & 0.0050 & [-0.0200, 0.0320] \\
+\midrule
+600 & 2stage & val MSE & 500 & 9.8899 & 5.0963 & 0.7309 & 0.00531 & -- & -- \\
+600 & e2e & val gap & 110 & 7.7838 & 4.0153 & 0.7329 & 0.00533 & -0.0019 & [-0.0078, 0.0000] \\
+600 & e2e & val FY & 490 & 12.2328 & 5.8586 & 0.7488 & 0.00545 & -0.0179 & [-0.0564, 0.0219] \\
+\bottomrule
+\end{tabular}
+}
+\end{table}
+
+\paragraph{Reading Table~\ref{tab:unseen1000-results}.}
+The 1000-graph unseen test does not replicate the stronger FY-loss-selected
+improvements from the 400-graph held-out split. The 2stage baseline is stable
+around mean gap \(0.731\), and e2e is tied or slightly worse except for a small
+improvement at \(n=200\) selected by validation FY loss. The confidence interval
+for that improvement still crosses zero. Thus, the unseen evaluation makes the
+claim more cautious: the current two-feature FY model does not yet show robust
+out-of-split improvement.
+
+\subsection{Realistic-synthetic stress test}
+
+Table~\ref{tab:realistic-results} evaluates the same noisy-linear-trained
+models under a more complex realistic-synthetic label regime:
+\[
+    \mathrm{expected\ transplant\ count}
+    \times
+    \mathrm{QALY}
+    \times
+    \mathrm{priority\ multiplier}
+    \times
+    (1+\mathrm{deterministic\ noise}).
+\]
+
+\begin{table}[h]
+\centering
+\caption{Realistic-synthetic label-regime stress test.}
+\label{tab:realistic-results}
+\resizebox{\textwidth}{!}{
+\begin{tabular}{rllrrrrrrrl}
+\toprule
+Train size & Method & Selected by & Epoch & \(\theta_1\) & \(\theta_2\)
+& Mean gap & Norm. gap & Ratio & Paired improvement & 95\% CI \\
+\midrule
+50 & 2stage & val MSE & 500 & 9.8707 & 5.1130 & 12.1103 & 0.06603 & 0.93397 & -- & -- \\
+50 & e2e & val gap & 50 & 5.4807 & 2.8132 & 12.1314 & 0.06613 & 0.93387 & -0.0210 & [-0.0750, 0.0239] \\
+50 & e2e & val FY & 440 & 11.8304 & 5.0208 & 12.3439 & 0.06718 & 0.93282 & -0.2335 & [-0.4036, -0.0678] \\
+\midrule
+200 & 2stage & val MSE & 500 & 9.8848 & 5.1038 & 12.0837 & 0.06588 & 0.93412 & -- & -- \\
+200 & e2e & val gap & 150 & 8.8078 & 4.5582 & 12.0879 & 0.06591 & 0.93409 & -0.0041 & [-0.0118, 0.0000] \\
+200 & e2e & val FY & 500 & 12.2682 & 6.0649 & 12.1739 & 0.06631 & 0.93369 & -0.0902 & [-0.1674, -0.0198] \\
+\midrule
+600 & 2stage & val MSE & 500 & 9.8899 & 5.0963 & 12.1108 & 0.06606 & 0.93394 & -- & -- \\
+600 & e2e & val gap & 110 & 7.7838 & 4.0153 & 12.1108 & 0.06606 & 0.93394 & 0.0000 & [0.0000, 0.0000] \\
+600 & e2e & val FY & 490 & 12.2328 & 5.8586 & 12.1670 & 0.06618 & 0.93382 & -0.0562 & [-0.1618, 0.0471] \\
+\bottomrule
+\end{tabular}
+}
+\end{table}
+
+\paragraph{Reading Table~\ref{tab:realistic-results}.}
+Under the shifted realistic-synthetic reward labels, the noisy-linear-trained
+2stage model is slightly better than or tied with the e2e models. This should
+not be interpreted as a general failure of FY. It mainly shows that a
+two-feature model trained on controlled noisy-linear labels does not transfer
+cleanly to a different, more complex reward definition.
+
+\section{Figure Roadmap}
+
+The current Step1b plotting script produces 10 presentation-ready figures. Each
+figure is saved as both PNG and PDF under \(\StepOneBPlotRoot\).
+
+\begin{table}[h]
+\centering
+\caption{Step1b figure roadmap.}
+\label{tab:figure-roadmap}
+\resizebox{\textwidth}{!}{
+\begin{tabular}{llp{0.52\textwidth}}
+\toprule
+Figure & File & What to explain \\
+\midrule
+1 & \texttt{01\_normalized\_decision\_gap\_by\_dataset} &
+Main generalization plot. Compare normalized decision gap across train sizes and datasets. \\
+2 & \texttt{02\_raw\_decision\_gap\_by\_dataset} &
+Raw oracle objective gap. Useful for checking whether normalized trends are driven by scale. \\
+3 & \texttt{03\_achieved\_oracle\_ratio\_by\_dataset} &
+Achieved/oracle objective ratio. Higher is better and easier to interpret as percentage of oracle value. \\
+4 & \texttt{04\_paired\_improvement\_over\_2stage} &
+Most important comparison plot. Positive bars mean e2e beats 2stage on paired test graphs. \\
+5 & \texttt{05\_selected\_parameter\_endpoints} &
+Shows where selected checkpoints land in \((\theta_1,\theta_2)\) space. \\
+6 & \texttt{06\_parameter\_trajectories} &
+Shows training dynamics in parameter space for each train size. \\
+7 & \texttt{07\_2stage\_mse\_loss\_curves} &
+Checks whether MSE reward fitting converges and generalizes on validation MSE. \\
+8 & \texttt{08\_e2e\_fy\_objective\_curves} &
+Checks FY surrogate optimization and train/validation FY behavior. \\
+9 & \texttt{09\_e2e\_decision\_gap\_curves} &
+Shows whether e2e trajectory improves downstream decision gap on train/validation. \\
+10 & \texttt{10\_e2e\_validation\_tradeoff} &
+Directly compares validation FY objective vs validation decision gap across epochs. \\
+\bottomrule
+\end{tabular}
+}
+\end{table}
+
+\section{Figure-by-Figure Presentation Notes}
+
+\subsection{Main decision quality: normalized decision gap}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{\StepOneBPlotRoot/01_normalized_decision_gap_by_dataset.png}
+\caption{Mean normalized synthetic-label decision gap across training sizes and
+evaluation datasets. Lower is better.}
+\label{fig:step1b-normalized-gap}
+\end{figure}
+
+\paragraph{How to explain this figure.}
+Start with this figure because it is the most compact summary of generalization.
+The left panel is the original held-out noisy-linear split; the middle panel is
+the newly generated unseen noisy-linear test; the right panel is the
+realistic-synthetic stress test. The key message is that FY-loss selection looks
+promising on the original held-out split, but the advantage weakens or disappears
+on the 1000-graph unseen test and does not transfer to the shifted
+realistic-synthetic reward labels.
+
+\subsection{Raw decision gap}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{\StepOneBPlotRoot/02_raw_decision_gap_by_dataset.png}
+\caption{Mean raw oracle objective gap across datasets. Lower is better.}
+\label{fig:step1b-raw-gap}
+\end{figure}
+
+\paragraph{How to explain this figure.}
+Use this figure to confirm that the normalized-gap trends are not an artifact of
+normalization. The raw gaps are much larger in the realistic-synthetic stress
+test because the reward scale is different.
+
+\subsection{Achieved/oracle objective ratio}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{\StepOneBPlotRoot/03_achieved_oracle_ratio_by_dataset.png}
+\caption{Mean achieved/oracle objective ratio. Higher is better.}
+\label{fig:step1b-ratio}
+\end{figure}
+
+\paragraph{How to explain this figure.}
+This figure translates the decision gap into an ``oracle percentage'' view. It
+is useful for communication: even when raw gaps differ across datasets, the ratio
+shows how close the induced KEP solution is to the synthetic-label oracle
+solution.
+
+\subsection{Paired improvement over 2stage}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{\StepOneBPlotRoot/04_paired_improvement_over_2stage.png}
+\caption{Paired e2e improvement over 2stage. Positive values mean e2e has a
+smaller decision gap than 2stage on the same test graphs. Error bars are
+bootstrap confidence intervals.}
+\label{fig:step1b-paired-improvement}
+\end{figure}
+
+\paragraph{How to explain this figure.}
+This is the most important comparison plot. Unlike raw mean gap, paired
+improvement controls for the fact that all methods are evaluated on the same
+test graphs. The current story is nuanced: e2e selected by validation FY loss is
+positive on the original held-out split for \(n=200,600\), but this advantage is
+not stable on the unseen 1000-graph test and becomes negative under the
+realistic-synthetic stress test.
+
+\subsection{Selected parameter endpoints}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.82\textwidth]{\StepOneBPlotRoot/05_selected_parameter_endpoints.png}
+\caption{Selected model parameters in the two-dimensional linear-probe space.}
+\label{fig:step1b-selected-parameters}
+\end{figure}
+
+\paragraph{How to explain this figure.}
+This figure connects Step1b back to Step1a. The 2stage checkpoints cluster near
+the clean coefficient \([10,5]\). The e2e checkpoint selected by validation
+decision gap may select smaller-scale parameters, while the e2e checkpoint
+selected by validation FY loss often selects a larger-scale parameter vector.
+This supports the interpretation that FY does not simply recover the reward
+coefficient; it moves according to perturbed decision stability.
+
+\subsection{Parameter trajectories}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{\StepOneBPlotRoot/06_parameter_trajectories.png}
+\caption{Training trajectories in \((\theta_1,\theta_2)\) space for each
+training size.}
+\label{fig:step1b-trajectories}
+\end{figure}
+
+\paragraph{How to explain this figure.}
+This figure shows the actual training paths. It helps explain why selected
+checkpoints differ: validation decision gap and validation FY loss can choose
+different epochs along the same FY trajectory. It also shows whether increasing
+training size stabilizes the trajectory.
+
+\subsection{2stage MSE loss curves}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{\StepOneBPlotRoot/07_2stage_mse_loss_curves.png}
+\caption{2stage train and validation MSE curves.}
+\label{fig:step1b-2stage-loss}
+\end{figure}
+
+\paragraph{How to explain this figure.}
+This is the sanity check for the reward-fitting baseline. MSE should steadily
+fit the synthetic labels and validation MSE should track training MSE reasonably
+well. The selected 2stage checkpoint is the lowest-validation-MSE point.
+
+\subsection{e2e FY objective curves}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{\StepOneBPlotRoot/08_e2e_fy_objective_curves.png}
+\caption{e2e train and validation perturbed FY objective curves.}
+\label{fig:step1b-fy-curves}
+\end{figure}
+
+\paragraph{How to explain this figure.}
+This figure answers whether the FY surrogate objective is being optimized. The
+validation-FY-selected checkpoint is chosen from this curve. It is especially
+important because it tests whether the surrogate itself can be used as a model
+selection criterion.
+
+\subsection{e2e decision-gap curves}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{\StepOneBPlotRoot/09_e2e_decision_gap_curves.png}
+\caption{e2e train and validation synthetic-label decision-gap curves.}
+\label{fig:step1b-gap-curves}
+\end{figure}
+
+\paragraph{How to explain this figure.}
+This curve is not the training objective, but it is the downstream metric we
+care about. It shows whether the FY training trajectory visits lower-gap regions
+on validation data. The validation-gap-selected checkpoint is chosen from this
+curve.
+
+\subsection{Validation FY objective vs decision gap}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{\StepOneBPlotRoot/10_e2e_validation_tradeoff.png}
+\caption{Relationship between validation FY objective and validation decision
+gap along the e2e trajectory.}
+\label{fig:step1b-tradeoff}
+\end{figure}
+
+\paragraph{How to explain this figure.}
+This figure directly tests whether validation FY objective and validation
+decision gap are aligned. If the point minimizing FY objective is also near a
+low decision-gap point, then FY is useful not only for training but also for
+model selection. If the two markers are far apart, the FY objective may still
+provide useful gradients but may not be a reliable early-stopping criterion.
+
+\section{Main Interpretation}
+
+The current Step1b evidence is mixed but informative.
+
+\begin{enumerate}
+    \item \textbf{On the original 400-graph held-out test split, FY-loss
+    selection is promising.}
+    For \(n=200\) and \(n=600\), the e2e checkpoint selected by validation FY
+    loss improves over 2stage with positive paired improvement. This is the
+    strongest evidence that the FY surrogate can be useful on the controlled
+    noisy-linear benchmark.
+
+    \item \textbf{On the 1000-graph unseen noisy-linear dataset, the advantage is
+    not robust.}
+    The 2stage baseline remains stable, and e2e is tied or slightly worse in
+    most cases. The only small positive e2e result is at \(n=200\) selected by
+    validation FY loss, but its bootstrap interval crosses zero.
+
+    \item \textbf{Under the realistic-synthetic stress test, noisy-linear-trained
+    e2e does not transfer better than 2stage.}
+    This is expected to some extent because the model was trained on a simple
+    noisy-linear label but evaluated under a more complex reward label.
+
+    \item \textbf{The two e2e selection rules answer different questions.}
+    Validation decision gap asks whether the trajectory contains a good
+    decision-quality point. Validation FY loss asks whether the surrogate itself
+    selects a good point. Reporting both is necessary.
+
+    \item \textbf{The current result suggests a next experimental step.}
+    To make FY more competitive on unseen data, we may need better model
+    capacity, stronger feature sets, warm-started FY fine-tuning, or tuning of
+    \(\epsilon\), \(M\), and checkpoint rules.
+\end{enumerate}
+
+\section{What We Can and Cannot Claim}
+
+\paragraph{Supported by current evidence.}
+The FY training pipeline is now evaluated in a standard train/validation/test
+style. On the original held-out noisy-linear split, the FY-loss-selected
+checkpoint can outperform the two-stage MSE baseline for the completed
+\(n=200\) and \(n=600\) runs.
+
+\paragraph{Not yet supported.}
+The current evidence does not show a robust FY advantage on newly generated
+unseen noisy-linear graphs or under the realistic-synthetic label shift.
+Therefore, we should not claim that FY generally outperforms MSE on unseen KEP
+instances in the current two-feature probe setting.
+
+\paragraph{Best summary sentence.}
+\begin{quote}
+Step1b upgrades Step1a from an in-sample trajectory diagnostic to a held-out
+generalization study. The current results show that FY can select better
+decision-quality models on the original noisy-linear split, but this advantage is
+not yet robust on newly generated unseen graphs or under a shifted
+realistic-synthetic reward label.
+\end{quote}
+
+\section{Next Steps}
+
+The current report suggests the following next experimental steps:
+
+\begin{enumerate}
+    \item Complete the \(n=1200\) formal run and add it to all tables/figures.
+    \item Add an MSE-warm-started FY fine-tuning method.
+    \item Repeat the formal runs over multiple subset/theta seeds.
+    \item Run an \(\epsilon\) and \(M\) ablation.
+    \item Test richer feature sets beyond utility and recipient cPRA.
+    \item Consider reporting both exact-zero-gap rate and nonzero-gap
+    conditional performance, because many graphs produce identical decisions
+    across methods.
+\end{enumerate}
+
+\end{document}

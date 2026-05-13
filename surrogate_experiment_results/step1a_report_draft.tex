@@ -7,19 +7,16 @@
 \usepackage{graphicx}
 \usepackage{subcaption}
 \usepackage{xcolor}
-\usepackage{array}
-\usepackage{multirow}
-\usepackage{pdflscape}
 \usepackage{hyperref}
 
-\title{Step1a--Step1b: Diagnostic and Generalization Study of the Perturbed Fenchel--Young Surrogate}
+\title{Step1a: In-Sample Diagnostic of the Perturbed Fenchel--Young Surrogate}
 \author{Weikang}
 \date{May 2026}
 
-% report0513.sh compiles from surrogate_experiment_results/.
-\newcommand{\StepOneARoot}{Step1a}
-\newcommand{\StepOneBPlotRoot}{Step1b/plot_results}
-\newcommand{\StepOneBArchive}{Step1b/remote_results/formal_M16_2stage500_e2e500_s10}
+% Change this path if the figures are generated elsewhere.
+% Recommended formal output:
+%   results/step1_runs/step1a/epsilon=<eps>/
+\newcommand{\StepOneARoot}{results/step1_runs/step1a}
 
 \begin{document}
 \maketitle
@@ -204,82 +201,105 @@ of the FY trajectory.
 
 \section{Figure-Based Analysis}
 
-\subsection{\texorpdfstring{\(\epsilon=0.2\)}{epsilon=0.2}: diagnostic summary}
+\subsection{\texorpdfstring{\(\epsilon=0.2\)}{epsilon=0.2}: trajectory on the decision-gap landscape}
 
-\paragraph{How to read this group.}
-The contour panel shows that MSE reward fitting moves toward the noise-free
-linear coefficient \([10,5]\), while FY follows the geometry induced by the KEP
-solver and the perturbed FY objective. The metric panels separate the training
-surrogate from the deterministic decision metric: the best decision-gap epoch can
-occur before the final FY iterate, motivating validation-based checkpoint
-selection rather than only using the final epoch.
-
-\begin{figure}[!htbp]
+\begin{figure}[h]
 \centering
-\begin{subfigure}{\textwidth}
-\centering
-\includegraphics[width=0.94\textwidth]{\StepOneARoot/epsilon=0.2/trajectory_contour.png}
-\caption{MSE and FY trajectories on the synthetic-label decision-gap landscape.}
-\end{subfigure}
-
-\vspace{-0.1em}
-\begin{subfigure}{\textwidth}
-\centering
-\includegraphics[width=0.94\textwidth]{\StepOneARoot/epsilon=0.2/trajectory_3d_metrics.png}
-\caption{Three trajectory views: MSE decision gap, FY decision gap, and FY
-perturbed objective.}
-\end{subfigure}
-
-\vspace{-0.1em}
-\begin{subfigure}{\textwidth}
-\centering
-\includegraphics[width=0.94\textwidth]{\StepOneARoot/epsilon=0.2/trajectory_epoch_metrics.png}
-\caption{FY perturbed objective and synthetic-label decision gap over epochs.}
-\end{subfigure}
-
-\caption{\(\epsilon=0.2\). Step1a in-sample diagnostic summary. The contour plot
-shows that FY visits a low decision-gap region early; the epoch plot highlights
-why validation-based checkpoint selection is useful in Step1b.}
-\label{fig:step1a-eps02-summary}
+\includegraphics[width=\textwidth]{\StepOneARoot/epsilon=0.2/trajectory_contour.png}
+\caption{\(\epsilon=0.2\). MSE reward fitting and FY decision-focused training
+trajectories on the synthetic-label decision-gap landscape. The colorbar is the
+average oracle objective gap. The diamond marks the noise-free linear coefficient
+\([10,5]\), the star marks the final iterate, and the gold marker marks the
+best-gap iterate along the trajectory.}
+\label{fig:step1a-eps02-contour}
 \end{figure}
 
-\subsection{\texorpdfstring{\(\epsilon=1.0\)}{epsilon=1.0}: diagnostic summary}
+\paragraph{How to explain this figure.}
+The left panel shows that MSE reward fitting moves toward the noise-free linear
+coefficient \([10,5]\), which is expected because the reward labels are generated
+from a noisy version of that clean linear signal. The right panel shows that FY
+does not need to recover \([10,5]\). Instead, it follows the geometry induced by
+the KEP solver and the perturbed FY objective. For \(\epsilon=0.2\), the
+trajectory visits a low decision-gap region early, which motivates checkpoint
+selection rather than only using the final iterate.
 
-\paragraph{How to read this group.}
+\subsection{\texorpdfstring{\(\epsilon=0.2\)}{epsilon=0.2}: 3D trajectory metrics}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{\StepOneARoot/epsilon=0.2/trajectory_3d_metrics.png}
+\caption{\(\epsilon=0.2\). Three trajectory views: MSE decision gap, FY decision
+gap, and FY perturbed objective.}
+\label{fig:step1a-eps02-3d}
+\end{figure}
+
+\paragraph{How to explain this figure.}
+This figure separates the decision metric from the training surrogate. The FY
+objective can continue decreasing even when the deterministic KEP decision gap
+has already reached a good region. This is expected because the FY objective
+optimizes perturbation robustness, not only the unperturbed deterministic KEP
+solution.
+
+\subsection{\texorpdfstring{\(\epsilon=0.2\)}{epsilon=0.2}: FY objective and decision gap over epochs}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{\StepOneARoot/epsilon=0.2/trajectory_epoch_metrics.png}
+\caption{\(\epsilon=0.2\). FY perturbed objective and synthetic-label decision
+gap over epochs.}
+\label{fig:step1a-eps02-epoch}
+\end{figure}
+
+\paragraph{How to explain this figure.}
+The best decision-gap epoch can occur before the final epoch. Therefore, Step1a
+motivates validation-based model selection in Step1b: the final FY iterate is
+not necessarily the best deterministic decision-quality iterate.
+
+\subsection{\texorpdfstring{\(\epsilon=1.0\)}{epsilon=1.0}: trajectory on the decision-gap landscape}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{\StepOneARoot/epsilon=1.0/trajectory_contour.png}
+\caption{\(\epsilon=1.0\). MSE reward fitting and FY decision-focused training
+trajectories on the synthetic-label decision-gap landscape.}
+\label{fig:step1a-eps10-contour}
+\end{figure}
+
+\paragraph{How to explain this figure.}
 With a larger perturbation scale, FY tends to move to a larger parameter scale.
 This is consistent with the fact that the model must produce decisions that are
-stable under stronger perturbations. The 3D and epoch views help distinguish
-movement in parameter space from movement in the decision metric and the FY
-surrogate objective.
+stable under stronger perturbations. The parameter endpoint is therefore not
+expected to coincide with the clean coefficient \([10,5]\).
 
-\begin{figure}[!htbp]
-\centering
-\begin{subfigure}{\textwidth}
-\centering
-\includegraphics[width=0.94\textwidth]{\StepOneARoot/epsilon=1.0/trajectory_contour.png}
-\caption{MSE and FY trajectories on the synthetic-label decision-gap landscape.}
-\end{subfigure}
+\subsection{\texorpdfstring{\(\epsilon=1.0\)}{epsilon=1.0}: 3D trajectory metrics}
 
-\vspace{-0.1em}
-\begin{subfigure}{\textwidth}
+\begin{figure}[h]
 \centering
-\includegraphics[width=0.94\textwidth]{\StepOneARoot/epsilon=1.0/trajectory_3d_metrics.png}
-\caption{Three trajectory views: MSE decision gap, FY decision gap, and FY
-perturbed objective.}
-\end{subfigure}
-
-\vspace{-0.1em}
-\begin{subfigure}{\textwidth}
-\centering
-\includegraphics[width=0.94\textwidth]{\StepOneARoot/epsilon=1.0/trajectory_epoch_metrics.png}
-\caption{FY perturbed objective and synthetic-label decision gap over epochs.}
-\end{subfigure}
-
-\caption{\(\epsilon=1.0\). Step1a in-sample diagnostic summary. The larger
-perturbation scale changes the scale and timing of the FY trajectory, so the
-endpoint is not expected to coincide with the clean coefficient \([10,5]\).}
-\label{fig:step1a-eps10-summary}
+\includegraphics[width=\textwidth]{\StepOneARoot/epsilon=1.0/trajectory_3d_metrics.png}
+\caption{\(\epsilon=1.0\). Three trajectory views: MSE decision gap, FY decision
+gap, and FY perturbed objective.}
+\label{fig:step1a-eps10-3d}
 \end{figure}
+
+\paragraph{How to explain this figure.}
+The larger perturbation scale changes the shape and scale of FY optimization.
+The 3D view helps distinguish movement in parameter space from movement in the
+decision metric and the FY surrogate objective.
+
+\subsection{\texorpdfstring{\(\epsilon=1.0\)}{epsilon=1.0}: FY objective and decision gap over epochs}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{\StepOneARoot/epsilon=1.0/trajectory_epoch_metrics.png}
+\caption{\(\epsilon=1.0\). FY perturbed objective and synthetic-label decision
+gap over epochs.}
+\label{fig:step1a-eps10-epoch}
+\end{figure}
+
+\paragraph{How to explain this figure.}
+The best decision-gap epoch occurs much later than in the \(\epsilon=0.2\)
+run. This shows that \(\epsilon\) affects both the scale of the trajectory and
+the timing of useful decision-quality improvements.
 
 \section{Interpretation}
 
@@ -334,10 +354,5 @@ Step1a reveals that the final FY iterate is not necessarily the best point in
 terms of deterministic decision quality. This naturally motivates Step1b, where
 we train on different numbers of graph instances, select checkpoints using
 validation metrics, and evaluate the selected models on held-out test instances.
-
-\clearpage
-\section*{Step1b: Sample-Size Generalization Study for the Perturbed Fenchel--Young Surrogate}
-\addcontentsline{toc}{section}{Step1b: Sample-Size Generalization Study for the Perturbed Fenchel--Young Surrogate}
-\input{step1b_report_body}
 
 \end{document}
