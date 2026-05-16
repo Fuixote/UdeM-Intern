@@ -464,24 +464,24 @@ is useful for communication: even when raw gaps differ across datasets, the rati
 shows how close the induced KEP solution is to the synthetic-label oracle
 solution.
 
-\subsection{Paired improvement over 2stage}
+\subsection{Direct method performance}
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=\textwidth]{\StepOneBPlotRoot/04_paired_improvement_over_2stage.png}
-\caption{Paired e2e improvement over 2stage. Positive values mean e2e has a
-smaller decision gap than 2stage on the same test graphs. Error bars are
-bootstrap confidence intervals.}
-\label{fig:step1b-paired-improvement}
+\caption{Direct method comparison by mean normalized decision gap. Lower values
+are better. Each training size shows three bars: 2stage selected by validation
+MSE, e2e selected by validation decision gap, and e2e selected by validation FY
+loss.}
+\label{fig:step1b-direct-performance}
 \end{figure}
 
 \paragraph{How to explain this figure.}
-This is the most important comparison plot. Unlike raw mean gap, paired
-improvement controls for the fact that all methods are evaluated on the same
-test graphs. The current story is nuanced: e2e selected by validation FY loss is
-positive on the original held-out split for \(n=200,600\), but this advantage is
-not stable on the unseen 1000-graph test and becomes negative under the
-realistic-synthetic stress test.
+This plot avoids the large visual uncertainty of paired-improvement confidence
+intervals and instead shows the three selected models on the same absolute
+performance metric. It should be read together with the paired statistics in the
+tables: lower bars indicate better mean normalized decision quality, while the
+paired tables still provide graph-by-graph significance evidence.
 
 \subsection{Selected parameter endpoints}
 
@@ -516,49 +516,27 @@ checkpoints differ: validation decision gap and validation FY loss can choose
 different epochs along the same FY trajectory. It also shows whether increasing
 training size stabilizes the trajectory.
 
-\subsection{2stage MSE loss curves}
+\subsection{Training and validation curves}
 
 \begin{figure}[h]
 \centering
-\includegraphics[width=\textwidth]{\StepOneBPlotRoot/07_2stage_mse_loss_curves.png}
-\caption{2stage train and validation MSE curves.}
-\label{fig:step1b-2stage-loss}
+\includegraphics[width=\textwidth]{\StepOneBPlotRoot/07_08_09_training_curves_combined.png}
+\caption{Training and validation curves for the three tracked quantities:
+2stage MSE, e2e perturbed FY objective, and e2e synthetic-label decision gap.
+Rows correspond to metric families and columns correspond to training-set
+sizes. The 2stage MSE curves are evaluated at every epoch, while the e2e FY and
+decision-gap curves are evaluated every 10 epochs in the formal archive.}
+\label{fig:step1b-training-curves-combined}
 \end{figure}
 
 \paragraph{How to explain this figure.}
-This is the sanity check for the reward-fitting baseline. MSE should steadily
-fit the synthetic labels and validation MSE should track training MSE reasonably
-well. The selected 2stage checkpoint is the lowest-validation-MSE point.
-
-\subsection{e2e FY objective curves}
-
-\begin{figure}[h]
-\centering
-\includegraphics[width=\textwidth]{\StepOneBPlotRoot/08_e2e_fy_objective_curves.png}
-\caption{e2e train and validation perturbed FY objective curves.}
-\label{fig:step1b-fy-curves}
-\end{figure}
-
-\paragraph{How to explain this figure.}
-This figure answers whether the FY surrogate objective is being optimized. The
-validation-FY-selected checkpoint is chosen from this curve. It is especially
-important because it tests whether the surrogate itself can be used as a model
-selection criterion.
-
-\subsection{e2e decision-gap curves}
-
-\begin{figure}[h]
-\centering
-\includegraphics[width=\textwidth]{\StepOneBPlotRoot/09_e2e_decision_gap_curves.png}
-\caption{e2e train and validation synthetic-label decision-gap curves.}
-\label{fig:step1b-gap-curves}
-\end{figure}
-
-\paragraph{How to explain this figure.}
-This curve is not the training objective, but it is the downstream metric we
-care about. It shows whether the FY training trajectory visits lower-gap regions
-on validation data. The validation-gap-selected checkpoint is chosen from this
-curve.
+This combined figure keeps the three training diagnostics together. The first
+row is the 2stage reward-fitting sanity check: MSE should steadily fit the
+synthetic labels and validation MSE should track training MSE reasonably well.
+The second row shows whether the e2e FY surrogate objective is being optimized;
+the validation-FY-selected checkpoint is chosen from this curve. The third row
+is not the training objective, but it is the downstream decision metric used for
+validation-gap checkpoint selection.
 
 \subsection{Validation FY objective vs decision gap}
 

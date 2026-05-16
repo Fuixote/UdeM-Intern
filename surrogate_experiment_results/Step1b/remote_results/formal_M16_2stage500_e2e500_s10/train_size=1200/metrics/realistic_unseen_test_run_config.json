@@ -1,0 +1,17 @@
+{
+  "generated_at": "2026-05-15T13:50:56",
+  "script": "surrogate_experiment_results/Step1b/evaluate_unseen_run.py",
+  "run_dir": "surrogate_experiment_results/Step1b/remote_results/formal_M16_2stage500_e2e500_s10/train_size=1200",
+  "dataset_dir": "dataset/processed/realistic_synthetic_dataset",
+  "graph_count": 2000,
+  "graph_limit": null,
+  "weights": [
+    "surrogate_experiment_results/Step1b/remote_results/formal_M16_2stage500_e2e500_s10/train_size=1200/model_weights/2stage_best_by_validation_mse_loss.npz",
+    "surrogate_experiment_results/Step1b/remote_results/formal_M16_2stage500_e2e500_s10/train_size=1200/model_weights/e2e_best_by_validation_decision_gap.npz",
+    "surrogate_experiment_results/Step1b/remote_results/formal_M16_2stage500_e2e500_s10/train_size=1200/model_weights/e2e_best_by_validation_fy_loss.npz"
+  ],
+  "output_stem": "realistic_unseen_test",
+  "gurobi_seed": 42,
+  "bootstrap_samples": 1000,
+  "bootstrap_seed": 42
+}
