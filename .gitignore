@@ -30,10 +30,8 @@ main.pdf
 *.fdb_latexmk
 *.synctex.gz
 
-# Large binary files (papers, images)
-*.pdf
-*.jpg
-*.png
+# Papers and image artifacts are intentionally trackable so GitHub-hosted AI
+# tools can inspect generated reports and figures.
 
 # Third-party dependencies
 generator_webapp/bower_components/
