@@ -33,8 +33,8 @@ DEFAULT_DATASET_DIR = (
 
 EXPECTED_WEIGHT_FILES = [
     "2stage_best_by_validation_mse_loss.npz",
-    "e2e_best_by_validation_decision_gap.npz",
-    "e2e_best_by_validation_fy_loss.npz",
+    "spoplus_best_by_validation_decision_gap.npz",
+    "spoplus_best_by_validation_spoplus_loss.npz",
 ]
 
 SUMMARY_FIELDS = [

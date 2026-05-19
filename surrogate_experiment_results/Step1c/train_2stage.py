@@ -188,6 +188,8 @@ def parse_args(argv=None):
     parser.add_argument("--theta_init", type=float, nargs=2, default=None)
     parser.add_argument("--n_epochs", type=int, default=100)
     parser.add_argument("--lr", type=float, default=0.05)
+    parser.add_argument("--train_graph_limit", type=int, default=None)
+    parser.add_argument("--validation_limit", type=int, default=None)
     parser.add_argument("--plot", action="store_true")
     return parser.parse_args(argv)
 
@@ -205,11 +207,15 @@ def main(argv=None):
     train_entries = select_train_subset(
         split["train_pool"], train_size=args.train_size, seed=args.subset_seed
     )
+    if args.train_graph_limit is not None:
+        train_entries = train_entries[: args.train_graph_limit]
     validation_entries = (
         graph_entries_from_data_dir(args.validation_data_dir)
         if args.validation_data_dir
         else split["validation"]
     )
+    if args.validation_limit is not None:
+        validation_entries = validation_entries[: args.validation_limit]
 
     write_json(out_dir / "train_subset.json", train_entries)
     write_json(out_dir / "validation_set.json", validation_entries)

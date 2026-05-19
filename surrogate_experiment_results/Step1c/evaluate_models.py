@@ -176,6 +176,7 @@ def parse_args(argv=None):
     parser.add_argument("--gurobi_seed", type=int, default=42)
     parser.add_argument("--bootstrap_samples", type=int, default=1000)
     parser.add_argument("--bootstrap_seed", type=int, default=42)
+    parser.add_argument("--test_limit", type=int, default=None)
     return parser.parse_args(argv)
 
 
@@ -194,8 +195,11 @@ def main(argv=None):
 
     test_graphs = []
     try:
-        print(f"Loading test split: n={len(split['test'])}")
-        test_graphs = common.load_graph_records([entry["path"] for entry in split["test"]], env)
+        test_entries = split["test"]
+        if args.test_limit is not None:
+            test_entries = test_entries[: args.test_limit]
+        print(f"Loading test split: n={len(test_entries)}")
+        test_graphs = common.load_graph_records([entry["path"] for entry in test_entries], env)
 
         models_and_evaluations = []
         for weight_path in args.weights:

@@ -58,10 +58,111 @@ The shared master split intentionally remains:
 results/step1b_splits/master_split_seed=42.json
 ```
 
-because Step1c should reuse the Step1b data protocol. The scaffold is not yet a
-true SPO+ implementation: `train_end2end.py` still contains the copied FY logic.
-The next implementation step is to replace or fork that training path with
-reward-max SPO+ while preserving the surrounding Step1b evaluation protocol.
+because Step1c should reuse the Step1b data protocol.
+
+Current implementation status:
+
+```text
+split_dataset.py
+step1c_common.py
+train_2stage.py
+train_end2end.py        # retained FY reference scaffold
+train_spoplus.py        # reward-max SPO+ trainer
+evaluate_models.py
+evaluate_unseen_run.py  # expects Step1c SPO+ checkpoint names
+plot_result_summary.py
+plot_posthoc_diagnostics.py
+run_step1c.sh
+```
+
+As of 2026-05-19, Step1c has a first reward-max SPO+ implementation:
+
+```text
+step1c_common.py:
+  spo_plus_loss_and_grad
+  grad_spoplus
+  average_spoplus_objective
+  evaluate_trajectory_spoplus_objective
+  evaluate_trajectory_spoplus_diagnostics
+  spoplus_solution_rates
+
+train_spoplus.py:
+  writes trajectory_spoplus.npy
+  writes metrics/spoplus_loss_curve.csv
+  writes spoplus_best_by_validation_decision_gap.npz
+  writes spoplus_best_by_validation_spoplus_loss.npz
+```
+
+The first tiny smoke test was run on garnet, because local Gurobi attempted to
+resolve `token.gurobi.com` and failed. The garnet smoke used:
+
+```text
+STEP1C_TRAIN_SIZE=5
+STEP1C_2STAGE_N_EPOCHS=2
+STEP1C_SPOPLUS_N_EPOCHS=2
+STEP1C_METRIC_STRIDE=1
+STEP1C_TRAIN_GRAPH_LIMIT=2
+STEP1C_VALIDATION_LIMIT=3
+STEP1C_TEST_LIMIT=3
+STEP1C_OUTPUT_DIR=/tmp/step1c_spoplus_smoke
+```
+
+It completed and wrote:
+
+```text
+metrics/2stage_loss_curve.csv
+metrics/spoplus_loss_curve.csv
+metrics/test_summary.csv
+model_weights/2stage_best_by_validation_mse_loss.npz
+model_weights/spoplus_best_by_validation_decision_gap.npz
+model_weights/spoplus_best_by_validation_spoplus_loss.npz
+plots/2stage_mse_loss.png
+plots/spoplus_loss.png
+```
+
+This smoke test is only an implementation check, not a scientific result.
+
+On 2026-05-19, a first local formal `train_size=50` Step1c run was completed
+with the matched Step1b-val2000 formal settings:
+
+```text
+STEP1C_TRAIN_SIZE=50
+STEP1C_2STAGE_N_EPOCHS=500
+STEP1C_SPOPLUS_N_EPOCHS=500
+STEP1C_METRIC_STRIDE=10
+validation override:
+  dataset/processed/step1_noisy_linear_sigma010_validation2000_seed20260519
+output:
+  surrogate_experiment_results/Step1c/remote_results/
+    formal_spoplus_ablation_val2000/train_size=50/
+```
+
+The first attempt exposed a performance issue in the SPO+ post-processing: the
+code was separately re-solving KEP instances for validation decision gap, raw
+SPO+ loss, normalized SPO+ loss, and solution equality rates. With 2000
+validation graphs and 51 checkpoint epochs, this created several redundant
+full passes over the same graph/checkpoint pairs. The fix was to add
+`evaluate_trajectory_spoplus_diagnostics`, which computes decision gap,
+raw/normalized SPO+ loss, and `y_adv` / `y_pred` equality rates in one pass.
+This does not change the experimental definition; it only removes redundant
+oracle calls and adds progress lines like:
+
+```text
+[SPO+ metrics] validation 24/51 epoch=230
+```
+
+First held-out 400-graph test result for `train_size=50`:
+
+| method | selection metric | selected epoch | theta | test mean gap | test mean normalized gap | paired mean improvement over 2stage |
+| --- | --- | ---: | --- | ---: | ---: | ---: |
+| 2stage | validation MSE | 500 | `[9.8707, 5.1130]` | 0.848028 | 0.006110 | -- |
+| SPO+ | validation decision gap | 100 | `[6.7245, 3.4149]` | 0.807284 | 0.005809 | 0.040744 |
+| SPO+ | validation SPO+ loss | 480 | `[9.1155, 4.1380]` | 0.740109 | 0.005442 | 0.107920 |
+
+This is only one train-size run, so do not generalize yet. It is nevertheless
+a useful feasibility signal: reward-max SPO+ trains stably from the same random
+initialization, writes both checkpoint types, and the validation-SPO+-selected
+checkpoint is best among the three methods on this held-out400 test split.
 
 ## Golden Rule 1: Step1c Is a Strict Surrogate Swap
 
@@ -104,6 +205,41 @@ grad_SPO+ = 2 X^T (y_adv - y_oracle)
 
 Using the exact same learning rate may compare optimizer scale rather than
 surrogate quality.
+
+## Golden Rule 1b: Fair FY Baseline Must Use the Same Validation Protocol
+
+Step1c defaults to the larger validation set:
+
+```text
+dataset/processed/step1_noisy_linear_sigma010_validation2000_seed20260519
+```
+
+This improves checkpoint-selection stability, but it also means old Step1b FY
+archives that used the original 400-graph validation split are not a strict
+baseline for Step1c.
+
+For the primary Step1c comparison, use:
+
+```text
+2stage / FY / SPO+
+same train split
+same train size
+same subset seed
+same theta seed
+same validation2000 set
+same metric stride
+same heldout400 / unseen1000 / realistic2000 evaluation
+```
+
+In other words:
+
+```text
+Strict comparison baseline = FY rerun under the Step1c validation2000 protocol.
+Not strict baseline        = old Step1b FY archive selected with 400 validation graphs.
+```
+
+If an old Step1b result is shown, label it as historical context rather than as
+the primary SPO+ baseline.
 
 ## Golden Rule 2: SPO Is Cost Minimization, KEP Is Reward Maximization
 
@@ -243,6 +379,34 @@ normalized_spoplus
 Raw SPO+ is closer to the original paper. Normalized SPO+ may be easier to
 compare across heterogeneous graph scales.
 
+Recommended implementation targets:
+
+```python
+spo_plus_loss_and_grad(record, theta, env, normalize=False)
+grad_spoplus(graphs, theta, env, normalize=False)
+average_spoplus_objective(theta, graphs, env, normalize=False)
+evaluate_trajectory_spoplus_objective(
+    trajectory,
+    graphs,
+    env,
+    indices=None,
+    normalize=False,
+)
+```
+
+Record both raw and normalized metrics:
+
+```text
+train_spoplus_loss
+validation_spoplus_loss
+train_normalized_spoplus_loss
+validation_normalized_spoplus_loss
+```
+
+For the first version, select the main SPO+ checkpoint by raw
+`validation_spoplus_loss`; keep normalized SPO+ as a diagnostic unless later
+evidence shows raw scale is unstable.
+
 ## Golden Rule 5: Required Sanity Checks
 
 Before any formal Step1c run, add and pass these checks.
@@ -291,6 +455,27 @@ decision gaps are zero. SPO and SPO+ behavior can depend on the oracle's
 returned optimal solution. Keep Gurobi seed and solver settings fixed. If
 needed, add tiny deterministic jitter only with explicit documentation.
 
+Recommended test file:
+
+```text
+tests/test_step1c_spoplus.py
+```
+
+Minimum tests:
+
+```text
+test_spoplus_loss_zero_at_perfect_prediction_on_small_graphs
+test_spoplus_upper_bounds_decision_gap_for_random_theta
+test_spoplus_shifted_weights_can_be_negative
+test_spoplus_gradient_shape_and_finite_values
+```
+
+The upper-bound test is the most important sign check:
+
+```text
+spo_plus_loss + tolerance >= decision_gap
+```
+
 ## Golden Rule 6: Do Not Save Only One SPO+ Checkpoint
 
 Step1b saves two FY checkpoints:
@@ -328,6 +513,18 @@ The main Step1c result should emphasize `best_by_validation_spoplus_loss`,
 because the question is whether SPO+ is useful as a training and model-selection
 surrogate. `best_by_validation_decision_gap` is an oracle-style diagnostic.
 
+Use explicit method names in `.npz` metadata:
+
+```text
+method = "spoplus"
+selection_metric = "validation_spoplus_loss"
+selection_metric = "validation_decision_gap"
+```
+
+Do not call SPO+ checkpoints `"e2e"` in saved metadata. FY and SPO+ are both
+end-to-end decision-focused training paths, but the method label must identify
+the surrogate to avoid confusing downstream plots.
+
 ## Golden Rule 7: Fairness Against Step1b FY
 
 FY and SPO+ have different solver-call budgets.
@@ -348,6 +545,16 @@ Optional later comparison:
 
 Do not overclaim if SPO+ is faster or slower. Report both decision quality and
 computational cost.
+
+Recommended plot/table labels:
+
+```text
+2stage (val MSE)
+FY (val FY, validation2000 rerun)
+FY (val gap, validation2000 rerun)          # diagnostic
+SPO+ (val SPO+)
+SPO+ (val gap)                             # diagnostic
+```
 
 ## Golden Rule 8: Suggested First Run Order
 
@@ -370,6 +577,86 @@ Do not begin with a large surrogate zoo. First compare:
 FY surrogate from Step1b
 SPO+ surrogate from Step1c
 ```
+
+## Golden Rule 8b: Concrete Engineering Order
+
+Implement Step1c in this order:
+
+```text
+1. step1c_common.py
+   Add SPO+ loss, gradient, trajectory-objective, and equality-rate helpers.
+
+2. tests/test_step1c_spoplus.py
+   Add sign, upper-bound, negative-weight, and finite-gradient tests.
+
+3. train_spoplus.py
+   Fork from train_end2end.py, replace FY training and checkpoint logic.
+
+4. run_step1c.sh
+   Call train_spoplus.py, remove FY-specific required weights from the Step1c
+   evaluation call, and add SPO+ run-config fields.
+
+5. evaluate_unseen_run.py
+   Stop hard-coding FY checkpoint names. Either support explicit --weights or
+   use Step1c SPO+ checkpoint names by default.
+
+6. plot_result_summary.py / plot_posthoc_diagnostics.py
+   Add SPO+ labels and diagnostics after the training artifacts exist.
+```
+
+Prefer forking `train_spoplus.py` instead of deleting `train_end2end.py`
+immediately. The copied FY path is useful as a reference while implementing the
+SPO+ path, but formal Step1c should call the SPO+ trainer.
+
+Recommended Step1c runner variables:
+
+```text
+STEP1C_SPOPLUS_N_EPOCHS
+STEP1C_SPOPLUS_LR
+STEP1C_SPOPLUS_NORMALIZE_LOSS
+STEP1C_SPOPLUS_GRAD_CLIP
+STEP1C_SPOPLUS_WEIGHT_DECAY
+```
+
+The current copied variables `STEP1C_FY_EPSILON` and `STEP1C_FY_M` are FY
+scaffold leftovers and should not define the formal SPO+ run.
+
+## Golden Rule 8c: Smoke Runs Need Graph Limits
+
+A tiny smoke test should not accidentally evaluate all 2000 validation graphs.
+Before smoke testing, add a validation limit to the relevant training scripts:
+
+```text
+--validation_limit
+```
+
+Optionally also add:
+
+```text
+--train_graph_limit
+```
+
+Then use a true quick smoke:
+
+```text
+STEP1C_TRAIN_SIZE=5
+STEP1C_2STAGE_N_EPOCHS=2
+STEP1C_SPOPLUS_N_EPOCHS=2
+STEP1C_METRIC_STRIDE=1
+validation_limit=small
+```
+
+Smoke-test success means:
+
+```text
+SPO+ loss is finite
+loss/metric CSVs are written
+both SPO+ checkpoints are written
+heldout test_summary.csv is written
+negative shifted weights do not break the solver
+```
+
+Only after this should Step1c run `train_size=200` as a feasibility experiment.
 
 ## Golden Rule 9: Warm-start Is Valuable but Not the Main Control
 
@@ -430,6 +717,25 @@ epoch vs theta_1 and theta_2
 epoch vs ||theta||
 epoch vs y_adv == y_oracle fraction
 epoch vs y_pred == y_oracle fraction
+```
+
+The main SPO+ curve CSV should include at least:
+
+```text
+epoch
+theta_1
+theta_2
+theta_norm
+train_spoplus_loss
+validation_spoplus_loss
+train_normalized_spoplus_loss
+validation_normalized_spoplus_loss
+train_decision_gap
+validation_decision_gap
+train_y_adv_oracle_equal_rate
+validation_y_adv_oracle_equal_rate
+train_y_pred_oracle_equal_rate
+validation_y_pred_oracle_equal_rate
 ```
 
 The two equality rates are especially useful:
@@ -502,3 +808,20 @@ The first Step1c version should stop at:
 
 Do not expand into many surrogates or misspecification settings until this
 strict SPO+ ablation is reproducible.
+
+## Full-run Gate
+
+Do not start the full `{50, 200, 600, 1200}` Step1c run until all of these are
+true:
+
+```text
+1. SPO+ sanity tests pass.
+2. Tiny smoke run finishes and writes all expected artifacts.
+3. train_size=200 feasibility run shows finite losses and stable theta.
+4. SPO+ selected-by-loss and selected-by-gap checkpoints are both present.
+5. Evaluation scripts accept the SPO+ checkpoint names.
+6. FY baseline has been rerun under validation2000 if used in strict comparison.
+```
+
+If `theta_norm` grows without stabilizing, pause before the full run and test
+gradient clipping, weight decay, or normalized SPO+ loss.

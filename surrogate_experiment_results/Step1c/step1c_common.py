@@ -105,6 +105,172 @@ def run_fy_trajectory(graphs, theta_init, n_epochs, lr, eps_abs, M, seed, env):
     return np.asarray(trajectory, dtype=float)
 
 
+def spo_plus_loss_and_grad(
+    record,
+    theta,
+    env,
+    normalize=False,
+    normalizer_epsilon=1e-9,
+):
+    step1a = load_step1a_module()
+    theta = np.asarray(theta, dtype=float)
+    X = np.asarray(record["X"], dtype=float)
+    w_true = np.asarray(record["w_true"], dtype=float)
+    y_optimal = np.asarray(record["y_optimal"], dtype=float)
+
+    w_hat = X @ theta
+    shifted_w = 2.0 * w_hat - w_true
+    y_adv = np.asarray(step1a.solve_once(shifted_w, record["graph"], env), dtype=float)
+
+    loss = (
+        float(np.dot(shifted_w, y_adv))
+        - 2.0 * float(np.dot(w_hat, y_optimal))
+        + float(np.dot(w_true, y_optimal))
+    )
+    grad = 2.0 * (X.T @ (y_adv - y_optimal))
+
+    if normalize:
+        denominator = abs(float(np.dot(w_true, y_optimal))) + normalizer_epsilon
+        loss /= denominator
+        grad = grad / denominator
+
+    return float(loss), np.asarray(grad, dtype=float)
+
+
+def grad_spoplus(graphs, theta, env, normalize=False, normalizer_epsilon=1e-9):
+    grad = np.zeros(2, dtype=float)
+    for record in graphs:
+        _, record_grad = spo_plus_loss_and_grad(
+            record,
+            theta,
+            env,
+            normalize=normalize,
+            normalizer_epsilon=normalizer_epsilon,
+        )
+        grad += record_grad
+    return grad / len(graphs)
+
+
+def average_spoplus_objective(
+    theta,
+    graphs,
+    env,
+    normalize=False,
+    normalizer_epsilon=1e-9,
+):
+    losses = [
+        spo_plus_loss_and_grad(
+            record,
+            theta,
+            env,
+            normalize=normalize,
+            normalizer_epsilon=normalizer_epsilon,
+        )[0]
+        for record in graphs
+    ]
+    return float(np.mean(losses))
+
+
+def spoplus_solution_rates(theta, graphs, env):
+    step1a = load_step1a_module()
+    theta = np.asarray(theta, dtype=float)
+    y_adv_matches = []
+    y_pred_matches = []
+    for record in graphs:
+        X = np.asarray(record["X"], dtype=float)
+        w_true = np.asarray(record["w_true"], dtype=float)
+        y_optimal = np.asarray(record["y_optimal"], dtype=float)
+        w_hat = X @ theta
+        y_pred = np.asarray(step1a.solve_once(w_hat, record["graph"], env), dtype=float)
+        shifted_w = 2.0 * w_hat - w_true
+        y_adv = np.asarray(step1a.solve_once(shifted_w, record["graph"], env), dtype=float)
+        y_pred_matches.append(bool(np.allclose(y_pred, y_optimal)))
+        y_adv_matches.append(bool(np.allclose(y_adv, y_optimal)))
+    return {
+        "y_adv_oracle_equal_rate": float(np.mean(y_adv_matches)),
+        "y_pred_oracle_equal_rate": float(np.mean(y_pred_matches)),
+    }
+
+
+def spoplus_diagnostics_for_theta(
+    theta,
+    graphs,
+    env,
+    normalizer_epsilon=1e-9,
+):
+    step1a = load_step1a_module()
+    theta = np.asarray(theta, dtype=float)
+    rows = []
+    for record in graphs:
+        X = np.asarray(record["X"], dtype=float)
+        w_true = np.asarray(record["w_true"], dtype=float)
+        y_optimal = np.asarray(record["y_optimal"], dtype=float)
+
+        w_hat = X @ theta
+        y_pred = np.asarray(step1a.solve_once(w_hat, record["graph"], env), dtype=float)
+        shifted_w = 2.0 * w_hat - w_true
+        y_adv = np.asarray(step1a.solve_once(shifted_w, record["graph"], env), dtype=float)
+
+        optimal_obj = float(np.dot(w_true, y_optimal))
+        achieved_obj = float(np.dot(w_true, y_pred))
+        gap = optimal_obj - achieved_obj
+        spoplus_loss = (
+            float(np.dot(shifted_w, y_adv))
+            - 2.0 * float(np.dot(w_hat, y_optimal))
+            + optimal_obj
+        )
+        denominator = abs(optimal_obj) + normalizer_epsilon
+        rows.append(
+            {
+                "decision_gap": gap,
+                "spoplus_loss": spoplus_loss,
+                "normalized_spoplus_loss": spoplus_loss / denominator,
+                "y_adv_oracle_equal": bool(np.allclose(y_adv, y_optimal)),
+                "y_pred_oracle_equal": bool(np.allclose(y_pred, y_optimal)),
+            }
+        )
+    return {
+        "decision_gap": float(np.mean([row["decision_gap"] for row in rows])),
+        "spoplus_loss": float(np.mean([row["spoplus_loss"] for row in rows])),
+        "normalized_spoplus_loss": float(
+            np.mean([row["normalized_spoplus_loss"] for row in rows])
+        ),
+        "y_adv_oracle_equal_rate": float(
+            np.mean([row["y_adv_oracle_equal"] for row in rows])
+        ),
+        "y_pred_oracle_equal_rate": float(
+            np.mean([row["y_pred_oracle_equal"] for row in rows])
+        ),
+    }
+
+
+def run_spoplus_trajectory(
+    graphs,
+    theta_init,
+    n_epochs,
+    lr,
+    env,
+    normalize=False,
+    grad_clip=None,
+    weight_decay=0.0,
+):
+    opt = Adam(lr)
+    theta = np.asarray(theta_init, dtype=float).copy()
+    trajectory = [theta.copy()]
+    for epoch in range(n_epochs):
+        grad = grad_spoplus(graphs, theta, env, normalize=normalize)
+        if weight_decay:
+            grad = grad + float(weight_decay) * theta
+        if grad_clip is not None and grad_clip > 0:
+            norm = float(np.linalg.norm(grad))
+            if norm > grad_clip:
+                grad = grad * (float(grad_clip) / norm)
+        theta = opt.step(theta, grad)
+        trajectory.append(theta.copy())
+        print(f"  [SPO+] epoch {epoch + 1:>4} theta={np.round(theta, 4)}")
+    return np.asarray(trajectory, dtype=float)
+
+
 def evaluate_theta(theta, graphs, env, normalizer_epsilon=1e-9):
     step1a = load_step1a_module()
     theta = np.asarray(theta, dtype=float)
@@ -186,3 +352,55 @@ def evaluate_trajectory_fy_objective(
             for idx in indices
         ]
     )
+
+
+def evaluate_trajectory_spoplus_objective(
+    trajectory,
+    graphs,
+    env,
+    indices=None,
+    normalize=False,
+    normalizer_epsilon=1e-9,
+):
+    if indices is None:
+        indices = np.arange(len(trajectory), dtype=int)
+    return np.asarray(
+        [
+            average_spoplus_objective(
+                trajectory[idx],
+                graphs,
+                env,
+                normalize=normalize,
+                normalizer_epsilon=normalizer_epsilon,
+            )
+            for idx in indices
+        ]
+    )
+
+
+def evaluate_trajectory_spoplus_diagnostics(
+    trajectory,
+    graphs,
+    env,
+    indices=None,
+    label="graphs",
+    normalizer_epsilon=1e-9,
+):
+    if indices is None:
+        indices = np.arange(len(trajectory), dtype=int)
+    rows = []
+    total = len(indices)
+    for pos, idx in enumerate(indices, start=1):
+        print(
+            f"  [SPO+ metrics] {label} {pos}/{total} epoch={int(idx)}",
+            flush=True,
+        )
+        row = spoplus_diagnostics_for_theta(
+            trajectory[idx],
+            graphs,
+            env,
+            normalizer_epsilon=normalizer_epsilon,
+        )
+        row["epoch"] = int(idx)
+        rows.append(row)
+    return rows
