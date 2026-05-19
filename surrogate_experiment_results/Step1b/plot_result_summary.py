@@ -140,6 +140,55 @@ def style_axes(ax):
     ax.spines["right"].set_visible(False)
 
 
+def bootstrap_mean_ci(values, n_bootstrap=1000, seed=42, confidence=0.95):
+    clean_values = [value for value in values if math.isfinite(value)]
+    if not clean_values:
+        return math.nan, math.nan, math.nan
+
+    array = np.asarray(clean_values, dtype=float)
+    mean_value = float(np.mean(array))
+    if array.size == 1 or n_bootstrap <= 0:
+        return mean_value, mean_value, mean_value
+
+    rng = np.random.default_rng(seed)
+    bootstrap_means = np.empty(n_bootstrap, dtype=float)
+    for index in range(n_bootstrap):
+        sample = array[rng.integers(0, array.size, size=array.size)]
+        bootstrap_means[index] = float(np.mean(sample))
+
+    alpha = 1.0 - confidence
+    low, high = np.quantile(bootstrap_means, [alpha / 2.0, 1.0 - alpha / 2.0])
+    return mean_value, float(low), float(high)
+
+
+def per_graph_csv_path(results_root: Path, train_size: int, dataset) -> Path:
+    return results_root / f"train_size={train_size}" / "metrics" / dataset["per_graph_file"]
+
+
+def direct_bar_error_stats(results_root: Path, train_sizes, n_bootstrap=1000, seed=42):
+    stats = {}
+    for dataset_index, dataset in enumerate(DATASETS):
+        for train_size in train_sizes:
+            path = per_graph_csv_path(results_root, train_size, dataset)
+            if not path.exists():
+                continue
+
+            rows = read_csv(path)
+            for method_index, method_key in enumerate(METHOD_ORDER):
+                values = [
+                    as_float(row.get("normalized_gap"))
+                    for row in rows
+                    if row_key(row) == method_key
+                ]
+                stats_seed = seed + dataset_index * 100_000 + train_size * 100 + method_index
+                stats[(dataset["key"], train_size, method_key)] = bootstrap_mean_ci(
+                    values,
+                    n_bootstrap=n_bootstrap,
+                    seed=stats_seed,
+                )
+    return stats
+
+
 def save_figure(fig, out_path: Path):
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out_path, dpi=220)
@@ -197,8 +246,24 @@ def plot_metric_panels(rows_by_dataset, train_sizes, metric, ylabel, title, out_
     plt.close(fig)
 
 
-def plot_direct_method_performance_bars(rows_by_dataset, train_sizes, out_path):
+def plot_direct_method_performance_bars(
+    rows_by_dataset,
+    train_sizes,
+    out_path,
+    results_root=None,
+    bootstrap_samples=1000,
+    bootstrap_seed=42,
+):
     import matplotlib.pyplot as plt
+
+    error_stats = {}
+    if results_root is not None and bootstrap_samples:
+        error_stats = direct_bar_error_stats(
+            Path(results_root),
+            train_sizes,
+            n_bootstrap=bootstrap_samples,
+            seed=bootstrap_seed,
+        )
 
     fig, axes = plt.subplots(1, 3, figsize=(13.2, 4.2), sharex=True, constrained_layout=True)
     x_positions = np.arange(len(train_sizes))
@@ -209,6 +274,8 @@ def plot_direct_method_performance_bars(rows_by_dataset, train_sizes, out_path):
         rows = rows_by_dataset[dataset["key"]]
         for offset, method_key in zip(offsets, METHOD_ORDER):
             values = []
+            lower_errors = []
+            upper_errors = []
             for size in train_sizes:
                 candidates = [
                     row
@@ -217,9 +284,27 @@ def plot_direct_method_performance_bars(rows_by_dataset, train_sizes, out_path):
                 ]
                 if not candidates:
                     values.append(math.nan)
+                    lower_errors.append(0.0)
+                    upper_errors.append(0.0)
                     continue
                 row = candidates[0]
-                values.append(as_float(row["test_mean_normalized_gap"]))
+                value = as_float(row["test_mean_normalized_gap"])
+                values.append(value)
+
+                _, low, high = error_stats.get(
+                    (dataset["key"], size, method_key),
+                    (math.nan, math.nan, math.nan),
+                )
+                if math.isfinite(value) and math.isfinite(low) and math.isfinite(high):
+                    lower_errors.append(max(0.0, value - low))
+                    upper_errors.append(max(0.0, high - value))
+                else:
+                    lower_errors.append(0.0)
+                    upper_errors.append(0.0)
+
+            yerr = None
+            if any(error > 0.0 for error in lower_errors + upper_errors):
+                yerr = np.vstack([lower_errors, upper_errors])
 
             ax.bar(
                 x_positions + offset,
@@ -228,6 +313,14 @@ def plot_direct_method_performance_bars(rows_by_dataset, train_sizes, out_path):
                 color=METHOD_COLORS[method_key],
                 label=METHOD_LABELS[method_key],
                 alpha=0.86,
+                yerr=yerr,
+                capsize=3.0 if yerr is not None else 0.0,
+                error_kw={
+                    "elinewidth": 1.0,
+                    "ecolor": "#222222",
+                    "capthick": 1.0,
+                    "alpha": 0.82,
+                },
             )
         ax.set_ylim(bottom=0.0)
         ax.set_title(f"{dataset['title']}\n{dataset['subtitle']}", fontsize=11)
@@ -240,6 +333,14 @@ def plot_direct_method_performance_bars(rows_by_dataset, train_sizes, out_path):
     handles, labels = axes[0].get_legend_handles_labels()
     fig.legend(handles, labels, loc="upper center", ncols=3, frameon=False, bbox_to_anchor=(0.5, 1.08))
     fig.suptitle("Direct Method Performance by Training Set Size", y=1.18, fontsize=14)
+    fig.text(
+        0.5,
+        -0.025,
+        "Error bars show per-graph bootstrap 95% confidence intervals for the mean normalized gap.",
+        ha="center",
+        fontsize=8.5,
+        color="#444444",
+    )
     save_figure(fig, out_path)
     plt.close(fig)
 
@@ -634,10 +735,6 @@ def plot_epoch_diagnostics_dataset(results_root, train_sizes, dataset, out_path)
     )
     save_figure(fig, out_path)
     plt.close(fig)
-
-
-def per_graph_csv_path(results_root: Path, train_size: int, dataset) -> Path:
-    return results_root / f"train_size={train_size}" / "metrics" / dataset["per_graph_file"]
 
 
 def plot_per_graph_gap_boxplots_dataset(results_root, train_sizes, dataset, out_path):
@@ -1052,7 +1149,12 @@ def main(argv=None):
         ),
         (
             "04_paired_improvement_over_2stage.png",
-            lambda path: plot_direct_method_performance_bars(rows_by_dataset, train_sizes, path),
+            lambda path: plot_direct_method_performance_bars(
+                rows_by_dataset,
+                train_sizes,
+                path,
+                results_root=results_root,
+            ),
         ),
         (
             "05_selected_parameter_endpoints.png",

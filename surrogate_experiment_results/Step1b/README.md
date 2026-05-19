@@ -111,6 +111,82 @@ Current runs focus on:
 n in {50, 200, 600, 1200}
 ```
 
+## Larger Validation Dataset
+
+On 2026-05-19, a separate 2000-graph validation batch was generated locally for
+future reruns with a larger checkpoint-selection split. It keeps the same graph
+generation defaults and the same noisy-linear synthetic label-processing
+regime as `dataset/processed/step1_noisy_linear_sigma010`, but uses a distinct
+raw generator seed.
+
+Raw batch:
+
+```text
+dataset/raw/2026-05-19_000000__step1_noisy_linear_sigma010_validation2000_seed20260519
+```
+
+Processed batch:
+
+```text
+dataset/processed/step1_noisy_linear_sigma010_validation2000_seed20260519
+```
+
+Generation command:
+
+```bash
+python3 0-data-generation.py \
+  --instances 2000 \
+  --patients 50 \
+  --seed 20260519 \
+  --output_dir dataset/raw/2026-05-19_000000__step1_noisy_linear_sigma010_validation2000_seed20260519
+```
+
+Processing command:
+
+```bash
+python3 1-data-processing.py \
+  dataset/raw/2026-05-19_000000__step1_noisy_linear_sigma010_validation2000_seed20260519 \
+  dataset/processed/step1_noisy_linear_sigma010_validation2000_seed20260519 \
+  --all \
+  --label_mode noisy_clean_linear_utility_cpra \
+  --clean_linear_utility_weight 10 \
+  --clean_linear_cpra_weight 5 \
+  --clean_linear_noise_sigma 0.1 \
+  --output_as_batch_dir
+```
+
+Verification:
+
+```text
+raw config seed/instances/patients/NDD: 20260519 / 2000 / 50 / 0.05
+changed raw config keys excluding seed: none
+processed G-*.json count: 2000
+processed label mode: noisy_clean_linear_utility_cpra
+processed label weights/noise: utility=10, recipient_cPRA=5, sigma=0.1
+local raw size: 131M
+local processed size: 467M
+```
+
+`run_step1b.sh` now uses this larger validation set by default:
+
+```bash
+surrogate_experiment_results/Step1b/run_step1b.sh
+```
+
+The train pool and test split still come from
+`results/step1b_splits/master_split_seed=42.json`, so train-size comparisons
+such as `n in {50, 200, 600, 1200}` remain unchanged. Only checkpoint
+selection and validation curves use the separate 2000-graph validation dataset.
+The default output directory appends the validation dataset name to avoid
+overwriting the earlier 400-validation runs.
+
+To intentionally restore the older 400-graph validation split for a debugging
+run, pass an empty override:
+
+```bash
+STEP1B_VALIDATION_DATA_DIR= surrogate_experiment_results/Step1b/run_step1b.sh
+```
+
 ## Unseen Test Dataset
 
 On 2026-05-13, a separate 1000-graph unseen test batch was generated locally
@@ -400,7 +476,14 @@ Default output directory:
 surrogate_experiment_results/Step1b/plot_results
 ```
 
-Each figure is written as both PNG and PDF. The current figure set is:
+Each figure is written as both PNG and PDF. The direct method performance bar
+plot (`04_paired_improvement_over_2stage`) uses the summary mean normalized
+decision gap for each bar and per-graph bootstrap 95% confidence intervals from
+the corresponding `*_per_graph.csv` files as error bars. This is an absolute
+test-performance uncertainty band, not the paired e2e-vs-2stage improvement
+interval reported in the summary CSV files.
+
+The current figure set is:
 
 ```text
 01_normalized_decision_gap_by_dataset
@@ -490,6 +573,88 @@ metrics/heldout400_reward_calibration.csv
 metrics/unseen1000_reward_calibration.csv
 metrics/realistic2000_reward_calibration.csv
 ```
+
+### Post-hoc diagnostic dashboards
+
+On 2026-05-19, a second plotting entrypoint was added for deeper diagnostic
+analysis:
+
+```bash
+MPLCONFIGDIR=/tmp/matplotlib conda run --no-capture-output -n KEPs \
+  python surrogate_experiment_results/Step1b/plot_posthoc_diagnostics.py
+```
+
+This script does not train models and does not call Gurobi. It only reads the
+cached epoch-level and per-graph CSV artifacts from the formal archive and
+writes additional PNG/PDF figures under:
+
+```text
+surrogate_experiment_results/Step1b/plot_results
+```
+
+The post-hoc plots are diagnostic only. In particular, any "oracle" best epoch
+shown in the figures is the best epoch among the saved trajectory evaluation
+points and must not be used as a checkpoint-selection rule.
+
+Generated outputs:
+
+```text
+17_trajectory_dashboard_train_size_50
+17_trajectory_dashboard_train_size_200
+17_trajectory_dashboard_train_size_600
+17_trajectory_dashboard_train_size_1200
+18_selection_suboptimality
+19_heldout400_per_graph_diagnostics
+19_unseen1000_per_graph_diagnostics
+19_realistic2000_per_graph_diagnostics
+```
+
+The `17_*` figures show one trajectory diagnostic dashboard per train size.
+They combine:
+
+```text
+train FY objective
+validation FY objective
+train decision gap
+validation decision gap
+heldout400 test decision gap
+unseen1000 test decision gap
+realistic2000 test decision gap
+```
+
+Vertical markers identify:
+
+```text
+best validation decision-gap epoch
+best validation FY-objective epoch
+best heldout400 / unseen1000 / realistic2000 epoch among evaluated checkpoints
+```
+
+The `18_selection_suboptimality` figure and CSV summarize checkpoint selection
+suboptimality:
+
+```text
+G_D(theta_selected_by_c) - min_t G_D(theta_t)
+```
+
+where `D` is one of validation, heldout400, unseen1000, or realistic2000, and
+`c` is either validation decision gap or validation FY objective. This is a
+post-hoc distance-to-best-evaluated-epoch metric, not a training objective.
+
+The `19_*` per-graph diagnostic figures use the selected-checkpoint per-graph
+CSV files to show:
+
+```text
+normalized gap histograms by method
+paired improvement histograms: 2stage gap - e2e gap
+scatter of e2e val-gap-selected vs e2e val-FY-selected per-graph gaps
+nonzero-gap conditional mean by train size and method
+```
+
+`changed-solution rate vs epoch` is intentionally not included in this batch,
+because the current CSV artifacts store objective gaps but not KEP solution
+signatures. Computing solution-change rates would require an additional offline
+solver pass that records selected-edge sets or solution hashes.
 
 ## Methods
 

@@ -37,6 +37,10 @@ def list_graph_files(data_dir):
     return sorted(paths, key=graph_id)
 
 
+def graph_entries_from_data_dir(data_dir):
+    return [graph_entry(path) for path in list_graph_files(data_dir)]
+
+
 def make_master_split(files, train_pool_size, val_size, test_size, seed):
     total_needed = train_pool_size + val_size + test_size
     if len(files) < total_needed:

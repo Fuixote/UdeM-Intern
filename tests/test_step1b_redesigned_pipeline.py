@@ -59,6 +59,18 @@ class Step1bRedesignedPipelineTest(unittest.TestCase):
         self.assertEqual(len(first), 5)
         self.assertTrue({item["path"] for item in first} <= {item["path"] for item in train_pool})
 
+    def test_graph_entries_from_data_dir_are_sorted_by_graph_id(self):
+        split_step1b = load_module("split_dataset.py", "step1b_split_dataset")
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            for name in ("G-10.json", "G-2.json", "G-1.json"):
+                (tmp_path / name).write_text("{}", encoding="utf-8")
+
+            entries = split_step1b.graph_entries_from_data_dir(tmp_path)
+
+        self.assertEqual([entry["graph_id"] for entry in entries], [1, 2, 10])
+        self.assertEqual([Path(entry["path"]).name for entry in entries], ["G-1.json", "G-2.json", "G-10.json"])
+
     def test_mse_checkpoint_selection_uses_validation_mse_loss(self):
         train_2stage = load_module("train_2stage.py", "step1b_train_2stage")
         trajectory = np.array([[0.0, 0.0], [1.0, 1.0], [2.0, 2.0]])

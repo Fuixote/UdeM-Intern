@@ -10,6 +10,8 @@ DEFAULT_PYTHON="/home/weikang/miniconda3/envs/KEPs/bin/python"
 PYTHON_BIN="${KEP_PYTHON:-$DEFAULT_PYTHON}"
 
 DATA_DIR="${STEP1B_DATA_DIR:-dataset/processed/step1_noisy_linear_sigma010}"
+DEFAULT_VALIDATION_DATA_DIR="dataset/processed/step1_noisy_linear_sigma010_validation2000_seed20260519"
+VALIDATION_DATA_DIR="${STEP1B_VALIDATION_DATA_DIR-$DEFAULT_VALIDATION_DATA_DIR}"
 SPLIT_SEED="${STEP1B_SPLIT_SEED:-42}"
 SUBSET_SEED="${STEP1B_SUBSET_SEED:-42}"
 THETA_SEED="${STEP1B_THETA_SEED:-42}"
@@ -45,12 +47,21 @@ if [[ -n "$E2E_EARLY_STOP_METRIC" ]]; then
   )
 fi
 
-DEFAULT_RUN_DIR="$OUTPUT_ROOT/train_size=$TRAIN_SIZE/split_seed=$SPLIT_SEED/subset_seed=$SUBSET_SEED/theta_seed=$THETA_SEED/eps=${FY_EPSILON}_M=${FY_M}_e2e_epochs=${N_EPOCHS_E2E}_stride=${METRIC_STRIDE}${EARLY_STOP_SUFFIX}"
+VALIDATION_SUFFIX=""
+VALIDATION_ARGS=()
+if [[ -n "$VALIDATION_DATA_DIR" ]]; then
+  VALIDATION_TAG="$(basename "$VALIDATION_DATA_DIR")"
+  VALIDATION_SUFFIX="_val=${VALIDATION_TAG}"
+  VALIDATION_ARGS=(--validation_data_dir "$VALIDATION_DATA_DIR")
+fi
+
+DEFAULT_RUN_DIR="$OUTPUT_ROOT/train_size=$TRAIN_SIZE/split_seed=$SPLIT_SEED/subset_seed=$SUBSET_SEED/theta_seed=$THETA_SEED/eps=${FY_EPSILON}_M=${FY_M}_e2e_epochs=${N_EPOCHS_E2E}_stride=${METRIC_STRIDE}${EARLY_STOP_SUFFIX}${VALIDATION_SUFFIX}"
 RUN_DIR="${STEP1B_OUTPUT_DIR:-$DEFAULT_RUN_DIR}"
 
 echo "Step1b root: $ROOT_DIR"
 echo "Python: $PYTHON_BIN"
 echo "Data: $DATA_DIR"
+echo "Validation data override: ${VALIDATION_DATA_DIR:-split validation}"
 echo "Split: $SPLIT_PATH"
 echo "Run dir: $RUN_DIR"
 echo "master split train_pool=$TRAIN_POOL_SIZE val=$VAL_SIZE test=$TEST_SIZE split_seed=$SPLIT_SEED"
@@ -68,6 +79,7 @@ from pathlib import Path
 
 config = {
     "data_dir": "$DATA_DIR",
+    "validation_data_dir": "$VALIDATION_DATA_DIR" or None,
     "split_path": "$SPLIT_PATH",
     "run_dir": "$RUN_DIR",
     "split_seed": int("$SPLIT_SEED"),
@@ -115,6 +127,7 @@ fi
 MPLCONFIGDIR="${MPLCONFIGDIR:-/tmp/matplotlib}" \
 "$PYTHON_BIN" "$SCRIPT_DIR/train_2stage.py" \
   --split_path "$SPLIT_PATH" \
+  "${VALIDATION_ARGS[@]}" \
   --out_dir "$RUN_DIR" \
   --train_size "$TRAIN_SIZE" \
   --subset_seed "$SUBSET_SEED" \
@@ -127,6 +140,7 @@ MPLCONFIGDIR="${MPLCONFIGDIR:-/tmp/matplotlib}" \
 MPLCONFIGDIR="${MPLCONFIGDIR:-/tmp/matplotlib}" \
 "$PYTHON_BIN" "$SCRIPT_DIR/train_end2end.py" \
   --split_path "$SPLIT_PATH" \
+  "${VALIDATION_ARGS[@]}" \
   --out_dir "$RUN_DIR" \
   --train_size "$TRAIN_SIZE" \
   --subset_seed "$SUBSET_SEED" \

@@ -1,0 +1,33 @@
+train_size,dataset_key,dataset_title,selection_metric,selection_label,selected_epoch,oracle_epoch,selected_value,oracle_value,selection_suboptimality
+50,validation,Validation split,validation_decision_gap,selected by val gap,50,50,0.7304564380645752,0.7304564380645752,0.0
+50,validation,Validation split,validation_fy_loss,selected by val FY,440,50,0.7997756385803223,0.7304564380645752,0.06931920051574714
+50,heldout400,Held-out noisy-linear test,validation_decision_gap,selected by val gap,50,80,0.8165857982635498,0.7346255970001221,0.08196020126342773
+50,heldout400,Held-out noisy-linear test,validation_fy_loss,selected by val FY,440,80,0.7891513252258301,0.7346255970001221,0.054525728225708
+50,unseen1000,Unseen noisy-linear test,validation_decision_gap,selected by val gap,50,40,0.7364114303588867,0.7270028991699219,0.009408531188964786
+50,unseen1000,Unseen noisy-linear test,validation_fy_loss,selected by val FY,440,40,0.7674654884338379,0.7270028991699219,0.04046258926391599
+50,realistic2000,Realistic-synthetic stress test,validation_decision_gap,selected by val gap,50,20,12.13185333633423,12.001103874206542,0.130749462127687
+50,realistic2000,Realistic-synthetic stress test,validation_fy_loss,selected by val FY,440,20,12.366898651123046,12.001103874206542,0.36579477691650375
+200,validation,Validation split,validation_decision_gap,selected by val gap,150,150,0.7326109981536866,0.7326109981536866,0.0
+200,validation,Validation split,validation_fy_loss,selected by val FY,500,150,0.7672517490386963,0.7326109981536866,0.03464075088500973
+200,heldout400,Held-out noisy-linear test,validation_decision_gap,selected by val gap,150,480,0.8466575145721436,0.7717037868499755,0.07495372772216802
+200,heldout400,Held-out noisy-linear test,validation_fy_loss,selected by val FY,500,480,0.7746805477142334,0.7717037868499755,0.00297676086425791
+200,unseen1000,Unseen noisy-linear test,validation_decision_gap,selected by val gap,150,240,0.7369738311767579,0.7217885131835937,0.015185317993164138
+200,unseen1000,Unseen noisy-linear test,validation_fy_loss,selected by val FY,500,240,0.7403459701538085,0.7217885131835937,0.018557456970214825
+200,realistic2000,Realistic-synthetic stress test,validation_decision_gap,selected by val gap,150,70,12.101482067108154,12.002558597564697,0.09892346954345754
+200,realistic2000,Realistic-synthetic stress test,validation_fy_loss,selected by val FY,500,70,12.174991146087647,12.002558597564697,0.1724325485229503
+600,validation,Validation split,validation_decision_gap,selected by val gap,110,110,0.7308499813079834,0.7308499813079834,0.0
+600,validation,Validation split,validation_fy_loss,selected by val FY,490,110,0.7839011859893799,0.7308499813079834,0.05305120468139646
+600,heldout400,Held-out noisy-linear test,validation_decision_gap,selected by val gap,110,460,0.8466575145721436,0.7547272205352783,0.09193029403686526
+600,heldout400,Held-out noisy-linear test,validation_fy_loss,selected by val FY,490,460,0.7547272205352783,0.7547272205352783,0.0
+600,unseen1000,Unseen noisy-linear test,validation_decision_gap,selected by val gap,110,90,0.7391928176879883,0.7196430358886718,0.019549781799316435
+600,unseen1000,Unseen noisy-linear test,validation_fy_loss,selected by val FY,490,90,0.7560867385864258,0.7196430358886718,0.03644370269775399
+600,realistic2000,Realistic-synthetic stress test,validation_decision_gap,selected by val gap,110,50,12.089850231170654,11.969164981842042,0.1206852493286128
+600,realistic2000,Realistic-synthetic stress test,validation_fy_loss,selected by val FY,490,50,12.155624824523926,11.969164981842042,0.18645984268188442
+1200,validation,Validation split,validation_decision_gap,selected by val gap,130,130,0.7312009525299072,0.7312009525299072,0.0
+1200,validation,Validation split,validation_fy_loss,selected by val FY,500,130,0.7663999462127685,0.7312009525299072,0.03519899368286128
+1200,heldout400,Held-out noisy-linear test,validation_decision_gap,selected by val gap,130,430,0.8466575145721436,0.7558522510528565,0.09080526351928708
+1200,heldout400,Held-out noisy-linear test,validation_fy_loss,selected by val FY,500,430,0.7558522510528565,0.7558522510528565,0.0
+1200,unseen1000,Unseen noisy-linear test,validation_decision_gap,selected by val gap,130,110,0.7386964492797852,0.720490463256836,0.018205986022949205
+1200,unseen1000,Unseen noisy-linear test,validation_fy_loss,selected by val FY,500,110,0.7415013809204102,0.720490463256836,0.021010917663574213
+1200,realistic2000,Realistic-synthetic stress test,validation_decision_gap,selected by val gap,130,60,12.112533809661866,12.00322214126587,0.10931166839599626
+1200,realistic2000,Realistic-synthetic stress test,validation_fy_loss,selected by val FY,500,60,12.163907985687256,12.00322214126587,0.160685844421387

@@ -16,7 +16,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
-from split_dataset import read_json, select_train_subset
+from split_dataset import graph_entries_from_data_dir, read_json, select_train_subset
 from plot_training_curves import plot_loss_curve
 
 
@@ -173,6 +173,14 @@ def write_model_weights(out_dir, checkpoint, train_size):
 def parse_args(argv=None):
     parser = argparse.ArgumentParser(description="Train Step1b 2stage baseline.")
     parser.add_argument("--split_path", default=str(DEFAULT_SPLIT_PATH))
+    parser.add_argument(
+        "--validation_data_dir",
+        default=None,
+        help=(
+            "Optional processed G-*.json directory used for validation/checkpoint "
+            "selection instead of the validation split in --split_path."
+        ),
+    )
     parser.add_argument("--out_dir", default=str(DEFAULT_OUT_DIR))
     parser.add_argument("--train_size", type=int, default=50)
     parser.add_argument("--subset_seed", type=int, default=42)
@@ -197,12 +205,18 @@ def main(argv=None):
     train_entries = select_train_subset(
         split["train_pool"], train_size=args.train_size, seed=args.subset_seed
     )
-    validation_entries = split["validation"]
+    validation_entries = (
+        graph_entries_from_data_dir(args.validation_data_dir)
+        if args.validation_data_dir
+        else split["validation"]
+    )
 
     write_json(out_dir / "train_subset.json", train_entries)
+    write_json(out_dir / "validation_set.json", validation_entries)
     print(f"Loading 2stage train subset: n={len(train_entries)}")
     train_graphs = load_reward_records(train_entries)
-    print(f"Loading 2stage validation split: n={len(validation_entries)}")
+    validation_source = args.validation_data_dir or "split validation"
+    print(f"Loading 2stage validation set: n={len(validation_entries)} source={validation_source}")
     validation_graphs = load_reward_records(validation_entries)
 
     rng = np.random.RandomState(args.theta_seed)
