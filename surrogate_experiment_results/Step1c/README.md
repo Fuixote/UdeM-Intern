@@ -164,6 +164,28 @@ a useful feasibility signal: reward-max SPO+ trains stably from the same random
 initialization, writes both checkpoint types, and the validation-SPO+-selected
 checkpoint is best among the three methods on this held-out400 test split.
 
+On 2026-05-19, a matched garnet server run was launched for all four train
+sizes. This run is intended to be the strict Step1c counterpart to the Step1b
+validation2000 FY rerun:
+
+```text
+train_size in {50, 200, 600, 1200}
+STEP1C_2STAGE_N_EPOCHS=500
+STEP1C_SPOPLUS_N_EPOCHS=500
+STEP1C_SPOPLUS_LR=0.1
+STEP1C_METRIC_STRIDE=10
+validation override:
+  dataset/processed/step1_noisy_linear_sigma010_validation2000_seed20260519
+output root:
+  surrogate_experiment_results/Step1c/remote_results/
+    formal_spoplus_lr0.1_2stage500_spoplus500_s10_val2000_server/
+logs:
+  logs/step1c_spoplus_val2000_server_train_size_<n>.log
+```
+
+The output root is intentionally distinct from the local feasibility run
+`formal_spoplus_ablation_val2000/` and from all Step1b FY outputs.
+
 ## Golden Rule 1: Step1c Is a Strict Surrogate Swap
 
 Keep fixed:
