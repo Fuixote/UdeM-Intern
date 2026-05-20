@@ -1,0 +1,18 @@
+{
+  "generated_at": "2026-05-20T00:03:05",
+  "script": "surrogate_experiment_results/evaluate_step1bc_unseen_once.py",
+  "source": "step1c",
+  "run_dir": "/home/weikang/projects/UdeM-Intern/Exps/surrogate_experiment_results/Step1c/remote_results/formal_spoplus_ablation_val2000/train_size=50",
+  "dataset_dir": "dataset/processed/step1_noisy_linear_sigma010_unseen_test10000_seed20260520",
+  "graph_count": 10000,
+  "graph_limit": null,
+  "weights": [
+    "/home/weikang/projects/UdeM-Intern/Exps/surrogate_experiment_results/Step1c/remote_results/formal_spoplus_ablation_val2000/train_size=50/model_weights/2stage_best_by_validation_mse_loss.npz",
+    "/home/weikang/projects/UdeM-Intern/Exps/surrogate_experiment_results/Step1c/remote_results/formal_spoplus_ablation_val2000/train_size=50/model_weights/spoplus_best_by_validation_decision_gap.npz",
+    "/home/weikang/projects/UdeM-Intern/Exps/surrogate_experiment_results/Step1c/remote_results/formal_spoplus_ablation_val2000/train_size=50/model_weights/spoplus_best_by_validation_spoplus_loss.npz"
+  ],
+  "output_stem": "unseen10000",
+  "gurobi_seed": 42,
+  "bootstrap_samples": 1000,
+  "bootstrap_seed": 42
+}
