@@ -7,11 +7,11 @@
     "theta_2": 5.112999896631308,
     "selection_metric": "validation_mse_loss",
     "selection_value": 0.4694900125041546,
-    "test_mean_decision_gap": 0.84802809715271,
-    "test_mean_normalized_gap": 0.006110459936553719,
-    "test_median_normalized_gap": 5.463179825069406e-05,
-    "test_mean_achieved_oracle_ratio": 0.9938895400633982,
-    "model_path": "surrogate_experiment_results/Step1c/remote_results/formal_spoplus_ablation_val2000/train_size=50/model_weights/2stage_best_by_validation_mse_loss.npz"
+    "test_mean_decision_gap": 0.8480284786224366,
+    "test_mean_normalized_gap": 0.0061104630092959945,
+    "test_median_normalized_gap": 5.4685248175492305e-05,
+    "test_mean_achieved_oracle_ratio": 0.9938895369906561,
+    "model_path": "surrogate_experiment_results/Step1c/remote_results/formal_spoplus_lr0.1_2stage500_spoplus500_s10_val2000_server/train_size=50/model_weights/2stage_best_by_validation_mse_loss.npz"
   },
   {
     "method": "spoplus",
@@ -21,16 +21,16 @@
     "theta_2": 3.4149374749998125,
     "selection_metric": "validation_decision_gap",
     "selection_value": 0.7208266959749162,
-    "test_mean_decision_gap": 0.8072841167449951,
-    "test_mean_normalized_gap": 0.005808626574200295,
+    "test_mean_decision_gap": 0.807284460067749,
+    "test_mean_normalized_gap": 0.005808629419418262,
     "test_median_normalized_gap": 0.0,
-    "test_mean_achieved_oracle_ratio": 0.9941913734257539,
-    "model_path": "surrogate_experiment_results/Step1c/remote_results/formal_spoplus_ablation_val2000/train_size=50/model_weights/spoplus_best_by_validation_decision_gap.npz",
-    "paired_mean_improvement_over_2stage": 0.04074398040771485,
+    "test_mean_achieved_oracle_ratio": 0.9941913705805361,
+    "model_path": "surrogate_experiment_results/Step1c/remote_results/formal_spoplus_lr0.1_2stage500_spoplus500_s10_val2000_server/train_size=50/model_weights/spoplus_best_by_validation_decision_gap.npz",
+    "paired_mean_improvement_over_2stage": 0.0407440185546875,
     "paired_median_improvement_over_2stage": 0.0,
     "fraction_improved_over_2stage": 0.0175,
-    "paired_mean_improvement_ci_low": -0.00013273763656616188,
-    "paired_mean_improvement_ci_high": 0.09998998022079467
+    "paired_mean_improvement_ci_low": -0.00013269948959350564,
+    "paired_mean_improvement_ci_high": 0.09999001741409301
   },
   {
     "method": "spoplus",
@@ -40,15 +40,15 @@
     "theta_2": 4.137967673645587,
     "selection_metric": "validation_spoplus_loss",
     "selection_value": 2.869202013805875,
-    "test_mean_decision_gap": 0.7401085758209228,
-    "test_mean_normalized_gap": 0.005442249080873817,
+    "test_mean_decision_gap": 0.7401089382171631,
+    "test_mean_normalized_gap": 0.005442251849235882,
     "test_median_normalized_gap": 0.0,
-    "test_mean_achieved_oracle_ratio": 0.9945577509190823,
-    "model_path": "surrogate_experiment_results/Step1c/remote_results/formal_spoplus_ablation_val2000/train_size=50/model_weights/spoplus_best_by_validation_spoplus_loss.npz",
-    "paired_mean_improvement_over_2stage": 0.10791952133178712,
+    "test_mean_achieved_oracle_ratio": 0.9945577481507203,
+    "model_path": "surrogate_experiment_results/Step1c/remote_results/formal_spoplus_lr0.1_2stage500_spoplus500_s10_val2000_server/train_size=50/model_weights/spoplus_best_by_validation_spoplus_loss.npz",
+    "paired_mean_improvement_over_2stage": 0.10791954040527343,
     "paired_median_improvement_over_2stage": 0.0,
     "fraction_improved_over_2stage": 0.0725,
-    "paired_mean_improvement_ci_low": 0.03465905666351319,
-    "paired_mean_improvement_ci_high": 0.19599851751327516
+    "paired_mean_improvement_ci_low": 0.03465902328491211,
+    "paired_mean_improvement_ci_high": 0.19599842309951782
   }
 ]

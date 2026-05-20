@@ -1,0 +1,17 @@
+{
+  "method": "spoplus",
+  "model_type": "linear_probe",
+  "model_formula": "w_hat_e = theta_1 * utility_e + theta_2 * recipient_cPRA_e",
+  "feature_names": [
+    "utility",
+    "recipient_cPRA"
+  ],
+  "train_size": 1200,
+  "selected_epoch": 130,
+  "selection_metric": "validation_decision_gap",
+  "selection_value": 0.7236033425442875,
+  "theta": [
+    7.036888949844284,
+    3.681969341759868
+  ]
+}
