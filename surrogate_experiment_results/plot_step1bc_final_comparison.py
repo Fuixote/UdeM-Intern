@@ -571,8 +571,8 @@ def plot_per_graph_boxplots(
     if len(datasets) == 1:
         axes = [axes]
 
-    width = 0.13
-    method_offsets = np.linspace(-0.28, 0.28, len(METHOD_ORDER))
+    width = 0.145
+    method_offsets = np.linspace(-0.32, 0.32, len(METHOD_ORDER))
     x_positions = np.arange(len(train_sizes), dtype=float)
 
     for ax, dataset in zip(axes, datasets):
@@ -601,15 +601,24 @@ def plot_per_graph_boxplots(
                 positions=positions,
                 widths=width,
                 patch_artist=True,
+                whis=(5, 95),
                 showfliers=show_fliers,
+                showmeans=True,
                 manage_ticks=False,
-                medianprops={"color": "white", "linewidth": 1.1},
-                whiskerprops={"color": METHOD_COLORS[method_id], "linewidth": 0.9},
-                capprops={"color": METHOD_COLORS[method_id], "linewidth": 0.9},
+                medianprops={"color": "#111111", "linewidth": 1.2},
+                whiskerprops={"color": METHOD_COLORS[method_id], "linewidth": 1.15},
+                capprops={"color": METHOD_COLORS[method_id], "linewidth": 1.15},
+                meanprops={
+                    "marker": "D",
+                    "markerfacecolor": "white",
+                    "markeredgecolor": "#111111",
+                    "markeredgewidth": 0.8,
+                    "markersize": 3.8,
+                },
             )
             for patch in boxes["boxes"]:
                 patch.set_facecolor(METHOD_COLORS[method_id])
-                patch.set_alpha(0.78)
+                patch.set_alpha(0.55)
                 patch.set_edgecolor(METHOD_COLORS[method_id])
 
         style_axes(ax)
@@ -626,6 +635,25 @@ def plot_per_graph_boxplots(
                 ha="center",
                 va="center",
                 color="#777777",
+            )
+        else:
+            ymin, ymax = ax.get_ylim()
+            ax.set_ylim(min(0.0, ymin), ymax * 1.28)
+            ax.text(
+                0.02,
+                0.98,
+                "box = IQR\nwhiskers = 5-95%\ndiamond = mean",
+                transform=ax.transAxes,
+                ha="left",
+                va="top",
+                fontsize=8.2,
+                color="#555555",
+                bbox={
+                    "boxstyle": "round,pad=0.25",
+                    "facecolor": "white",
+                    "edgecolor": "#dddddd",
+                    "alpha": 0.86,
+                },
             )
 
     axes[0].set_ylabel("Per-graph normalized decision gap\n(lower is better)")
