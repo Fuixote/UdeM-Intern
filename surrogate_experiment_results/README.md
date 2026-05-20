@@ -54,8 +54,8 @@ Main figures:
 
 ```text
 figure0_mean_normalized_gap_no_error_bars.{png,pdf}
-figure1_mean_normalized_gap_heldout400_unseen10000.{png,pdf}
-figure2_per_graph_gap_boxplots_heldout400_unseen10000.{png,pdf}
+figure1_mean_normalized_gap_heldout400_large_unseen.{png,pdf}
+figure2_per_graph_gap_boxplots_heldout400_large_unseen.{png,pdf}
 ```
 
 `figure0` is the mean-only line plot without uncertainty bars. `figure1` is the
@@ -74,13 +74,12 @@ combined_step1bc_per_graph.csv
 
 As of the latest local verification, held-out400 rows are available from Step1c
 for train sizes 50/200/600/1200 and from Step1b for train sizes 50/200/600.
-The 10,000-graph unseen noisy-linear dataset has been generated locally at:
+The large unseen noisy-linear dataset has been generated locally at:
 
-```text
-dataset/processed/step1_noisy_linear_sigma010_unseen_test10000_seed20260520
-```
+The internal dataset path keeps its original generation stem for reproducibility,
+but report/figure display labels refer to it as the large unseen test.
 
-The unseen10000 panel currently includes Step1c train sizes 50/200/600/1200 and
+The large-unseen panel currently includes Step1c train sizes 50/200/600/1200 and
 Step1b train sizes 50/200/600. Step1b train size 1200 is still absent locally
 until its remote run finishes and is synced back. The latest combined plotting
 run wrote `36` summary rows and `187200` per-graph rows under
@@ -92,8 +91,8 @@ Use `evaluate_step1bc_unseen_once.py` for large unseen-test evaluation across
 Step1b/Step1c archives. This replaces the older pattern of launching one
 `evaluate_unseen_run.py` process per run directory.
 
-The reason is operational: per-run parallel evaluation loads the same 10,000
-graphs repeatedly, builds multiple Gurobi environments, and recomputes the
+The reason is operational: per-run parallel evaluation loads the same large
+unseen graph set repeatedly, builds multiple Gurobi environments, and recomputes the
 synthetic-label oracle solution for the same graph in each process. On a local
 machine this can saturate memory and I/O. The combined evaluator instead:
 
@@ -114,7 +113,7 @@ Dry-run the discovery step without Gurobi:
   --train_sizes 50 200 600 1200
 ```
 
-Run the current intended unseen10000 evaluation:
+Run the current intended large-unseen evaluation:
 
 ```bash
 MPLCONFIGDIR=/tmp/matplotlib \
@@ -133,7 +132,7 @@ synced back locally.
 ## Local Unseen-Test Timing
 
 On 2026-05-19, a local timing run evaluated the first 1,000 graphs from the
-unseen10000 noisy-linear dataset using the Step1c `train_size=50` archive and
+large unseen noisy-linear dataset using the Step1c `train_size=50` archive and
 three checkpoints:
 
 ```text

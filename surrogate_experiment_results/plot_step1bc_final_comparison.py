@@ -94,7 +94,7 @@ def default_dataset_specs(unseen_stem: str) -> list[DatasetSpec]:
         ),
         DatasetSpec(
             key=unseen_stem,
-            title=f"Unseen noisy-linear test\n{unseen_stem.replace('unseen', '')} graphs",
+            title="Large unseen noisy-linear test",
             summary_files=(f"{unseen_stem}_summary.csv", "unseen_test_summary.csv"),
             per_graph_files=(f"{unseen_stem}_per_graph.csv", "unseen_test_per_graph.csv"),
         ),
@@ -1009,7 +1009,7 @@ def main(argv=None) -> int:
         per_graph_rows,
         datasets,
         train_sizes,
-        out_dir / "figure1_mean_normalized_gap_heldout400_unseen10000.png",
+        out_dir / "figure1_mean_normalized_gap_heldout400_large_unseen.png",
         n_bootstrap=args.bootstrap_samples,
         seed=args.bootstrap_seed,
     )
@@ -1017,7 +1017,7 @@ def main(argv=None) -> int:
         per_graph_rows,
         datasets,
         train_sizes,
-        out_dir / "figure2_per_graph_gap_boxplots_heldout400_unseen10000.png",
+        out_dir / "figure2_per_graph_gap_boxplots_heldout400_large_unseen.png",
         show_fliers=args.show_fliers,
     )
     plot_checkpoint_epochs(
