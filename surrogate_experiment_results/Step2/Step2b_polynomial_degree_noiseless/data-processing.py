@@ -1136,7 +1136,7 @@ def build_run_info(
     return {
         "generated_at": started_at.isoformat(timespec="seconds"),
         "finished_at": finished_at.isoformat(timespec="seconds"),
-        "processor_script": "1-data-processing.py",
+        "processor_script": str(Path(__file__).resolve().relative_to(PROJECT_ROOT)),
         "workspace": str(WORKSPACE),
         "raw_batch_name": raw_batch_dir.name,
         "raw_input_dir": str(raw_batch_dir),

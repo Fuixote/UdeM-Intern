@@ -396,6 +396,51 @@ Step2c_polynomial_degree_multiplicative_noise/data-processing.py
 
 All three are intended to reuse the same raw graph structures and write formal reusable datasets under `dataset/processed/`. Step2c is Step2b plus deterministic uniform multiplicative noise after graph-level polynomial rescaling.
 
+The current production helpers are:
+
+```text
+validate_step2_processed_dataset.py
+  Reads one processed dataset directory and writes:
+    label_diagnostics.json
+    label_graph_diagnostics.csv
+  The summary includes graph/edge counts, label mean/std/min/max, zero-label fraction,
+  clean-linear-vs-label correlation, Step2b polynomial-label correlation, and Step2c multiplier statistics.
+
+run_generate_step2abc_datasets.sh
+  Generates the first Step2 ABC dataset grid:
+    Step2a rho=0.5
+    Step2b degree in {1,2,4}
+    Step2c degree in {1,2,4}, epsilon_bar=0.5
+    splits in {main2000,val2000,unseen10000}
+  Each processed dataset is immediately passed through the validator.
+```
+
+Use dry-run mode before generating anything:
+
+```bash
+DRY_RUN=1 bash surrogate_experiment_results/Step2/run_generate_step2abc_datasets.sh
+```
+
+Run actual generation only after the dry-run paths look correct:
+
+```bash
+bash surrogate_experiment_results/Step2/run_generate_step2abc_datasets.sh
+```
+
+Set `FORCE=1` only when intentionally rebuilding existing processed datasets:
+
+```bash
+FORCE=1 bash surrogate_experiment_results/Step2/run_generate_step2abc_datasets.sh
+```
+
+For stochastic Step2 regimes, the deterministic label-noise key includes the raw batch directory name:
+
+```text
+raw_batch_name | genjson file name | source node id | target vertex id | utility | label_seed namespace
+```
+
+This prevents main/validation/unseen batches from accidentally reusing the same per-edge label noise solely because they contain a same-named `genjson-*.json` file with matching local ids.
+
 最重要的是：**尽量固定 graph structures，只换 labels。**
 
 也就是说，如果可能，继续用同一批 raw graph / compatibility graph，然后根据不同 label mode 重新写 `w_true`。这样 Step2 比较的是 label generation effect，而不是 graph distribution effect。

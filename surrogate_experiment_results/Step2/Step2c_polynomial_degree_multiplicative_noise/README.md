@@ -116,7 +116,7 @@ eta_e = Uniform(1 - epsilon_bar, 1 + epsilon_bar)
 w_syn_e = max(0, m_e * eta_e)
 ```
 
-The random draw is deterministic from `source_key`, `label_seed`, and the Step2c noise namespace, so repeated processing is reproducible.
+The random draw is deterministic from the raw batch name, `source_key`, `label_seed`, and the Step2c noise namespace, so repeated processing is reproducible while main/validation/unseen batches do not accidentally share the same per-edge multiplier.
 
 The output preserves diagnostic fields:
 

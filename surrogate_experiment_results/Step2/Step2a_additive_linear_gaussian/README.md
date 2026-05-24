@@ -114,7 +114,7 @@ w_syn_e = max(0, b_e + epsilon_e)
 epsilon_e ~ Normal(0, (rho * mu_G)^2)
 ```
 
-The noise is deterministic per edge through a hash key that includes the source edge and `label_seed`, so rerunning the same command gives the same labels.
+The noise is deterministic per edge through a hash key that includes the raw batch name, source edge, and `label_seed`, so rerunning the same command gives the same labels while main/validation/unseen batches do not accidentally share the same per-edge label noise.
 
 Useful smoke command from the repo root:
 

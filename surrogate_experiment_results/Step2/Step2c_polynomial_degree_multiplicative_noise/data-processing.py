@@ -184,6 +184,18 @@ def expected_output_name(raw_file):
     return f"G-{match.group(1)}.json"
 
 
+def build_label_source_key(input_file, source_node_id, target, utility):
+    return "|".join(
+        [
+            input_file.parent.name,
+            input_file.name,
+            str(source_node_id),
+            str(target),
+            str(utility),
+        ]
+    )
+
+
 def build_processed_batch_name(raw_batch_dir, started_at):
     if is_batch_name(raw_batch_dir.name):
         return raw_batch_dir.name
@@ -760,7 +772,7 @@ def build_match_payload(
     recipient_bt = match.get("recipient_bt")
     survival_time = get_survival_time(d_age, recipient_age, utility)
     qaly = get_qaly(utility, survival_time, recipient_age, cpra)
-    source_key = "|".join(
+    arc_source_key = "|".join(
         [
             input_file.name,
             str(source_node_id),
@@ -768,6 +780,7 @@ def build_match_payload(
             str(utility),
         ]
     )
+    label_source_key = build_label_source_key(input_file, source_node_id, target, utility)
 
     target_patient_info = recipients_data.get(target, {})
     recipient_in_degree = graph_context["recipient_in_degree"].get(target, 0)
@@ -784,7 +797,7 @@ def build_match_payload(
         recipient_age,
         donor_bt,
         recipient_bt,
-        source_key,
+        arc_source_key,
     )
     arc_success_prob = round(1.0 - arc_failure_prob, 4)
     source_vertex_available_prob = round(1.0 - source_vertex_failure_prob, 4)
@@ -804,7 +817,7 @@ def build_match_payload(
         expected_transplant_count,
         qaly,
         priority_multiplier,
-        source_key,
+        label_source_key,
         utility,
         cpra,
         graph_label_context,
@@ -1166,7 +1179,7 @@ def build_run_info(
     return {
         "generated_at": started_at.isoformat(timespec="seconds"),
         "finished_at": finished_at.isoformat(timespec="seconds"),
-        "processor_script": "1-data-processing.py",
+        "processor_script": str(Path(__file__).resolve().relative_to(PROJECT_ROOT)),
         "workspace": str(WORKSPACE),
         "raw_batch_name": raw_batch_dir.name,
         "raw_input_dir": str(raw_batch_dir),
