@@ -3,6 +3,7 @@ import argparse
 import csv
 import json
 import math
+import sys
 import statistics
 from pathlib import Path
 
@@ -77,6 +78,20 @@ def pearson_correlation(xs, ys):
     return round_or_none(numerator / (x_denom * y_denom))
 
 
+def pearson_correlation_from_pairs(pairs):
+    cleaned = [
+        (parse_numeric(x), parse_numeric(y))
+        for x, y in pairs
+    ]
+    cleaned = [(x, y) for x, y in cleaned if x is not None and y is not None]
+    if len(cleaned) < 2:
+        return None
+    return pearson_correlation(
+        [x for x, _ in cleaned],
+        [y for _, y in cleaned],
+    )
+
+
 def processed_sort_key(path):
     stem = path.stem
     try:
@@ -124,6 +139,11 @@ def summarize_processed_dataset(dataset_dir):
     dataset_dir = Path(dataset_dir)
     files = collect_processed_files(dataset_dir)
     field_values = {}
+    correlation_pairs = {
+        "latent_clean_linear_label_vs_ground_truth_label": [],
+        "step2b_polynomial_label_vs_ground_truth_label": [],
+        "step2c_polynomial_label_vs_ground_truth_label": [],
+    }
     graph_rows = []
     label_modes = set()
     vertex_count = 0
@@ -145,6 +165,15 @@ def summarize_processed_dataset(dataset_dir):
                 parsed = parse_numeric(value)
                 if parsed is not None:
                     field_values.setdefault(key, []).append(parsed)
+            correlation_pairs["latent_clean_linear_label_vs_ground_truth_label"].append(
+                (match.get("latent_clean_linear_label"), match.get("ground_truth_label"))
+            )
+            correlation_pairs["step2b_polynomial_label_vs_ground_truth_label"].append(
+                (match.get("step2b_polynomial_label"), match.get("ground_truth_label"))
+            )
+            correlation_pairs["step2c_polynomial_label_vs_ground_truth_label"].append(
+                (match.get("step2c_polynomial_label"), match.get("ground_truth_label"))
+            )
 
     labels = {
         "ground_truth_label": numeric_summary(field_values.get("ground_truth_label", [])),
@@ -153,18 +182,8 @@ def summarize_processed_dataset(dataset_dir):
         labels["latent_clean_linear_label"] = numeric_summary(field_values["latent_clean_linear_label"])
 
     correlations = {
-        "latent_clean_linear_label_vs_ground_truth_label": pearson_correlation(
-            field_values.get("latent_clean_linear_label", []),
-            field_values.get("ground_truth_label", []),
-        ),
-        "step2b_polynomial_label_vs_ground_truth_label": pearson_correlation(
-            field_values.get("step2b_polynomial_label", []),
-            field_values.get("ground_truth_label", []),
-        ),
-        "step2c_polynomial_label_vs_ground_truth_label": pearson_correlation(
-            field_values.get("step2c_polynomial_label", []),
-            field_values.get("ground_truth_label", []),
-        ),
+        name: pearson_correlation_from_pairs(pairs)
+        for name, pairs in correlation_pairs.items()
     }
 
     summary = {
@@ -195,6 +214,34 @@ def summarize_processed_dataset(dataset_dir):
         },
     }
     return summary, graph_rows
+
+
+def validate_summary(
+    summary,
+    expected_graph_count=None,
+    expected_label_mode=None,
+    max_fraction_zero=None,
+):
+    errors = []
+    dataset = summary["dataset"]
+    if dataset["graph_count"] == 0:
+        errors.append("graph_count is 0")
+    if dataset["edge_count"] == 0:
+        errors.append("edge_count is 0")
+    if expected_graph_count is not None and dataset["graph_count"] != expected_graph_count:
+        errors.append(f"expected graph_count={expected_graph_count}, got {dataset['graph_count']}")
+    if expected_label_mode is not None:
+        label_modes = dataset.get("label_modes", [])
+        if label_modes != [expected_label_mode]:
+            got = ",".join(label_modes) if label_modes else "none"
+            errors.append(f"expected label mode {expected_label_mode}, got {got}")
+    if max_fraction_zero is not None:
+        fraction_zero = summary["labels"]["ground_truth_label"].get("fraction_zero")
+        if fraction_zero is not None and fraction_zero > max_fraction_zero:
+            errors.append(
+                f"fraction_zero {fraction_zero:.6f} exceeds max_fraction_zero {max_fraction_zero:.6f}"
+            )
+    return errors
 
 
 def write_diagnostics(dataset_dir, summary, graph_rows, output_dir=None):
@@ -235,6 +282,28 @@ def parse_args():
         default=None,
         help="Optional directory for label_diagnostics artifacts. Defaults to the processed dataset directory.",
     )
+    parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Exit nonzero if strict validation checks fail.",
+    )
+    parser.add_argument(
+        "--expected_graph_count",
+        type=int,
+        default=None,
+        help="Expected number of G-*.json graph files.",
+    )
+    parser.add_argument(
+        "--expected_label_mode",
+        default=None,
+        help="Expected single ground_truth_label_mode for the dataset.",
+    )
+    parser.add_argument(
+        "--max_fraction_zero",
+        type=float,
+        default=None,
+        help="Maximum allowed fraction of zero ground_truth_label values.",
+    )
     return parser.parse_args()
 
 
@@ -247,6 +316,16 @@ def main():
     summary, graph_rows = summarize_processed_dataset(dataset_dir)
     artifacts = write_diagnostics(dataset_dir, summary, graph_rows, args.output_dir)
     print(json.dumps({"dataset": summary["dataset"], "artifacts": artifacts}, indent=2))
+    errors = validate_summary(
+        summary,
+        expected_graph_count=args.expected_graph_count,
+        expected_label_mode=args.expected_label_mode,
+        max_fraction_zero=args.max_fraction_zero,
+    )
+    if errors:
+        for error in errors:
+            print(f"VALIDATION ERROR: {error}", file=sys.stderr)
+        return 1 if args.strict else 0
     return 0
 
 

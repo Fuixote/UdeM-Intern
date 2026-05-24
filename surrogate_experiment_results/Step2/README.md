@@ -405,6 +405,7 @@ validate_step2_processed_dataset.py
     label_graph_diagnostics.csv
   The summary includes graph/edge counts, label mean/std/min/max, zero-label fraction,
   clean-linear-vs-label correlation, Step2b polynomial-label correlation, and Step2c multiplier statistics.
+  Use --strict with --expected_graph_count and --expected_label_mode for production generation.
 
 run_generate_step2abc_datasets.sh
   Generates the first Step2 ABC dataset grid:
@@ -412,7 +413,7 @@ run_generate_step2abc_datasets.sh
     Step2b degree in {1,2,4}
     Step2c degree in {1,2,4}, epsilon_bar=0.5
     splits in {main2000,val2000,unseen10000}
-  Each processed dataset is immediately passed through the validator.
+  Each processed dataset is immediately passed through the strict validator.
 ```
 
 Use dry-run mode before generating anything:
@@ -431,6 +432,21 @@ Set `FORCE=1` only when intentionally rebuilding existing processed datasets:
 
 ```bash
 FORCE=1 bash surrogate_experiment_results/Step2/run_generate_step2abc_datasets.sh
+```
+
+The generation script supports parameterized naming. If `STEP2_RHO=0.25`, Step2a outputs use `rho025`; if `STEP2_EPSILON_BAR=0.25`, Step2c outputs use `eps025`. This prevents parameter/name mismatch:
+
+```bash
+DRY_RUN=1 STEP2_RHO=0.25 STEP2_EPSILON_BAR=0.25 \
+  bash surrogate_experiment_results/Step2/run_generate_step2abc_datasets.sh
+```
+
+For production generation, the validator is called with:
+
+```text
+--strict
+--expected_graph_count 2000 or 10000 depending on split
+--expected_label_mode <label mode>
 ```
 
 For stochastic Step2 regimes, the deterministic label-noise key includes the raw batch directory name:

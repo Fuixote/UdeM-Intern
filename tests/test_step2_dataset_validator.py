@@ -87,6 +87,52 @@ class Step2DatasetValidatorTest(unittest.TestCase):
             loaded = json.loads(Path(artifacts["summary_json"]).read_text(encoding="utf-8"))
             self.assertEqual(loaded["dataset"]["edge_count"], 2)
 
+    def test_strict_validation_reports_expected_count_and_label_mode_errors(self):
+        validator = load_validator_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            dataset_dir = Path(tmp)
+            self.write_graph(dataset_dir, "G-0.json", [0.0, 2.0])
+            summary, _ = validator.summarize_processed_dataset(dataset_dir)
+
+        errors = validator.validate_summary(
+            summary,
+            expected_graph_count=2,
+            expected_label_mode="step2b_polynomial_degree_noiseless",
+            max_fraction_zero=0.25,
+        )
+
+        self.assertIn("expected graph_count=2, got 1", errors)
+        self.assertIn(
+            "expected label mode step2b_polynomial_degree_noiseless, got step2c_polynomial_degree_multiplicative_noise",
+            errors,
+        )
+        self.assertIn("fraction_zero 0.500000 exceeds max_fraction_zero 0.250000", errors)
+
+    def test_strict_cli_fails_when_expected_graph_count_mismatches(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            dataset_dir = Path(tmp)
+            self.write_graph(dataset_dir, "G-0.json", [1.0, 2.0])
+
+            import subprocess
+
+            result = subprocess.run(
+                [
+                    "python",
+                    str(VALIDATOR_SCRIPT),
+                    str(dataset_dir),
+                    "--strict",
+                    "--expected_graph_count",
+                    "2",
+                ],
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("expected graph_count=2, got 1", result.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()
