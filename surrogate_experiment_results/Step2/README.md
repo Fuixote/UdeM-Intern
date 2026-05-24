@@ -457,6 +457,103 @@ raw_batch_name | genjson file name | source node id | target vertex id | utility
 
 This prevents main/validation/unseen batches from accidentally reusing the same per-edge label noise solely because they contain a same-named `genjson-*.json` file with matching local ids.
 
+## Latest Step2 ABC Dataset Production
+
+Local production run completed on 2026-05-23 with:
+
+```bash
+bash surrogate_experiment_results/Step2/run_generate_step2abc_datasets.sh
+```
+
+Full log:
+
+```text
+logs/step2abc_generation.log
+```
+
+The run generated and strictly validated all 21 planned Step2 ABC processed datasets:
+
+```text
+Step2a:
+  rho=0.5 x {main2000, val2000, unseen10000}
+
+Step2b:
+  degree in {1,2,4} x {main2000, val2000, unseen10000}
+
+Step2c:
+  degree in {1,2,4}, epsilon_bar=0.5 x {main2000, val2000, unseen10000}
+```
+
+Every dataset has:
+
+```text
+G-*.json
+run_info.json
+batch_summary.json
+batch_report.md
+label_diagnostics.json
+label_graph_diagnostics.csv
+```
+
+Strict validation passed with the expected graph counts and label modes:
+
+```text
+main2000:      2000 graphs
+val2000:       2000 graphs
+unseen10000:  10000 graphs
+```
+
+QA snapshot for the main2000 training pools:
+
+| dataset | graphs | edges | label mean | label std | zero fraction | corr(clean,label) |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| step2a_additive_rho050_main2000_seed20260523 | 2000 | 492684 | 6.1069 | 4.0595 | 0.0839 | 0.7290 |
+| step2b_poly_d1_main2000_seed20260523 | 2000 | 492684 | 5.9516 | 3.1484 | 0.0000 | 1.0000 |
+| step2b_poly_d2_main2000_seed20260523 | 2000 | 492684 | 5.9549 | 3.5020 | 0.0000 | 0.9971 |
+| step2b_poly_d4_main2000_seed20260523 | 2000 | 492684 | 5.9621 | 4.3709 | 0.0000 | 0.9747 |
+| step2c_poly_d1_mult_eps050_main2000_seed20260523 | 2000 | 492684 | 5.9518 | 3.6971 | 0.0000 | 0.8510 |
+| step2c_poly_d2_mult_eps050_main2000_seed20260523 | 2000 | 492684 | 5.9550 | 4.0262 | 0.0000 | 0.8667 |
+| step2c_poly_d4_mult_eps050_main2000_seed20260523 | 2000 | 492684 | 5.9618 | 4.8580 | 0.0000 | 0.8763 |
+
+QA snapshot for the unseen10000 evaluation pools:
+
+| dataset | graphs | edges | label mean | label std | zero fraction | corr(clean,label) |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| step2a_additive_rho050_unseen10000_seed20260523 | 10000 | 2338230 | 6.1601 | 4.0871 | 0.0836 | 0.7266 |
+| step2b_poly_d1_unseen10000_seed20260523 | 10000 | 2338230 | 6.0137 | 3.1625 | 0.0000 | 1.0000 |
+| step2b_poly_d2_unseen10000_seed20260523 | 10000 | 2338230 | 6.0171 | 3.5175 | 0.0000 | 0.9971 |
+| step2b_poly_d4_unseen10000_seed20260523 | 10000 | 2338230 | 6.0243 | 4.3893 | 0.0000 | 0.9749 |
+| step2c_poly_d1_mult_eps050_unseen10000_seed20260523 | 10000 | 2338230 | 6.0141 | 3.7209 | 0.0000 | 0.8499 |
+| step2c_poly_d2_mult_eps050_unseen10000_seed20260523 | 10000 | 2338230 | 6.0175 | 4.0518 | 0.0000 | 0.8656 |
+| step2c_poly_d4_mult_eps050_unseen10000_seed20260523 | 10000 | 2338230 | 6.0247 | 4.8875 | 0.0000 | 0.8755 |
+
+Interpretation of the QA:
+
+```text
+Step2a introduces additive Gaussian noise and clipping, so about 8.4% of labels are zero.
+Step2b keeps graph-level mean scale stable as degree increases; label variance increases with degree.
+Step2c adds multiplicative noise on top of Step2b; label variance increases and clean-label correlation drops, as intended.
+```
+
+Additional post-generation quality audit:
+
+```text
+Graph structure invariance:
+  main2000:     7 datasets, 2000 graphs, 492684 edges, no vertex/edge-count mismatches
+  val2000:      7 datasets, 2000 graphs, 464520 edges, no vertex/edge-count mismatches
+  unseen10000:  7 datasets, 10000 graphs, 2338230 edges, no vertex/edge-count mismatches
+
+Per-graph label-to-clean mean ratio:
+  Step2b d1: exactly 1.0000 on every graph, as expected.
+  Step2b d2/d4: mean ratio about 1.0005/1.0017, with 95th percentile below 1.0065.
+  Step2c: mean ratio about 1.000-1.002, with 95th percentile below 1.042 after multiplicative noise.
+  Step2a: mean ratio about 1.024 because Gaussian noise is clipped at zero; this is expected.
+
+Stochastic checks:
+  Step2a additive noise has near-zero mean and std matching graph-level sigma.
+  Step2c multiplier has mean about 1.000, std about 0.2886, and min/max exactly 0.5/1.5.
+```
+
 最重要的是：**尽量固定 graph structures，只换 labels。**
 
 也就是说，如果可能，继续用同一批 raw graph / compatibility graph，然后根据不同 label mode 重新写 `w_true`。这样 Step2 比较的是 label generation effect，而不是 graph distribution effect。
