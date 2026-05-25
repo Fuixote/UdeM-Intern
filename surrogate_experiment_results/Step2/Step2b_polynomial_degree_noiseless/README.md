@@ -49,8 +49,7 @@ Here d is the misspecification knob. Larger d makes high-score edges disproporti
 
 ```text
 kappa = 3
-degree d in {1, 2, 4}
-optional later: degree d in {6, 8}
+degree d in {1, 2, 4, 8}
 delta: small positive numerical stabilizer
 clip_mode: max0
 rescale_mode: graph_mean_to_clean_linear_mean
@@ -74,6 +73,10 @@ dataset/processed/step2b_poly_d2_unseen10000_seed20260523
 dataset/processed/step2b_poly_d4_main2000_seed20260523
 dataset/processed/step2b_poly_d4_val2000_seed20260523
 dataset/processed/step2b_poly_d4_unseen10000_seed20260523
+
+dataset/processed/step2b_poly_d8_main2000_seed20260523
+dataset/processed/step2b_poly_d8_val2000_seed20260523
+dataset/processed/step2b_poly_d8_unseen10000_seed20260523
 ```
 
 The graph structures should come from the same raw source directories used by Step2a:

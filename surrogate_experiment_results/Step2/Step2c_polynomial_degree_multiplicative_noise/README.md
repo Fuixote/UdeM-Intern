@@ -40,7 +40,7 @@ If epsilon_bar <= 1 and m_e^(d) >= 0, clipping is usually inactive, but it is st
 
 ```text
 kappa = 3
-degree d in {1, 2, 4}
+degree d in {1, 2, 4, 8}
 epsilon_bar = 0.5
 optional later: epsilon_bar in {0.25, 0.5}
 delta: small positive numerical stabilizer
@@ -66,6 +66,10 @@ dataset/processed/step2c_poly_d2_mult_eps050_unseen10000_seed20260523
 dataset/processed/step2c_poly_d4_mult_eps050_main2000_seed20260523
 dataset/processed/step2c_poly_d4_mult_eps050_val2000_seed20260523
 dataset/processed/step2c_poly_d4_mult_eps050_unseen10000_seed20260523
+
+dataset/processed/step2c_poly_d8_mult_eps050_main2000_seed20260523
+dataset/processed/step2c_poly_d8_mult_eps050_val2000_seed20260523
+dataset/processed/step2c_poly_d8_mult_eps050_unseen10000_seed20260523
 ```
 
 The graph structures should come from the same raw source directories used by Step2a/Step2b:

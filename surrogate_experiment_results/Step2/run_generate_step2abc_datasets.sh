@@ -39,7 +39,7 @@ declare -A EXPECTED_GRAPH_COUNTS=(
 )
 
 SPLITS=(main2000 val2000 unseen10000)
-DEGREES=(1 2 4)
+DEGREES=(1 2 4 8)
 
 run_cmd() {
   printf '>'

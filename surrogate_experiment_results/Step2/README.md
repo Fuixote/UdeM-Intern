@@ -145,7 +145,7 @@ w^{syn}_e = \max(0, m^{(d)}_e)
 
 ```text
 kappa = 3
-degree d ∈ {1, 2, 4, 6}
+degree d ∈ {1, 2, 4, 8}
 ```
 
 这个设计有几个优点：
@@ -195,7 +195,7 @@ w^{syn}_e = \max(0, m^{(d)}_e \cdot \eta_e)
 建议：
 
 ```text
-degree d ∈ {1, 2, 4, 6}
+degree d ∈ {1, 2, 4, 8}
 epsilon_bar ∈ {0.25, 0.5}
 ```
 
@@ -329,11 +329,11 @@ This keeps `surrogate_experiment_results/Step2/...` as the code/protocol area, w
 
 ```text
 Step2a: rho = 0.5
-Step2b: degree = {1, 2, 4}
-Step2c: degree = {1, 2, 4}, epsilon_bar = 0.5
+Step2b: degree = {1, 2, 4, 8}
+Step2c: degree = {1, 2, 4, 8}, epsilon_bar = 0.5
 ```
 
-等结果稳定后再跑 Step2d。不要一开始就把 `degree={1,2,4,6,8}`、多个 noise、多个 seed 全部铺开，否则计算量和解释复杂度都会很高。
+等结果稳定后再跑 Step2d。不要一开始就把多个 noise、多个 seed 全部铺开，否则计算量和解释复杂度都会很高。
 
 ## 关键实验 protocol
 
@@ -355,6 +355,9 @@ dataset/processed/step2b_poly_d2_unseen10000_seed20260523
 dataset/processed/step2b_poly_d4_main2000_seed20260523
 dataset/processed/step2b_poly_d4_val2000_seed20260523
 dataset/processed/step2b_poly_d4_unseen10000_seed20260523
+dataset/processed/step2b_poly_d8_main2000_seed20260523
+dataset/processed/step2b_poly_d8_val2000_seed20260523
+dataset/processed/step2b_poly_d8_unseen10000_seed20260523
 
 Step2c:
 dataset/processed/step2c_poly_d1_mult_eps050_main2000_seed20260523
@@ -366,6 +369,9 @@ dataset/processed/step2c_poly_d2_mult_eps050_unseen10000_seed20260523
 dataset/processed/step2c_poly_d4_mult_eps050_main2000_seed20260523
 dataset/processed/step2c_poly_d4_mult_eps050_val2000_seed20260523
 dataset/processed/step2c_poly_d4_mult_eps050_unseen10000_seed20260523
+dataset/processed/step2c_poly_d8_mult_eps050_main2000_seed20260523
+dataset/processed/step2c_poly_d8_mult_eps050_val2000_seed20260523
+dataset/processed/step2c_poly_d8_mult_eps050_unseen10000_seed20260523
 
 Step2d:
 dataset/processed/step2d_poly_d1_factor_tau025_main2000_seed20260523
@@ -410,8 +416,8 @@ validate_step2_processed_dataset.py
 run_generate_step2abc_datasets.sh
   Generates the first Step2 ABC dataset grid:
     Step2a rho=0.5
-    Step2b degree in {1,2,4}
-    Step2c degree in {1,2,4}, epsilon_bar=0.5
+    Step2b degree in {1,2,4,8}
+    Step2c degree in {1,2,4,8}, epsilon_bar=0.5
     splits in {main2000,val2000,unseen10000}
   Each processed dataset is immediately passed through the strict validator.
 ```
@@ -471,17 +477,17 @@ Full log:
 logs/step2abc_generation.log
 ```
 
-The run generated and strictly validated all 21 planned Step2 ABC processed datasets:
+The 2026-05-23 run generated and strictly validated the original 21 Step2 ABC processed datasets under the earlier `{1,2,4}` degree grid. On 2026-05-24, the paper-aligned degree `8` extension was generated locally, strictly validated, and synced to garnet. The active Step2 ABC processed dataset grid is now:
 
 ```text
 Step2a:
   rho=0.5 x {main2000, val2000, unseen10000}
 
 Step2b:
-  degree in {1,2,4} x {main2000, val2000, unseen10000}
+  completed: degree in {1,2,4,8} x {main2000, val2000, unseen10000}
 
 Step2c:
-  degree in {1,2,4}, epsilon_bar=0.5 x {main2000, val2000, unseen10000}
+  completed: degree in {1,2,4,8}, epsilon_bar=0.5 x {main2000, val2000, unseen10000}
 ```
 
 Every dataset has:
@@ -511,9 +517,11 @@ QA snapshot for the main2000 training pools:
 | step2b_poly_d1_main2000_seed20260523 | 2000 | 492684 | 5.9516 | 3.1484 | 0.0000 | 1.0000 |
 | step2b_poly_d2_main2000_seed20260523 | 2000 | 492684 | 5.9549 | 3.5020 | 0.0000 | 0.9971 |
 | step2b_poly_d4_main2000_seed20260523 | 2000 | 492684 | 5.9621 | 4.3709 | 0.0000 | 0.9747 |
+| step2b_poly_d8_main2000_seed20260523 | 2000 | 492684 | 5.9769 | 6.8146 | 0.0000 | 0.8817 |
 | step2c_poly_d1_mult_eps050_main2000_seed20260523 | 2000 | 492684 | 5.9518 | 3.6971 | 0.0000 | 0.8510 |
 | step2c_poly_d2_mult_eps050_main2000_seed20260523 | 2000 | 492684 | 5.9550 | 4.0262 | 0.0000 | 0.8667 |
 | step2c_poly_d4_mult_eps050_main2000_seed20260523 | 2000 | 492684 | 5.9618 | 4.8580 | 0.0000 | 0.8763 |
+| step2c_poly_d8_mult_eps050_main2000_seed20260523 | 2000 | 492684 | 5.9751 | 7.2867 | 0.0000 | 0.8237 |
 
 QA snapshot for the unseen10000 evaluation pools:
 
@@ -523,9 +531,11 @@ QA snapshot for the unseen10000 evaluation pools:
 | step2b_poly_d1_unseen10000_seed20260523 | 10000 | 2338230 | 6.0137 | 3.1625 | 0.0000 | 1.0000 |
 | step2b_poly_d2_unseen10000_seed20260523 | 10000 | 2338230 | 6.0171 | 3.5175 | 0.0000 | 0.9971 |
 | step2b_poly_d4_unseen10000_seed20260523 | 10000 | 2338230 | 6.0243 | 4.3893 | 0.0000 | 0.9749 |
+| step2b_poly_d8_unseen10000_seed20260523 | 10000 | 2338230 | 6.0391 | 6.8293 | 0.0000 | 0.8834 |
 | step2c_poly_d1_mult_eps050_unseen10000_seed20260523 | 10000 | 2338230 | 6.0141 | 3.7209 | 0.0000 | 0.8499 |
 | step2c_poly_d2_mult_eps050_unseen10000_seed20260523 | 10000 | 2338230 | 6.0175 | 4.0518 | 0.0000 | 0.8656 |
 | step2c_poly_d4_mult_eps050_unseen10000_seed20260523 | 10000 | 2338230 | 6.0247 | 4.8875 | 0.0000 | 0.8755 |
+| step2c_poly_d8_mult_eps050_unseen10000_seed20260523 | 10000 | 2338230 | 6.0393 | 7.3170 | 0.0000 | 0.8244 |
 
 Interpretation of the QA:
 
@@ -539,14 +549,14 @@ Additional post-generation quality audit:
 
 ```text
 Graph structure invariance:
-  main2000:     7 datasets, 2000 graphs, 492684 edges, no vertex/edge-count mismatches
-  val2000:      7 datasets, 2000 graphs, 464520 edges, no vertex/edge-count mismatches
-  unseen10000:  7 datasets, 10000 graphs, 2338230 edges, no vertex/edge-count mismatches
+  main2000:     9 datasets, 2000 graphs, 492684 edges, no vertex/edge-count mismatches
+  val2000:      9 datasets, 2000 graphs, 464520 edges, no vertex/edge-count mismatches
+  unseen10000:  9 datasets, 10000 graphs, 2338230 edges, no vertex/edge-count mismatches
 
 Per-graph label-to-clean mean ratio:
   Step2b d1: exactly 1.0000 on every graph, as expected.
-  Step2b d2/d4: mean ratio about 1.0005/1.0017, with 95th percentile below 1.0065.
-  Step2c: mean ratio about 1.000-1.002, with 95th percentile below 1.042 after multiplicative noise.
+  Step2b d2/d4/d8: mean ratio about 1.0005/1.0017/1.0041, with d8 95th percentile below 1.015.
+  Step2c: mean ratio about 1.000-1.004, with d8 95th percentile about 1.050 after multiplicative noise.
   Step2a: mean ratio about 1.024 because Gaussian noise is clipped at zero; this is expected.
 
 Stochastic checks:
@@ -664,11 +674,11 @@ Step2a:
 
 Step2b:
   polynomial noiseless
-  degree = 1, 2, 4
+  degree = 1, 2, 4, 8
 
 Step2c:
   polynomial multiplicative noise
-  degree = 1, 2, 4
+  degree = 1, 2, 4, 8
   epsilon_bar = 0.5
 ```
 
@@ -685,7 +695,6 @@ subset_seed = 42
 ```text
 train_size = 1200
 label_seed repeats
-degree = 6 or 8
 Step2d factor noise
 ```
 

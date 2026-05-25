@@ -28,9 +28,11 @@ class Step2GenerationDriverTest(unittest.TestCase):
             "step2b_poly_d1_main2000_seed20260523",
             "step2b_poly_d2_val2000_seed20260523",
             "step2b_poly_d4_unseen10000_seed20260523",
+            "step2b_poly_d8_unseen10000_seed20260523",
             "step2c_poly_d1_mult_eps050_main2000_seed20260523",
             "step2c_poly_d2_mult_eps050_val2000_seed20260523",
             "step2c_poly_d4_mult_eps050_unseen10000_seed20260523",
+            "step2c_poly_d8_mult_eps050_unseen10000_seed20260523",
         ]
         for name in expected_names:
             self.assertIn(name, result.stdout)
