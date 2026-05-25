@@ -1,0 +1,17 @@
+{
+  "method": "2stage",
+  "model_type": "linear_probe",
+  "model_formula": "w_hat_e = theta_1 * utility_e + theta_2 * recipient_cPRA_e",
+  "feature_names": [
+    "utility",
+    "recipient_cPRA"
+  ],
+  "train_size": 50,
+  "selected_epoch": 500,
+  "selection_metric": "validation_mse_loss",
+  "selection_value": 3.8764840202189,
+  "theta": [
+    9.871965430337553,
+    5.116345971661057
+  ]
+}

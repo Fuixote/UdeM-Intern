@@ -34,6 +34,17 @@ main.pdf
 # tools can inspect generated reports and figures.
 surrogate_experiment_results/plot_results_step1bc/combined_step1bc_per_graph.csv
 
+# Step2 remote experiment archives: keep lightweight, AI-readable artifacts;
+# exclude binary weights, trajectory arrays, split indexes, and per-graph dumps.
+surrogate_experiment_results/Step2/**/remote_results/**
+!surrogate_experiment_results/Step2/**/remote_results/**/
+!surrogate_experiment_results/Step2/**/remote_results/**/run_config.json
+!surrogate_experiment_results/Step2/**/remote_results/**/metrics/test_summary.csv
+!surrogate_experiment_results/Step2/**/remote_results/**/metrics/test_summary.json
+!surrogate_experiment_results/Step2/**/remote_results/**/metrics/*loss_curve.csv
+!surrogate_experiment_results/Step2/**/remote_results/**/model_weights/*.json
+!surrogate_experiment_results/Step2/**/remote_results/**/plots/*.png
+
 # Third-party dependencies
 generator_webapp/bower_components/
 
