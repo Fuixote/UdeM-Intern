@@ -564,6 +564,66 @@ Stochastic checks:
   Step2c multiplier has mean about 1.000, std about 0.2886, and min/max exactly 0.5/1.5.
 ```
 
+## Final Unseen10000 Evaluation Helper
+
+After the Step2 training grid has been synced back into the Step2 `remote_results/`
+archives, use the combined unseen evaluator rather than running one evaluator per
+training directory:
+
+```bash
+MPLCONFIGDIR=/tmp/matplotlib \
+python surrogate_experiment_results/evaluate_step2_unseen_once.py
+```
+
+The script evaluates the full Step2 ABC grid by default:
+
+```text
+9 label regimes x 4 train sizes x 5 checkpoints = 180 model evaluations
+```
+
+The five checkpoint rows per regime/train-size are:
+
+```text
+2stage selected by validation MSE
+FY selected by validation decision gap
+FY selected by validation FY loss
+SPO+ selected by validation decision gap
+SPO+ selected by validation SPO+ loss
+```
+
+The evaluator groups runs by label regime. For each regime it loads the matching
+`unseen10000` processed dataset once, computes oracle graph records once, evaluates
+all train-size/checkpoint combinations for that regime, and writes:
+
+```text
+surrogate_experiment_results/Step2/step2_unseen10000_all_checkpoints_summary.csv
+surrogate_experiment_results/Step2/step2_unseen10000_all_checkpoints_summary.json
+
+.../remote_results/<regime>/step1b_fy/.../train_size=<n>/metrics/unseen10000_summary.csv
+.../remote_results/<regime>/step1b_fy/.../train_size=<n>/metrics/unseen10000_per_graph.csv
+
+.../remote_results/<regime>/step1c_spoplus/.../train_size=<n>/metrics/unseen10000_summary.csv
+.../remote_results/<regime>/step1c_spoplus/.../train_size=<n>/metrics/unseen10000_per_graph.csv
+```
+
+For a quick routing check without solving anything:
+
+```bash
+python surrogate_experiment_results/evaluate_step2_unseen_once.py --dry_run --skip_per_graph
+```
+
+For a small computational smoke test:
+
+```bash
+MPLCONFIGDIR=/tmp/matplotlib \
+python surrogate_experiment_results/evaluate_step2_unseen_once.py \
+  --regimes step2a_additive_rho050 \
+  --train_sizes 50 \
+  --graph_limit 5 \
+  --output_stem smoke_unseen5 \
+  --skip_per_graph
+```
+
 最重要的是：**尽量固定 graph structures，只换 labels。**
 
 也就是说，如果可能，继续用同一批 raw graph / compatibility graph，然后根据不同 label mode 重新写 `w_true`。这样 Step2 比较的是 label generation effect，而不是 graph distribution effect。

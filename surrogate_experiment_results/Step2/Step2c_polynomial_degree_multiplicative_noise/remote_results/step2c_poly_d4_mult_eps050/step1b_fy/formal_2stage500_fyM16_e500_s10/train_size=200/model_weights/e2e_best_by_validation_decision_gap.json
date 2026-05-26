@@ -1,0 +1,17 @@
+{
+  "method": "e2e",
+  "model_type": "linear_probe",
+  "model_formula": "w_hat_e = theta_1 * utility_e + theta_2 * recipient_cPRA_e",
+  "feature_names": [
+    "utility",
+    "recipient_cPRA"
+  ],
+  "train_size": 200,
+  "selected_epoch": 30,
+  "selection_metric": "validation_decision_gap",
+  "selection_value": 6.749641622543335,
+  "theta": [
+    3.989420582022236,
+    1.7886663453484064
+  ]
+}
