@@ -101,7 +101,39 @@ Thus \(b_e\) is an edge-level clean label, while \(\mu_G\) is the graph-level av
     d &\in \{1,2,4,8\},\qquad \kappa=3.
     \end{aligned}
   \]
-  Degree \(d=1\) is close to the clean-linear case; higher degrees increasingly distort the reward surface while keeping graph-level scale controlled.
+  The special case \(d=1\) nearly recovers the clean-linear label:
+  \[
+    r_e^{(1)} = q_e,\qquad
+    m_e^{(1)}
+    \approx
+    \mu_G
+    \frac{b_e/\mu_G}{\frac{1}{|E_G|}\sum_{e'\in E_G} b_{e'}/\mu_G}
+    =
+    b_e.
+  \]
+  For the most distorted case \(d=8\), the label is:
+  \[
+    \begin{aligned}
+    r_e^{(8)} &= (q_e+\kappa)^8-\kappa^8,\\
+    m_e^{(8)}
+    &=
+    \max\left\{
+      0,\,
+      \mu_G
+      \frac{(q_e+\kappa)^8-\kappa^8}
+      {\frac{1}{|E_G|}\sum_{e'\in E_G}\left[(q_{e'}+\kappa)^8-\kappa^8\right]+\delta}
+    \right\}.
+    \end{aligned}
+  \]
+  Thus
+  \[
+    b_e>\mu_G
+    \Rightarrow q_e>1
+    \Rightarrow (q_e+\kappa)^8 \text{ is strongly amplified},
+    \qquad
+    \frac{1}{|E_G|}\sum_{e\in E_G}m_e^{(8)}\approx \mu_G.
+  \]
+  The \(d=8\) regime therefore makes high-clean-label edges much larger relative to low-clean-label edges, while the rescaling keeps the graph-level label scale controlled.
 
   \item \textbf{Step2c: polynomial degree plus multiplicative noise.} This combines deterministic nonlinear misspecification with edge-wise multiplicative noise:
   \[
@@ -363,7 +395,32 @@ The figures support three main patterns: (i) the label regimes become progressiv
   \item \textbf{Theta and trajectory diagnostics suggest decision-oriented proxies.} FY and SPO+ do not merely recover the clean coefficient \([10,5]\). Their endpoints, norms, and trajectories suggest that they learn linear proxies that are useful for induced KEP decisions under synthetic-label misspecification.
 \end{enumerate}
 
-\paragraph{Limitations.}
-The per-graph and trajectory diagnostics are representative rather than exhaustive visualizations of every run and every graph. The current plots summarize one fixed seed/protocol grid; additional seed repetitions and a dedicated paired-improvement CI significance figure would be useful before making stronger claims about method dominance. All reported quantities are synthetic-label decision quality under designed synthetic regimes. They should not be interpreted as real clinical outcome regret or as claims about actual transplant outcomes.
+\clearpage
+\section*{Appendix: Condensed Unseen10000 Checkpoint Summary}
+
+\begin{table}[H]
+\centering
+\caption{Condensed large-unseen summary from \texttt{step2\_unseen10000\_all\_checkpoints\_summary.csv}. Each cell reports mean normalized decision gap averaged over train sizes \(50,200,600,1200\); lower is better. Bold marks the lowest checkpoint in each regime using full-precision values.}
+\label{tab:condensed-unseen10000-all-checkpoints}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrrl}
+\toprule
+Regime & 2stage & FY gap & FY loss & SPO+ gap & SPO+ loss & Best \\
+\midrule
+Step2a rho0.5 & 0.06069 & 0.06122 & \textbf{0.06065} & 0.06071 & 0.06067 & FY loss \\
+Step2b d1 & 0.00001 & 0.00000 & 0.00000 & 0.00000 & \textbf{0.00000} & SPO+ loss \\
+Step2b d2 & 0.00111 & 0.00084 & 0.00084 & 0.00084 & \textbf{0.00084} & SPO+ loss \\
+Step2b d4 & 0.01038 & \textbf{0.00843} & 0.00843 & 0.00846 & 0.00846 & FY gap \\
+Step2b d8 & 0.05745 & \textbf{0.04759} & 0.04769 & 0.04763 & 0.04762 & FY gap \\
+Step2c d1 & \textbf{0.03892} & 0.03923 & 0.03903 & 0.03899 & 0.03898 & 2stage \\
+Step2c d2 & 0.03848 & 0.03830 & 0.03830 & \textbf{0.03829} & 0.03832 & SPO+ gap \\
+Step2c d4 & 0.04445 & 0.04244 & \textbf{0.04243} & 0.04244 & 0.04246 & FY loss \\
+Step2c d8 & 0.08402 & 0.07456 & 0.07444 & 0.07436 & \textbf{0.07435} & SPO+ loss \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\noindent\textbf{How to read.} This table compresses the 180 unseen10000 model evaluations into regime-level averages. Step2a and Step2b d1 are sanity regimes where all methods are close. As degree increases, especially in Step2b d8 and Step2c d8, FY and SPO+ checkpoints have substantially lower normalized decision gap than 2stage.
 
 \end{document}
