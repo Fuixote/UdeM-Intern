@@ -606,6 +606,24 @@ surrogate_experiment_results/Step2/step2_unseen10000_all_checkpoints_summary.jso
 .../remote_results/<regime>/step1c_spoplus/.../train_size=<n>/metrics/unseen10000_per_graph.csv
 ```
 
+GitHub artifact policy:
+
+```text
+Track:
+  Step2 README files
+  root-level combined summary CSV/JSON files
+  generated figures
+
+Do not track:
+  per-run remote_results metrics/config/model dumps
+  per-graph CSV/JSON files
+  model weight binaries and local-only archives
+```
+
+The intended workflow is to keep large per-graph files locally, derive compact
+secondary summaries or figures from them when needed, and commit only those
+AI-readable summaries/figures.
+
 For a quick routing check without solving anything:
 
 ```bash

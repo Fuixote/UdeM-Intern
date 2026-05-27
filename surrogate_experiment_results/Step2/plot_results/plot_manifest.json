@@ -1,0 +1,19 @@
+{
+  "generated": [
+    "surrogate_experiment_results/Step2/plot_results/01_label_std_and_corr_by_degree.png",
+    "surrogate_experiment_results/Step2/plot_results/02_main_vs_unseen_label_alignment.png",
+    "surrogate_experiment_results/Step2/plot_results/03_unseen_normalized_gap_vs_degree.png",
+    "surrogate_experiment_results/Step2/plot_results/04_paired_improvement_heatmap.png",
+    "surrogate_experiment_results/Step2/plot_results/05_selector_delta_fy_spoplus.png",
+    "surrogate_experiment_results/Step2/plot_results/06_selected_epoch_heatmap.png",
+    "surrogate_experiment_results/Step2/plot_results/07_theta_endpoints.png",
+    "surrogate_experiment_results/Step2/plot_results/08_theta_norm_vs_gap.png",
+    "surrogate_experiment_results/Step2/plot_results/09_paired_delta_histograms.png",
+    "surrogate_experiment_results/Step2/plot_results/10_tail_gap_ecdf.png",
+    "surrogate_experiment_results/Step2/plot_results/11_hard_graph_attribution.png",
+    "surrogate_experiment_results/Step2/plot_results/12_training_trajectory_dashboard_step2a.png",
+    "surrogate_experiment_results/Step2/plot_results/13_training_trajectory_dashboard_step2b_d8.png",
+    "surrogate_experiment_results/Step2/plot_results/14_training_trajectory_dashboard_step2c_d8.png"
+  ],
+  "skipped": []
+}
