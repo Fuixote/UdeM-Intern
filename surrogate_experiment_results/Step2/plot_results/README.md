@@ -419,6 +419,149 @@ Purpose:
 > behavior can change theta scale without necessarily improving reward
 > calibration.
 
+### Figure 15: Heldout vs Large-Unseen Primary Gap
+
+Suggested output:
+
+```text
+15_heldout_vs_unseen_primary_gap.png
+```
+
+Data sources:
+
+```text
+step2_heldout400_primary_summary.csv
+step2_unseen10000_all_checkpoints_summary.csv
+```
+
+Plot:
+
+```text
+x-axis: heldout400 mean normalized decision gap
+y-axis: large-unseen mean normalized decision gap
+color: primary checkpoint
+marker: Step2a / Step2b / Step2c block
+reference: y = x diagonal
+```
+
+Purpose:
+
+> Check whether the small heldout400 split and the large unseen test tell the
+> same story.  Points near the diagonal mean the heldout result is consistent
+> with the larger test set.
+
+This figure is useful when the reader asks whether the large unseen evaluation
+changes the conclusions from the original heldout split.
+
+### Figure 16: Best Method Map on Large-Unseen
+
+Suggested output:
+
+```text
+16_best_method_map_unseen10000.png
+```
+
+Data source:
+
+```text
+step2_unseen10000_all_checkpoints_summary.csv
+```
+
+Plot:
+
+```text
+y-axis: train size {50, 200, 600, 1200}
+x-axis: regime
+cell color/text: best primary checkpoint among
+  2stage_val_mse
+  fy_val_fy_loss
+  spoplus_val_spoplus_loss
+```
+
+Purpose:
+
+> Provide the most compact winner map across all regimes and train sizes.  This
+> avoids hiding method reversals behind averaged line plots.
+
+### Figure 17: Gap vs Train Size for Representative Regimes
+
+Suggested output:
+
+```text
+17_unseen_gap_vs_train_size_selected_regimes.png
+```
+
+Data source:
+
+```text
+step2_unseen10000_all_checkpoints_summary.csv
+```
+
+Recommended regimes:
+
+```text
+Step2a additive rho050
+Step2b d4
+Step2b d8
+Step2c d4
+Step2c d8
+```
+
+Plot:
+
+```text
+x-axis: train size
+y-axis: large-unseen mean normalized decision gap
+lines: 2stage, FY selected by validation FY loss, SPO+ selected by validation SPO+ loss
+```
+
+Purpose:
+
+> Show whether the decision-focused advantage persists across training set
+> sizes rather than only after averaging over n.
+
+### Figure 18: Selector Delta Heatmap
+
+Suggested output:
+
+```text
+18_selector_delta_heatmap.png
+```
+
+Data source:
+
+```text
+step2_unseen10000_all_checkpoints_summary.csv
+```
+
+Compute:
+
+```text
+delta_FY =
+  gap(FY selected by validation decision gap)
+  - gap(FY selected by validation FY loss)
+
+delta_SPO+ =
+  gap(SPO+ selected by validation decision gap)
+  - gap(SPO+ selected by validation SPO+ loss)
+```
+
+Plot:
+
+```text
+y-axis: train size
+x-axis: regime
+color: selector delta
+panels: FY, SPO+
+```
+
+Positive means the surrogate-loss selector is better on the large unseen test.
+
+Purpose:
+
+> Extend Figure 05 by preserving the train-size dimension.  This tells whether
+> a selector advantage is broad or concentrated in a few regimes/sizes.
+
 ## Optional Per-Graph Diagnostics
 
 Use these only if local `unseen10000_per_graph.csv` files are present.  These
@@ -539,12 +682,12 @@ Purpose:
 > Explain training dynamics and checkpoint selection, especially when validation
 > decision gap and surrogate-loss selection disagree.
 
-### Figure 15: Selection Regret
+### Future Optional: Selection Regret
 
 Suggested output:
 
 ```text
-15_selection_regret.png
+future_selection_regret.png
 ```
 
 If per-epoch validation/unseen gaps are available:
@@ -587,19 +730,28 @@ For a concise report or advisor update, use this order:
 3. **Primary performance**
    Normalized unseen10000 gap vs degree.
 
-4. **Paired improvement**
+4. **Heldout / large-unseen consistency**
+   Show whether the original heldout split agrees with the larger unseen test.
+
+5. **Paired improvement**
    Heatmap of improvement over 2stage.
 
-5. **Checkpoint selector comparison**
+6. **Best method map**
+   Compact view of the winning primary checkpoint by regime and train size.
+
+7. **Train-size resolved representative regimes**
+   Show the sample-size dimension without averaging it away.
+
+8. **Checkpoint selector comparison**
    Surrogate-selected vs validation-gap-selected checkpoint.
 
-6. **Theta endpoint behavior**
+9. **Theta endpoint behavior**
    Show that FY and SPO+ learn different decision-oriented proxies.
 
-7. **Per-graph tail analysis**
+10. **Per-graph tail analysis**
    Optional; include if the mean effect needs explanation.
 
-8. **Trajectory dashboard**
+11. **Trajectory dashboard**
    Optional; include if checkpoint selection or training dynamics are questioned.
 
 ## Recommended Plotting Script
@@ -622,8 +774,9 @@ python surrogate_experiment_results/Step2/plot_step2_summary.py \
 ```
 
 The script should be robust to missing optional local files.  It should always
-generate figures 01-08 from root summary and label diagnostics, and only produce
-figures 09-15 when the required local per-graph or epoch files exist.
+generate figures 01-08 and 15-18 from root summaries and label diagnostics.
+It should only produce figures 09-14 when the required local per-graph or epoch
+files exist.
 
 ## Plotting Conventions
 
@@ -674,4 +827,3 @@ The plots should test this narrative:
 
 This narrative is plausible from the current summaries, but the plotting script
 should verify it visually before it becomes a report claim.
-

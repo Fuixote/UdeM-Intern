@@ -18,7 +18,8 @@ from typing import Iterable
 
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.colors import TwoSlopeNorm
+from matplotlib.colors import ListedColormap, TwoSlopeNorm
+from matplotlib.lines import Line2D
 
 
 PRIMARY_CHECKPOINTS = (
@@ -26,6 +27,12 @@ PRIMARY_CHECKPOINTS = (
     "fy_val_fy_loss",
     "spoplus_val_spoplus_loss",
 )
+
+HELDOUT_PRIMARY_COLUMNS = {
+    "2stage_val_mse": "2stage_val_mse",
+    "fy_val_fy_loss": "fy_val_fy",
+    "spoplus_val_spoplus_loss": "spoplus_val_spoplus",
+}
 
 CHECKPOINT_ORDER = (
     "2stage_val_mse",
@@ -166,6 +173,48 @@ def load_summary(path: Path) -> list[dict[str, object]]:
         )
         rows.append(normalized)
     return rows
+
+
+def load_heldout_primary(path: Path) -> list[dict[str, object]]:
+    """Convert heldout400 primary wide summary rows into checkpoint-level rows."""
+    rows: list[dict[str, object]] = []
+    for row in load_csv_rows(path):
+        for checkpoint, column in HELDOUT_PRIMARY_COLUMNS.items():
+            normalized = dict(row)
+            normalized["checkpoint_label"] = checkpoint
+            normalized["train_size_int"] = parse_int(row.get("train_size"), 0)
+            normalized["degree_int"] = parse_int(row.get("degree"))
+            normalized["heldout_mean_normalized_gap_float"] = parse_float(row.get(column))
+            rows.append(normalized)
+    return rows
+
+
+def best_primary_checkpoint_by_setting(rows: list[dict[str, object]]) -> dict[tuple[str, int], dict[str, object]]:
+    """Return the lowest normalized-gap primary checkpoint for each regime/train size."""
+    winners: dict[tuple[str, int], dict[str, object]] = {}
+    for row in rows:
+        checkpoint = row.get("checkpoint_label")
+        if checkpoint not in PRIMARY_CHECKPOINTS:
+            continue
+        regime = str(row.get("regime"))
+        train_size = row.get("train_size_int")
+        if not isinstance(train_size, int):
+            train_size = parse_int(row.get("train_size"))
+        if train_size is None:
+            continue
+        gap = row.get("test_mean_normalized_gap_float")
+        if isinstance(gap, str):
+            gap = parse_float(gap)
+        if gap is None or math.isnan(float(gap)):
+            continue
+        key = (regime, int(train_size))
+        current = winners.get(key)
+        current_gap = current.get("test_mean_normalized_gap_float") if current else math.inf
+        if isinstance(current_gap, str):
+            current_gap = parse_float(current_gap)
+        if current is None or float(gap) < float(current_gap):
+            winners[key] = row
+    return winners
 
 
 def split_from_dataset_name(name: str) -> str | None:
@@ -730,6 +779,197 @@ def plot_training_dashboard(step2_root: Path, out_dir: Path, formats: list[str],
     return save_figure(fig, out_dir, stem, formats)
 
 
+def plot_heldout_vs_unseen_primary_gap(
+    heldout_rows: list[dict[str, object]],
+    summary_rows: list[dict[str, object]],
+    out_dir: Path,
+    formats: list[str],
+) -> list[str]:
+    heldout_index = {
+        (str(row["regime"]), int(row["train_size_int"]), str(row["checkpoint_label"])): row
+        for row in heldout_rows
+        if row.get("checkpoint_label") in PRIMARY_CHECKPOINTS
+    }
+    block_markers = {"Step2a": "o", "Step2b": "s", "Step2c": "^"}
+
+    fig, ax = plt.subplots(figsize=(8.2, 6.6))
+    plotted_x: list[float] = []
+    plotted_y: list[float] = []
+    for checkpoint in PRIMARY_CHECKPOINTS:
+        for block, marker in block_markers.items():
+            xs, ys, sizes = [], [], []
+            for row in summary_rows:
+                if row.get("checkpoint_label") != checkpoint or row.get("block") != block:
+                    continue
+                key = (str(row["regime"]), int(row["train_size_int"]), checkpoint)
+                heldout = heldout_index.get(key)
+                if not heldout:
+                    continue
+                x = heldout["heldout_mean_normalized_gap_float"]
+                y = row["test_mean_normalized_gap_float"]
+                if math.isnan(float(x)) or math.isnan(float(y)):
+                    continue
+                xs.append(float(x))
+                ys.append(float(y))
+                sizes.append(32 + 0.04 * int(row["train_size_int"]))
+            if not xs:
+                continue
+            plotted_x.extend(xs)
+            plotted_y.extend(ys)
+            ax.scatter(
+                xs,
+                ys,
+                s=sizes,
+                marker=marker,
+                color=METHOD_COLORS[checkpoint],
+                alpha=0.72,
+                edgecolor="white",
+                linewidth=0.6,
+            )
+    if plotted_x and plotted_y:
+        lo = min(plotted_x + plotted_y)
+        hi = max(plotted_x + plotted_y)
+        pad = (hi - lo) * 0.08 if hi > lo else 0.001
+        ax.plot([lo - pad, hi + pad], [lo - pad, hi + pad], color="#555555", linestyle="--", linewidth=1)
+        ax.set_xlim(lo - pad, hi + pad)
+        ax.set_ylim(lo - pad, hi + pad)
+    method_handles = [
+        Line2D([0], [0], marker="o", linestyle="", color=METHOD_COLORS[c], label=METHOD_LABELS[c], markersize=7)
+        for c in PRIMARY_CHECKPOINTS
+    ]
+    block_handles = [
+        Line2D([0], [0], marker=m, linestyle="", color="#666666", label=b, markersize=7)
+        for b, m in block_markers.items()
+    ]
+    first_legend = ax.legend(handles=method_handles, loc="upper left", frameon=False, title="Checkpoint")
+    ax.add_artist(first_legend)
+    ax.legend(handles=block_handles, loc="lower right", frameon=False, title="Regime block")
+    ax.set_title("Heldout400 vs Large-Unseen Primary Performance")
+    ax.set_xlabel("Heldout400 mean normalized decision gap")
+    ax.set_ylabel("Large-unseen mean normalized decision gap")
+    return save_figure(fig, out_dir, "15_heldout_vs_unseen_primary_gap", formats)
+
+
+def plot_best_method_map_unseen10000(rows: list[dict[str, object]], out_dir: Path, formats: list[str]) -> list[str]:
+    regimes = sorted({str(r["regime"]) for r in rows}, key=regime_sort_key)
+    winners = best_primary_checkpoint_by_setting(rows)
+    method_codes = {
+        "2stage_val_mse": 0,
+        "fy_val_fy_loss": 1,
+        "spoplus_val_spoplus_loss": 2,
+    }
+    method_short = {
+        "2stage_val_mse": "2stg",
+        "fy_val_fy_loss": "FY",
+        "spoplus_val_spoplus_loss": "SPO+",
+    }
+    cmap = ListedColormap([METHOD_COLORS[c] for c in PRIMARY_CHECKPOINTS])
+    matrix = np.full((len(TRAIN_SIZES), len(regimes)), np.nan)
+    labels: dict[tuple[int, int], str] = {}
+    for i, train_size in enumerate(TRAIN_SIZES):
+        for j, regime in enumerate(regimes):
+            winner = winners.get((regime, train_size))
+            if not winner:
+                continue
+            checkpoint = str(winner["checkpoint_label"])
+            matrix[i, j] = method_codes[checkpoint]
+            labels[(i, j)] = method_short[checkpoint]
+
+    fig, ax = plt.subplots(figsize=(13.8, 4.8))
+    ax.imshow(np.ma.masked_invalid(matrix), aspect="auto", cmap=cmap, vmin=-0.5, vmax=2.5)
+    ax.set_yticks(range(len(TRAIN_SIZES)), [str(x) for x in TRAIN_SIZES])
+    ax.set_xticks(range(len(regimes)), [display_regime(r) for r in regimes], rotation=45, ha="right")
+    ax.set_ylabel("Training graphs")
+    ax.set_title("Best Primary Checkpoint on Large-Unseen Test")
+    for (i, j), label in labels.items():
+        ax.text(j, i, label, ha="center", va="center", color="white", fontsize=9, fontweight="bold")
+    handles = [
+        Line2D([0], [0], marker="s", linestyle="", color=METHOD_COLORS[c], label=METHOD_LABELS[c], markersize=9)
+        for c in PRIMARY_CHECKPOINTS
+    ]
+    ax.legend(handles=handles, loc="upper center", ncol=3, frameon=False, bbox_to_anchor=(0.5, 1.22))
+    return save_figure(fig, out_dir, "16_best_method_map_unseen10000", formats)
+
+
+def plot_gap_vs_train_size_selected_regimes(rows: list[dict[str, object]], out_dir: Path, formats: list[str]) -> list[str]:
+    selected_regimes = [
+        "step2a_additive_rho050",
+        "step2b_poly_d4",
+        "step2b_poly_d8",
+        "step2c_poly_d4_mult_eps050",
+        "step2c_poly_d8_mult_eps050",
+    ]
+    fig, axes = plt.subplots(2, 3, figsize=(15.5, 8.0), sharex=True)
+    axes_flat = axes.ravel()
+    for ax, regime in zip(axes_flat, selected_regimes):
+        for checkpoint in PRIMARY_CHECKPOINTS:
+            values = []
+            for train_size in TRAIN_SIZES:
+                matches = [
+                    row
+                    for row in rows
+                    if row.get("regime") == regime
+                    and row.get("checkpoint_label") == checkpoint
+                    and row.get("train_size_int") == train_size
+                ]
+                values.append(matches[0]["test_mean_normalized_gap_float"] if matches else math.nan)
+            ax.plot(
+                TRAIN_SIZES,
+                values,
+                marker="o",
+                linewidth=2,
+                color=METHOD_COLORS[checkpoint],
+                label=METHOD_LABELS[checkpoint],
+            )
+        ax.set_title(display_regime(regime))
+        ax.set_xticks(TRAIN_SIZES)
+    axes_flat[-1].axis("off")
+    handles, labels = axes_flat[0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc="upper center", ncol=3, frameon=False, bbox_to_anchor=(0.5, 1.02))
+    fig.supxlabel("Training graphs", y=0.03)
+    fig.supylabel("Mean normalized decision gap (lower is better)", x=0.02)
+    fig.suptitle("Large-Unseen Gap vs Train Size in Representative Regimes", y=1.08)
+    return save_figure(fig, out_dir, "17_unseen_gap_vs_train_size_selected_regimes", formats)
+
+
+def plot_selector_delta_heatmap(rows: list[dict[str, object]], out_dir: Path, formats: list[str]) -> list[str]:
+    panels = [
+        ("FY", compute_selector_deltas(rows, "fy_val_decision_gap", "fy_val_fy_loss")),
+        ("SPO+", compute_selector_deltas(rows, "spoplus_val_decision_gap", "spoplus_val_spoplus_loss")),
+    ]
+    regimes = sorted({str(r["regime"]) for r in rows}, key=regime_sort_key)
+    values_all = [float(row["selector_delta"]) for _, panel_rows in panels for row in panel_rows]
+    max_abs = max(abs(min(values_all)), abs(max(values_all))) if values_all else 1.0
+    norm = TwoSlopeNorm(vcenter=0.0, vmin=-max_abs, vmax=max_abs)
+
+    fig, axes = plt.subplots(1, 2, figsize=(15.5, 5.0), sharey=True)
+    image = None
+    for ax, (title, panel_rows) in zip(axes, panels):
+        matrix = np.full((len(TRAIN_SIZES), len(regimes)), np.nan)
+        for row in panel_rows:
+            regime = str(row["regime"])
+            train_size = parse_int(row.get("train_size"))
+            if train_size not in TRAIN_SIZES or regime not in regimes:
+                continue
+            i = TRAIN_SIZES.index(train_size)
+            j = regimes.index(regime)
+            matrix[i, j] = float(row["selector_delta"])
+        image = ax.imshow(matrix, aspect="auto", cmap="PRGn", norm=norm)
+        ax.set_title(f"{title}: surrogate-loss selector vs val-gap selector")
+        ax.set_yticks(range(len(TRAIN_SIZES)), [str(x) for x in TRAIN_SIZES])
+        ax.set_xticks(range(len(regimes)), [display_regime(r) for r in regimes], rotation=45, ha="right")
+        ax.set_ylabel("Training graphs")
+        for i in range(matrix.shape[0]):
+            for j in range(matrix.shape[1]):
+                value = matrix[i, j]
+                if not math.isnan(value):
+                    ax.text(j, i, f"{value:.4f}", ha="center", va="center", fontsize=6.5, color="black")
+    if image is not None:
+        fig.colorbar(image, ax=axes.ravel().tolist(), shrink=0.78, label="Selector delta on large-unseen normalized gap\npositive = surrogate-loss selector better")
+    fig.suptitle("Checkpoint Selection Delta by Regime and Train Size", y=1.02)
+    return save_figure(fig, out_dir, "18_selector_delta_heatmap", formats)
+
+
 def write_manifest(out_dir: Path, written: list[str], skipped: list[str]) -> None:
     manifest = {
         "generated": written,
@@ -744,6 +984,7 @@ def main() -> None:
     args.out_dir.mkdir(parents=True, exist_ok=True)
 
     summary_rows = load_summary(args.summary_csv)
+    heldout_rows = load_heldout_primary(args.heldout_csv)
     label_records = load_label_diagnostics(args.label_diagnostics_root)
     graph_records = load_graph_diagnostics(args.label_diagnostics_root)
 
@@ -765,6 +1006,10 @@ def main() -> None:
         ("12_training_trajectory_dashboard_step2a", lambda: plot_training_dashboard(args.step2_root, args.out_dir, args.formats, "step2a_additive_rho050", "12_training_trajectory_dashboard_step2a", "Training Trajectory Dashboard: Step2a, n=1200")),
         ("13_training_trajectory_dashboard_step2b_d8", lambda: plot_training_dashboard(args.step2_root, args.out_dir, args.formats, "step2b_poly_d8", "13_training_trajectory_dashboard_step2b_d8", "Training Trajectory Dashboard: Step2b d8, n=1200")),
         ("14_training_trajectory_dashboard_step2c_d8", lambda: plot_training_dashboard(args.step2_root, args.out_dir, args.formats, "step2c_poly_d8_mult_eps050", "14_training_trajectory_dashboard_step2c_d8", "Training Trajectory Dashboard: Step2c d8, n=1200")),
+        ("15_heldout_vs_unseen_primary_gap", lambda: plot_heldout_vs_unseen_primary_gap(heldout_rows, summary_rows, args.out_dir, args.formats)),
+        ("16_best_method_map_unseen10000", lambda: plot_best_method_map_unseen10000(summary_rows, args.out_dir, args.formats)),
+        ("17_unseen_gap_vs_train_size_selected_regimes", lambda: plot_gap_vs_train_size_selected_regimes(summary_rows, args.out_dir, args.formats)),
+        ("18_selector_delta_heatmap", lambda: plot_selector_delta_heatmap(summary_rows, args.out_dir, args.formats)),
     ]
 
     for name, plotter in plotters:

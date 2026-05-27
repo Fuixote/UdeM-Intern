@@ -13,7 +13,11 @@
     "surrogate_experiment_results/Step2/plot_results/11_hard_graph_attribution.png",
     "surrogate_experiment_results/Step2/plot_results/12_training_trajectory_dashboard_step2a.png",
     "surrogate_experiment_results/Step2/plot_results/13_training_trajectory_dashboard_step2b_d8.png",
-    "surrogate_experiment_results/Step2/plot_results/14_training_trajectory_dashboard_step2c_d8.png"
+    "surrogate_experiment_results/Step2/plot_results/14_training_trajectory_dashboard_step2c_d8.png",
+    "surrogate_experiment_results/Step2/plot_results/15_heldout_vs_unseen_primary_gap.png",
+    "surrogate_experiment_results/Step2/plot_results/16_best_method_map_unseen10000.png",
+    "surrogate_experiment_results/Step2/plot_results/17_unseen_gap_vs_train_size_selected_regimes.png",
+    "surrogate_experiment_results/Step2/plot_results/18_selector_delta_heatmap.png"
   ],
   "skipped": []
 }
