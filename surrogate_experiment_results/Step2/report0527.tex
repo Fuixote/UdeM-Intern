@@ -1,0 +1,344 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{amsmath}
+\usepackage{array}
+\usepackage{enumitem}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!55!black,
+  citecolor=blue!55!black,
+  urlcolor=blue!55!black
+}
+
+\captionsetup{font=small, labelfont=bf}
+\setlist[itemize]{leftmargin=1.2em, itemsep=0.2em, topsep=0.3em}
+\setlist[enumerate]{leftmargin=1.4em, itemsep=0.2em, topsep=0.3em}
+
+\newcommand{\plotdirlocal}{plot_results}
+\newcommand{\plotdirroot}{surrogate_experiment_results/Step2/plot_results}
+\newcommand{\stepfig}[2]{%
+  \IfFileExists{\plotdirlocal/#1}{%
+    \includegraphics[width=#2\linewidth]{\plotdirlocal/#1}%
+  }{%
+    \IfFileExists{\plotdirroot/#1}{%
+      \includegraphics[width=#2\linewidth]{\plotdirroot/#1}%
+    }{%
+      \fbox{\parbox{#2\linewidth}{\centering Missing figure: \texttt{\detokenize{#1}}}}%
+    }%
+  }%
+}
+\newcommand{\gap}{\mathrm{gap}}
+\newcommand{\E}{\mathbb{E}}
+
+\title{Step2 Synthetic-Label Surrogate Experiments: FY vs SPO+ under Controlled Misspecification}
+\author{}
+\date{May 27, 2026}
+
+\begin{document}
+\maketitle
+
+\section{Background and Experimental Setup}
+
+Step2 extends the Step1b/Step1c surrogate comparison by changing the \emph{synthetic label generation regime} while keeping the downstream kidney exchange optimization problem fixed. The controlled factors are:
+\begin{itemize}
+  \item the KEP downstream optimization oracle and feasible matching structure;
+  \item the two-feature linear probe, \(\widehat w_e = \theta_1 u_e + \theta_2 c_e\), where \(u_e\) is normalized utility and \(c_e\) is recipient cPRA;
+  \item the train sizes \(n\in\{50,200,600,1200\}\), validation protocol, checkpoint rules, and large-unseen evaluation protocol;
+  \item the evaluation metric: synthetic-label decision gap and mean normalized decision gap, where lower is better.
+\end{itemize}
+
+The main question is whether decision-focused surrogates, FY and SPO+, produce better KEP decisions than a two-stage reward-fitting baseline as synthetic labels become increasingly nonlinear and noisy. Step2 is therefore a controlled misspecification study rather than a new graph-generation study: graph structures are held fixed across label regimes, while labels are regenerated.
+
+\paragraph{Label regimes.}
+Let \(b_e = 10 u_e + 5 c_e\) denote the clean linear signal, and let \(\mu_G\) denote the graph-level mean of \(b_e\). The Step2 grid contains nine label regimes: one Step2a regime, four Step2b degrees, and four Step2c degrees.
+
+\begin{itemize}
+  \item \textbf{Step2a: additive linear Gaussian noise.} This is a near-linear bridge benchmark:
+  \[
+    w^{\mathrm{syn}}_e = \max\{0, b_e + \epsilon_e\},
+    \qquad
+    \epsilon_e \sim \mathcal N\bigl(0,(\rho\mu_G)^2\bigr),
+    \qquad \rho=0.5.
+  \]
+  The conditional mean remains close to linear, so the 2stage MSE baseline is expected to be strong.
+
+  \item \textbf{Step2b: noiseless polynomial degree labels.} This creates deterministic misspecification:
+  \[
+    q_e = \frac{b_e}{\mu_G+\delta},\qquad
+    r_e^{(d)} = (q_e + \kappa)^d - \kappa^d,
+  \]
+  \[
+    w^{\mathrm{syn}}_e = \max\left\{0,\mu_G\frac{r_e^{(d)}}{\frac{1}{|E_G|}\sum_{e'\in E_G} r_{e'}^{(d)} + \delta}\right\},
+    \qquad d\in\{1,2,4,8\},\quad \kappa=3.
+  \]
+  Degree \(d=1\) is close to the clean-linear case; higher degrees increasingly distort the reward surface while keeping graph-level scale controlled.
+
+  \item \textbf{Step2c: polynomial degree plus multiplicative noise.} This combines deterministic nonlinear misspecification with edge-wise multiplicative noise:
+  \[
+    w^{\mathrm{syn}}_e = \max\{0, m_e^{(d)}\eta_e\},
+    \qquad
+    \eta_e \sim \mathrm{Uniform}(1-\bar\epsilon,1+\bar\epsilon),
+    \qquad \bar\epsilon=0.5,
+  \]
+  where \(m_e^{(d)}\) is the graph-rescaled Step2b polynomial label before multiplicative noise. This is the hardest block in the experiment because it combines nonlinear and noisy misspecification.
+\end{itemize}
+
+\paragraph{Methods and checkpoint rules.}
+The primary method rows are:
+\begin{enumerate}
+  \item \textbf{2stage}: MSE reward fitting, checkpoint selected by validation MSE;
+  \item \textbf{FY}: decision-focused FY training, primary checkpoint selected by validation FY loss;
+  \item \textbf{SPO+}: decision-focused SPO+ training, primary checkpoint selected by validation SPO+ loss.
+\end{enumerate}
+For selector diagnostics, FY and SPO+ checkpoints selected by validation decision gap are also evaluated. Thus the large-unseen summary contains
+\[
+  9\text{ regimes}\times 4\text{ train sizes}\times 5\text{ checkpoint rows}=180
+\]
+model-evaluation rows.
+
+\paragraph{Metrics.}
+For a graph \(G\), let \(y^*(w)\) be the KEP solution under synthetic labels \(w\), and let \(y^*(\widehat w_\theta)\) be the solution induced by predicted weights. The synthetic-label decision gap is
+\[
+  \gap_G(\theta) = w^\top y^*(w) - w^\top y^*(\widehat w_\theta).
+\]
+The normalized gap divides the gap by a graph-level oracle scale, making results more comparable across label regimes. Throughout this report, lower mean normalized decision gap is better. Paired improvement over 2stage is defined so that higher values are better.
+
+\begin{table}[H]
+\centering
+\caption{Representative Step2 dataset statistics for main2000. The selected rows show that label regimes become harder in a controlled way. Higher label standard deviation and lower clean-label correlation indicate stronger departure from the clean two-feature signal.}
+\label{tab:label-qa}
+\begin{tabular}{lrrrr}
+\toprule
+Dataset & Edges & Label mean & Label std & Corr(clean,label) \\
+\midrule
+Step2a additive rho050 & 492,684 & 6.1069 & 4.0595 & 0.7290 \\
+Step2b polynomial d1 & 492,684 & 5.9516 & 3.1484 & 1.0000 \\
+Step2b polynomial d8 & 492,684 & 5.9769 & 6.8146 & 0.8817 \\
+Step2c polynomial d1 + noise & 492,684 & 5.9518 & 3.6971 & 0.8510 \\
+Step2c polynomial d8 + noise & 492,684 & 5.9751 & 7.2867 & 0.8237 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Representative large-unseen normalized decision gaps at train size 1200. Lower is better. These rows illustrate the main pattern: 2stage remains competitive in the near-linear Step2a regime, while FY and SPO+ recover substantial decision quality in high-degree regimes.}
+\label{tab:representative-unseen}
+\begin{tabular}{lrrr}
+\toprule
+Regime & 2stage (val MSE) & FY (val FY) & SPO+ (val SPO+) \\
+\midrule
+Step2a additive rho050 & 0.06067 & 0.06068 & 0.06072 \\
+Step2b polynomial d8 & 0.05737 & 0.04759 & 0.04763 \\
+Step2c polynomial d8 + noise & 0.08400 & 0.07436 & 0.07431 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Figures and Interpretation}
+
+This section presents dataset validation, primary performance, checkpoint-selection behavior, parameter diagnostics, and representative per-graph/trajectory diagnostics. Figures 1--8 and 15--18 summarize the main evidence; Figures 9--14 provide representative diagnostics for interpreting the aggregate results.
+
+\subsection*{Label-regime validation}
+
+\begin{figure}[H]
+\centering
+\stepfig{01_label_std_and_corr_by_degree.png}{0.96}
+\caption{Label QA by degree. The x-axis is polynomial degree \(d\in\{1,2,4,8\}\). The left y-axis shows synthetic-label standard deviation, and the right y-axis shows correlation between the clean linear label and the synthetic label. Panels separate Step2b noiseless polynomial labels and Step2c polynomial labels with multiplicative noise; Step2a is shown as a reference. The figure answers whether increasing degree and noise make the synthetic label regimes progressively harder. Higher standard deviation and lower correlation indicate stronger misspecification.}
+\label{fig:label-qa-degree}
+\end{figure}
+
+\noindent\textbf{How to read.} Step2b and Step2c should both show rising label variance as degree increases. Step2c should show lower clean-label correlation than Step2b because multiplicative noise is added. This supports the claim that Step2 constructs a controlled difficulty axis rather than arbitrary labels.
+
+\begin{figure}[H]
+\centering
+\stepfig{02_main_vs_unseen_label_alignment.png}{0.96}
+\caption{Main-vs-unseen label alignment. Each panel compares a label statistic between the main2000 training pool on the x-axis and the unseen10000 evaluation pool on the y-axis. Points are label regimes; colors indicate Step2a, Step2b, or Step2c. The dashed diagonal is \(y=x\). Points close to the diagonal suggest that the large-unseen test uses the same label regime rather than an unintended distribution shift.}
+\label{fig:main-unseen-alignment}
+\end{figure}
+
+\noindent\textbf{How to read.} The closer points are to the diagonal, the better the train and large-unseen label distributions align. This figure supports interpreting unseen10000 as a larger same-regime evaluation set.
+
+\subsection*{Primary performance and heldout consistency}
+
+\begin{figure}[H]
+\centering
+\stepfig{03_unseen_normalized_gap_vs_degree.png}{0.96}
+\caption{Primary normalized decision gap versus polynomial degree on unseen10000. The x-axis is degree, and the y-axis is mean normalized decision gap, where lower is better. Panels separate Step2b and Step2c. Lines correspond to the primary checkpoints: 2stage selected by validation MSE, FY selected by validation FY loss, and SPO+ selected by validation SPO+ loss. The figure asks whether decision-focused methods recover decision quality as label misspecification increases.}
+\label{fig:primary-gap-degree}
+\end{figure}
+
+\noindent\textbf{How to read.} Degree 1 should be easy and close to clean-linear. At degree 4 and especially degree 8, the 2stage curve should rise relative to FY and SPO+, suggesting that decision-focused training is more useful under stronger misspecification.
+
+\begin{figure}[H]
+\centering
+\stepfig{15_heldout_vs_unseen_primary_gap.png}{0.82}
+\caption{Heldout400 versus large-unseen primary performance. The x-axis is heldout400 mean normalized decision gap, and the y-axis is unseen10000 mean normalized decision gap. Colors indicate the primary checkpoint family, and markers indicate Step2a, Step2b, or Step2c. The dashed diagonal is \(y=x\). Lower values are better on both axes. The figure asks whether the small heldout split and the large-unseen evaluation tell a consistent story.}
+\label{fig:heldout-unseen}
+\end{figure}
+
+\noindent\textbf{How to read.} Points near the diagonal suggest that the heldout split and large-unseen test agree. Substantial departures would suggest that a conclusion from heldout400 should be checked against unseen10000 before being reported strongly.
+
+\begin{figure}[H]
+\centering
+\stepfig{04_paired_improvement_heatmap.png}{0.98}
+\caption{Paired improvement over 2stage on unseen10000. The x-axis lists label regimes, the y-axis lists train sizes, and each panel is a checkpoint rule. Cell color is paired mean raw-gap improvement over the 2stage baseline, so higher and more positive is better. The heatmap asks where decision-focused training improves paired decision quality over 2stage.}
+\label{fig:paired-improvement-heatmap}
+\end{figure}
+
+\noindent\textbf{How to read.} Near-linear regimes should have small or mixed improvements, while high-degree Step2b and Step2c regimes should show larger positive improvements for FY and SPO+. This plot is the most compact view of where decision-focused training helps.
+
+\begin{figure}[H]
+\centering
+\stepfig{16_best_method_map_unseen10000.png}{0.96}
+\caption{Best primary checkpoint map on unseen10000. The x-axis is label regime, and the y-axis is train size. Each cell reports the primary checkpoint with the lowest mean normalized decision gap among 2stage, FY selected by validation FY loss, and SPO+ selected by validation SPO+ loss. Cell color and text identify the winner. Lower gap is better; this map asks which method wins in each regime-size setting.}
+\label{fig:best-method-map}
+\end{figure}
+
+\noindent\textbf{How to read.} The map should show that no method globally dominates. Step2a and Step2b d1 are expected to be close, while high-degree regimes should more often favor FY or SPO+.
+
+\begin{figure}[H]
+\centering
+\stepfig{17_unseen_gap_vs_train_size_selected_regimes.png}{0.98}
+\caption{Large-unseen normalized gap versus train size for representative regimes. The x-axis is the number of training graphs, and the y-axis is mean normalized decision gap, where lower is better. Lines correspond to 2stage, FY selected by validation FY loss, and SPO+ selected by validation SPO+ loss. Panels show Step2a, Step2b d4/d8, and Step2c d4/d8. The figure asks whether the decision-focused advantage persists across train sizes rather than only after averaging over \(n\).}
+\label{fig:gap-train-size}
+\end{figure}
+
+\noindent\textbf{How to read.} A robust decision-focused advantage appears when FY/SPO+ remain below 2stage across multiple train sizes. If curves cross, the regime may be sensitive to sample size or checkpoint selection.
+
+\subsection*{Checkpoint selection diagnostics}
+
+\begin{figure}[H]
+\centering
+\stepfig{05_selector_delta_fy_spoplus.png}{0.92}
+\caption{Selector comparison averaged by regime. For FY, the plotted value is the unseen10000 gap of the validation-decision-gap checkpoint minus the unseen10000 gap of the validation-FY-loss checkpoint. For SPO+, the analogous comparison is validation-decision-gap checkpoint minus validation-SPO+-loss checkpoint. The y-axis is selector delta; positive means the surrogate-loss selector is better. The figure asks whether validation decision gap is a stable checkpoint selector.}
+\label{fig:selector-delta-mean}
+\end{figure}
+
+\noindent\textbf{How to read.} Positive bars mean the surrogate validation loss selects a checkpoint with lower large-unseen gap than validation decision gap selection. Negative bars mean validation decision gap selection is better. Values close to zero indicate that the two selection rules are nearly interchangeable after averaging over train sizes.
+
+\begin{figure}[H]
+\centering
+\stepfig{18_selector_delta_heatmap.png}{0.98}
+\caption{Selector delta heatmap by regime and train size. The x-axis is label regime, the y-axis is train size, and panels separate FY and SPO+. Color is selector delta on unseen10000 normalized gap: validation-decision-gap selected gap minus surrogate-loss selected gap. Positive values mean the surrogate-loss selector is better; negative values mean validation decision gap selection is better. The figure asks whether selector effects are broad or concentrated in specific regimes and sample sizes.}
+\label{fig:selector-delta-heatmap}
+\end{figure}
+
+\noindent\textbf{How to read.} Read green cells as settings where the surrogate-loss selector is better than the validation-gap selector; read purple cells as the opposite. The heatmap shows whether a selector advantage is broad across train sizes or concentrated in a few regime-size cells.
+
+\begin{figure}[H]
+\centering
+\stepfig{06_selected_epoch_heatmap.png}{0.98}
+\caption{Selected checkpoint epochs. The x-axis is label regime, the y-axis is train size, and panels correspond to FY selected by validation FY loss, FY selected by validation decision gap, SPO+ selected by validation SPO+ loss, and SPO+ selected by validation decision gap. Cell color and text report selected epoch. The figure asks whether selectors choose early or late checkpoints, which is important because FY and SPO+ may have different training dynamics.}
+\label{fig:selected-epoch}
+\end{figure}
+
+\noindent\textbf{How to read.} Darker/larger epoch values mean the checkpoint rule prefers later training states. Comparing panels shows whether validation decision gap and surrogate losses select similar or different parts of the same trajectory.
+
+\subsection*{Parameter and proxy diagnostics}
+
+\begin{figure}[H]
+\centering
+\stepfig{07_theta_endpoints.png}{0.98}
+\caption{Selected parameter endpoints. The x-axis is \(\theta_1\), the y-axis is \(\theta_2\), and panels separate Step2a, Step2b, and Step2c. Colors correspond to primary checkpoint families. The black star marks the clean linear coefficient \([10,5]\). The figure asks whether FY and SPO+ simply recover the clean reward coefficient or instead learn decision-oriented linear proxies.}
+\label{fig:theta-endpoints}
+\end{figure}
+
+\noindent\textbf{How to read.} Points near the black star are close to the clean linear reward coefficients. Points that move away from \([10,5]\) but still achieve lower decision gaps suggest that the method is learning a decision-oriented proxy rather than a calibrated reward predictor.
+
+\begin{figure}[H]
+\centering
+\stepfig{08_theta_norm_vs_gap.png}{0.98}
+\caption{Parameter scale versus decision quality. The x-axis is \(\|\theta\|_2\), and the y-axis is mean normalized decision gap, where lower is better. Panels separate Step2a, Step2b, and Step2c; colors indicate primary checkpoint families. The figure asks whether parameter scale, especially SPO+'s margin-like scaling behavior, is associated with decision quality.}
+\label{fig:theta-norm-gap}
+\end{figure}
+
+\noindent\textbf{How to read.} Lower points are better because they have smaller decision gap. Horizontal movement shows changes in parameter scale; this is useful for detecting whether improved decision quality comes with larger-margin or differently scaled proxy rewards.
+
+\subsection*{Representative per-graph and trajectory diagnostics}
+
+\begin{figure}[H]
+\centering
+\stepfig{09_paired_delta_histograms.png}{0.98}
+\caption{Per-graph paired improvement distributions for representative regimes. The x-axis is per-graph normalized-gap improvement over 2stage, and the y-axis is density. Panels show Step2a, Step2b d8, and Step2c d8 at train size 1200; colors compare FY and SPO+. Higher values to the right indicate larger per-graph improvement. The figure asks whether mean gains come from broad small improvements or a small tail of hard graphs.}
+\label{fig:paired-delta-hist}
+\end{figure}
+
+\noindent\textbf{How to read.} Mass to the right of zero means the decision-focused method improves over 2stage on those graphs; mass to the left means it loses. A narrow distribution near zero means most graphs are similar across methods, while a long positive tail means a few hard graphs drive much of the mean improvement.
+
+\begin{figure}[H]
+\centering
+\stepfig{10_tail_gap_ecdf.png}{0.98}
+\caption{Tail behavior of per-graph normalized decision gaps. The x-axis is per-graph normalized decision gap, the y-axis is the empirical CDF, and colors indicate primary checkpoint families. Panels show representative regimes. Lower gaps are better; curves shifted left suggest better tail and overall per-graph performance. The figure asks whether FY/SPO+ reduce hard-case gaps rather than only improving the mean.}
+\label{fig:tail-ecdf}
+\end{figure}
+
+\noindent\textbf{How to read.} A curve that rises faster and lies further left indicates more graphs with small decision gap. Separation in the right tail is especially important, because it shows whether a method reduces large-gap hard cases.
+
+\begin{figure}[H]
+\centering
+\stepfig{11_hard_graph_attribution.png}{0.98}
+\caption{Hard-graph attribution. The x-axis is graph label-to-clean mean ratio, and the y-axis is per-graph normalized-gap improvement over 2stage. Panels show representative regimes at train size 1200. Colors compare FY and SPO+. The vertical line at ratio 1 marks no graph-level label-scale shift; the horizontal line marks no improvement. The figure asks whether decision-focused gains are associated with graph-level label rescaling or distortion.}
+\label{fig:hard-graph-attribution}
+\end{figure}
+
+\noindent\textbf{How to read.} Points above the horizontal line are graphs where FY or SPO+ improves over 2stage. If improvements concentrate away from ratio 1, then decision-focused gains are associated with graph-level label distortion rather than uniformly distributed across all graphs.
+
+\begin{figure}[H]
+\centering
+\stepfig{12_training_trajectory_dashboard_step2a.png}{0.98}
+\caption{Training trajectory dashboard for Step2a at train size 1200. Panels show epoch on the x-axis and validation surrogate objective, validation decision gap, \(\theta_1\), and \(\theta_2\) on the y-axes. Colors compare FY and SPO+. The figure asks how training and checkpoint selection behave in the near-linear bridge regime.}
+\label{fig:traj-step2a}
+\end{figure}
+
+\noindent\textbf{How to read.} Step2a is a near-linear bridge, so large decision-focused gains are not expected. The useful signal is whether FY and SPO+ training remain stable and whether validation surrogate objectives and validation decision gap point to similar or different checkpoint regions.
+
+\begin{figure}[H]
+\centering
+\stepfig{13_training_trajectory_dashboard_step2b_d8.png}{0.98}
+\caption{Training trajectory dashboard for Step2b d8 at train size 1200. The x-axis is epoch; y-axes show validation surrogate objective, validation decision gap, and parameter trajectories. This representative high-degree deterministic-misspecification regime helps diagnose how FY and SPO+ move through parameter space before the selected checkpoint.}
+\label{fig:traj-step2b-d8}
+\end{figure}
+
+\noindent\textbf{How to read.} In this deterministic high-misspecification regime, look for whether FY and SPO+ reduce validation decision gap while moving to different \(\theta\) regions. Divergent trajectories can explain why both methods improve over 2stage without selecting identical proxy rewards.
+
+\begin{figure}[H]
+\centering
+\stepfig{14_training_trajectory_dashboard_step2c_d8.png}{0.98}
+\caption{Training trajectory dashboard for Step2c d8 at train size 1200. The x-axis is epoch; panels show validation surrogate objective, validation decision gap, \(\theta_1\), and \(\theta_2\). This representative nonlinear-and-noisy regime is useful for diagnosing why FY and SPO+ may select different epochs and parameter scales.}
+\label{fig:traj-step2c-d8}
+\end{figure}
+
+\noindent\textbf{How to read.} Step2c d8 combines nonlinear labels with multiplicative noise, so checkpoint selection can be less smooth. Compare validation surrogate objective, validation decision gap, and parameter movement to see whether the selected checkpoint is driven by stable progress or by a noisy validation signal.
+
+\section{Main Conclusions}
+
+\begin{enumerate}
+  \item \textbf{Step2 label regimes are controlled and progressively harder.} The QA figures and diagnostics support that graph structures are fixed while label variance and clean-label decorrelation increase with polynomial degree and multiplicative noise. Step2a is a noisy near-linear bridge, Step2b isolates deterministic misspecification, and Step2c combines nonlinear and noisy misspecification.
+
+  \item \textbf{Step2a and Step2b d1 are near-linear checks where 2stage is already strong.} In the additive bridge regime, the large-unseen normalized gaps for 2stage, FY, and SPO+ are very close. In Step2b d1, all methods are near oracle decision quality. These regimes are useful sanity checks rather than the main source of decision-focused gains.
+
+  \item \textbf{Higher-degree Step2b and Step2c regimes expose reward-model misspecification.} As degree increases, the two-feature linear reward model becomes less well aligned with the synthetic labels. In these settings, the 2stage reward-fitting baseline incurs larger decision gaps.
+
+  \item \textbf{FY and SPO+ recover meaningful decision quality under high-degree misspecification.} The large-unseen summary is consistent with substantial improvements in Step2b d8 and Step2c d8. For example, at train size 1200 in Step2c d8, the mean normalized gap decreases from roughly 0.0840 for 2stage to about 0.0744 for FY and 0.0743 for SPO+.
+
+  \item \textbf{FY and SPO+ are both useful; neither globally dominates.} The best-method map is the most compact summary of this point. In high-misspecification regimes both methods can outperform 2stage, but method winners vary across regimes and train sizes.
+
+  \item \textbf{Checkpoint selector matters.} Validation decision gap and validation surrogate loss can select different epochs. The selector-delta figures suggest that neither direct validation decision gap nor surrogate-loss selection should be treated as universally superior; the better rule depends on regime, training size, and surrogate family.
+
+  \item \textbf{Theta and trajectory diagnostics suggest decision-oriented proxies.} FY and SPO+ do not merely recover the clean coefficient \([10,5]\). Their endpoints, norms, and trajectories suggest that they learn linear proxies that are useful for induced KEP decisions under synthetic-label misspecification.
+\end{enumerate}
+
+\paragraph{Limitations.}
+Figures 9--14 are representative diagnostics rather than exhaustive visualizations of every run and every graph. All reported quantities are synthetic-label decision quality under designed synthetic regimes. They should not be interpreted as real clinical outcome regret or as claims about actual transplant outcomes.
+
+\end{document}

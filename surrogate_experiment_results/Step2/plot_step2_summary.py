@@ -875,19 +875,20 @@ def plot_best_method_map_unseen10000(rows: list[dict[str, object]], out_dir: Pat
             matrix[i, j] = method_codes[checkpoint]
             labels[(i, j)] = method_short[checkpoint]
 
-    fig, ax = plt.subplots(figsize=(13.8, 4.8))
+    fig, ax = plt.subplots(figsize=(15.5, 5.8))
     ax.imshow(np.ma.masked_invalid(matrix), aspect="auto", cmap=cmap, vmin=-0.5, vmax=2.5)
     ax.set_yticks(range(len(TRAIN_SIZES)), [str(x) for x in TRAIN_SIZES])
-    ax.set_xticks(range(len(regimes)), [display_regime(r) for r in regimes], rotation=45, ha="right")
+    ax.set_xticks(range(len(regimes)), [display_regime(r) for r in regimes], rotation=32, ha="right")
     ax.set_ylabel("Training graphs")
-    ax.set_title("Best Primary Checkpoint on Large-Unseen Test")
+    ax.set_title("Best Primary Checkpoint on Large-Unseen Test", pad=18)
     for (i, j), label in labels.items():
-        ax.text(j, i, label, ha="center", va="center", color="white", fontsize=9, fontweight="bold")
+        ax.text(j, i, label, ha="center", va="center", color="white", fontsize=8, fontweight="bold")
     handles = [
         Line2D([0], [0], marker="s", linestyle="", color=METHOD_COLORS[c], label=METHOD_LABELS[c], markersize=9)
         for c in PRIMARY_CHECKPOINTS
     ]
-    ax.legend(handles=handles, loc="upper center", ncol=3, frameon=False, bbox_to_anchor=(0.5, 1.22))
+    ax.legend(handles=handles, loc="upper center", ncol=3, frameon=False, bbox_to_anchor=(0.5, 1.30))
+    fig.subplots_adjust(top=0.76, bottom=0.24, left=0.08, right=0.98)
     return save_figure(fig, out_dir, "16_best_method_map_unseen10000", formats)
 
 
@@ -899,7 +900,7 @@ def plot_gap_vs_train_size_selected_regimes(rows: list[dict[str, object]], out_d
         "step2c_poly_d4_mult_eps050",
         "step2c_poly_d8_mult_eps050",
     ]
-    fig, axes = plt.subplots(2, 3, figsize=(15.5, 8.0), sharex=True)
+    fig, axes = plt.subplots(2, 3, figsize=(16.8, 9.2), sharex=True)
     axes_flat = axes.ravel()
     for ax, regime in zip(axes_flat, selected_regimes):
         for checkpoint in PRIMARY_CHECKPOINTS:
@@ -925,10 +926,11 @@ def plot_gap_vs_train_size_selected_regimes(rows: list[dict[str, object]], out_d
         ax.set_xticks(TRAIN_SIZES)
     axes_flat[-1].axis("off")
     handles, labels = axes_flat[0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc="upper center", ncol=3, frameon=False, bbox_to_anchor=(0.5, 1.02))
-    fig.supxlabel("Training graphs", y=0.03)
+    fig.legend(handles, labels, loc="upper center", ncol=3, frameon=False, bbox_to_anchor=(0.5, 0.94))
+    fig.supxlabel("Training graphs", y=0.045)
     fig.supylabel("Mean normalized decision gap (lower is better)", x=0.02)
-    fig.suptitle("Large-Unseen Gap vs Train Size in Representative Regimes", y=1.08)
+    fig.suptitle("Large-Unseen Gap vs Train Size in Representative Regimes", y=0.99)
+    fig.subplots_adjust(top=0.82, bottom=0.12, left=0.08, right=0.98, hspace=0.36, wspace=0.30)
     return save_figure(fig, out_dir, "17_unseen_gap_vs_train_size_selected_regimes", formats)
 
 
@@ -942,9 +944,9 @@ def plot_selector_delta_heatmap(rows: list[dict[str, object]], out_dir: Path, fo
     max_abs = max(abs(min(values_all)), abs(max(values_all))) if values_all else 1.0
     norm = TwoSlopeNorm(vcenter=0.0, vmin=-max_abs, vmax=max_abs)
 
-    fig, axes = plt.subplots(1, 2, figsize=(15.5, 5.0), sharey=True)
+    fig, axes = plt.subplots(2, 1, figsize=(14.5, 8.8), sharex=True, sharey=True)
     image = None
-    for ax, (title, panel_rows) in zip(axes, panels):
+    for panel_idx, (ax, (title, panel_rows)) in enumerate(zip(axes, panels)):
         matrix = np.full((len(TRAIN_SIZES), len(regimes)), np.nan)
         for row in panel_rows:
             regime = str(row["regime"])
@@ -955,18 +957,21 @@ def plot_selector_delta_heatmap(rows: list[dict[str, object]], out_dir: Path, fo
             j = regimes.index(regime)
             matrix[i, j] = float(row["selector_delta"])
         image = ax.imshow(matrix, aspect="auto", cmap="PRGn", norm=norm)
-        ax.set_title(f"{title}: surrogate-loss selector vs val-gap selector")
+        ax.set_title(f"{title}: surrogate-loss selector vs val-gap selector", pad=10)
         ax.set_yticks(range(len(TRAIN_SIZES)), [str(x) for x in TRAIN_SIZES])
-        ax.set_xticks(range(len(regimes)), [display_regime(r) for r in regimes], rotation=45, ha="right")
+        ax.set_xticks(range(len(regimes)), [display_regime(r) for r in regimes], rotation=32, ha="right")
+        ax.tick_params(axis="x", labelbottom=panel_idx == len(panels) - 1)
         ax.set_ylabel("Training graphs")
-        for i in range(matrix.shape[0]):
-            for j in range(matrix.shape[1]):
-                value = matrix[i, j]
-                if not math.isnan(value):
-                    ax.text(j, i, f"{value:.4f}", ha="center", va="center", fontsize=6.5, color="black")
     if image is not None:
-        fig.colorbar(image, ax=axes.ravel().tolist(), shrink=0.78, label="Selector delta on large-unseen normalized gap\npositive = surrogate-loss selector better")
-    fig.suptitle("Checkpoint Selection Delta by Regime and Train Size", y=1.02)
+        cbar_ax = fig.add_axes([0.90, 0.20, 0.018, 0.62])
+        cbar = fig.colorbar(image, cax=cbar_ax)
+        cbar.set_label(
+            "Selector delta on large-unseen normalized gap\npositive = surrogate-loss selector better",
+            fontsize=10,
+        )
+        cbar.ax.tick_params(labelsize=9)
+    fig.suptitle("Checkpoint Selection Delta by Regime and Train Size", y=0.99)
+    fig.subplots_adjust(top=0.90, bottom=0.16, left=0.08, right=0.87, hspace=0.34)
     return save_figure(fig, out_dir, "18_selector_delta_heatmap", formats)
 
 
