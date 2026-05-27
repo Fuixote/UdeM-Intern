@@ -62,6 +62,34 @@ Step2 extends the Step1b/Step1c surrogate comparison by changing the \emph{synth
 
 The main question is whether decision-focused surrogates, FY and SPO+, produce better KEP decisions than a two-stage reward-fitting baseline as synthetic labels become increasingly nonlinear and noisy. Step2 is therefore a controlled misspecification study rather than a new graph-generation study: graph structures are held fixed across label regimes, while labels are regenerated.
 
+\paragraph{KEP optimization oracle.}
+For every training, validation, and test solve, the experiments use the same hybrid KEP formulation implemented in \texttt{formulations/hybrid/backend.py}: candidate formulation for cycles and position-indexed edge formulation for chains (\texttt{CF-CYCLE + PIEF-CHAIN}). Let \(P\) be the set of patient-donor pair vertices, \(N\) the set of non-directed donor vertices, and \(E_G\) the directed compatibility edges. We enumerate cycle candidates \(\mathcal C\) up to length \(L=3\), and define valid chain-position keys
+\[
+  \mathcal K \subseteq E_G\times\{1,\ldots,H\},\qquad H=4,
+\]
+where \((e,k)\in\mathcal K\) means edge \(e\) may be used at chain position \(k\). For edge \(e\), let \(s(e)\) and \(t(e)\) denote its source and target. Given edge weights \(w\), the solver uses binary variables \(x_c\) for cycles and \(z_{e,k}\) for chain edges:
+\[
+\begin{aligned}
+\max_{x,z}\quad
+& \sum_{c\in\mathcal C}\left(\sum_{e\in c} w_e\right)x_c
+  + \sum_{(e,k)\in\mathcal K} w_e z_{e,k} \\
+\text{s.t.}\quad
+& \sum_{c\in\mathcal C:\, v\in c} x_c
+  + \sum_{(e,k)\in\mathcal K:\, t(e)=v} z_{e,k}
+  \le 1,
+  && \forall v\in P,\\
+& \sum_{(e,1)\in\mathcal K:\, s(e)=n} z_{e,1}
+  \le 1,
+  && \forall n\in N,\\
+& \sum_{(e,k)\in\mathcal K:\, s(e)=v} z_{e,k}
+  \le
+  \sum_{(e,k-1)\in\mathcal K:\, t(e)=v} z_{e,k-1},
+  && \forall v\in P,\ k=2,\ldots,H,\\
+& x_c\in\{0,1\},\quad z_{e,k}\in\{0,1\}.
+\end{aligned}
+\]
+The first constraint enforces that each pair vertex is used at most once across cycles and chains. The second enforces that each NDD starts at most one chain. The third is the chain-flow constraint: a pair can donate at chain position \(k\) only if it received a kidney at position \(k-1\). The optimal selected-edge vector returned by this Gurobi model is denoted \(y^\star(w)\); changing \(w\) changes only the objective coefficients, not the feasible KEP set.
+
 \paragraph{Label regimes.}
 For a graph \(G\), let \(E_G\) denote its processed edge set. For each edge \(e\in E_G\), define the clean two-feature linear signal as
 \[
