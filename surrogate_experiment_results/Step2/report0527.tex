@@ -51,7 +51,11 @@
 Step2 extends the Step1b/Step1c surrogate comparison by changing the \emph{synthetic label generation regime} while keeping the downstream kidney exchange optimization problem fixed. The controlled factors are:
 \begin{itemize}
   \item the KEP downstream optimization oracle and feasible matching structure;
-  \item the two-feature linear probe, \(\widehat w_e = \theta_1 u_e + \theta_2 c_e\), where \(u_e\) is normalized utility and \(c_e\) is recipient cPRA;
+  \item the two-feature linear probe
+  \[
+    \widehat w_e = \theta_1 u_e + \theta_2 c_e,
+  \]
+  where \(u_e\) is normalized utility and \(c_e\) is recipient cPRA;
   \item the train sizes \(n\in\{50,200,600,1200\}\), validation protocol, checkpoint rules, and large-unseen evaluation protocol;
   \item the evaluation metric: synthetic-label decision gap and mean normalized decision gap, where lower is better.
 \end{itemize}
@@ -59,14 +63,22 @@ Step2 extends the Step1b/Step1c surrogate comparison by changing the \emph{synth
 The main question is whether decision-focused surrogates, FY and SPO+, produce better KEP decisions than a two-stage reward-fitting baseline as synthetic labels become increasingly nonlinear and noisy. Step2 is therefore a controlled misspecification study rather than a new graph-generation study: graph structures are held fixed across label regimes, while labels are regenerated.
 
 \paragraph{Label regimes.}
-Let \(b_e = 10 u_e + 5 c_e\) denote the clean linear signal, and let \(\mu_G\) denote the graph-level mean of \(b_e\). The Step2 grid contains nine label regimes: one Step2a regime, four Step2b degrees, and four Step2c degrees.
+For a graph \(G\), let \(E_G\) denote its processed edge set. For each edge \(e\in E_G\), define the clean two-feature linear signal as
+\[
+  b_e = 10u_e + 5c_e,
+\]
+and define the graph-level clean-signal scale as
+\[
+  \mu_G = \frac{1}{|E_G|}\sum_{e\in E_G} b_e.
+\]
+Thus \(b_e\) is an edge-level clean label, while \(\mu_G\) is the graph-level average of those clean labels. The Step2 grid contains nine label regimes: one Step2a regime, four Step2b degrees, and four Step2c degrees.
 
 \begin{itemize}
   \item \textbf{Step2a: additive linear Gaussian noise.} This is a near-linear bridge benchmark:
   \[
     w^{\mathrm{syn}}_e = \max\{0, b_e + \epsilon_e\},
     \qquad
-    \epsilon_e \sim \mathcal N\bigl(0,(\rho\mu_G)^2\bigr),
+    \epsilon_e \sim \mathcal{N}\!\left(0,(\rho\mu_G)^2\right),
     \qquad \rho=0.5.
   \]
   The conditional mean remains close to linear, so the 2stage MSE baseline is expected to be strong.
@@ -77,8 +89,17 @@ Let \(b_e = 10 u_e + 5 c_e\) denote the clean linear signal, and let \(\mu_G\) d
     r_e^{(d)} = (q_e + \kappa)^d - \kappa^d,
   \]
   \[
-    w^{\mathrm{syn}}_e = \max\left\{0,\mu_G\frac{r_e^{(d)}}{\frac{1}{|E_G|}\sum_{e'\in E_G} r_{e'}^{(d)} + \delta}\right\},
-    \qquad d\in\{1,2,4,8\},\quad \kappa=3.
+    \begin{aligned}
+    m_e^{(d)}
+    &=
+    \max\left\{
+      0,\,
+      \mu_G
+      \frac{r_e^{(d)}}{\frac{1}{|E_G|}\sum_{e'\in E_G} r_{e'}^{(d)}+\delta}
+    \right\},\\
+    w^{\mathrm{syn}}_e &= m_e^{(d)},\\
+    d &\in \{1,2,4,8\},\qquad \kappa=3.
+    \end{aligned}
   \]
   Degree \(d=1\) is close to the clean-linear case; higher degrees increasingly distort the reward surface while keeping graph-level scale controlled.
 
@@ -89,7 +110,7 @@ Let \(b_e = 10 u_e + 5 c_e\) denote the clean linear signal, and let \(\mu_G\) d
     \eta_e \sim \mathrm{Uniform}(1-\bar\epsilon,1+\bar\epsilon),
     \qquad \bar\epsilon=0.5,
   \]
-  where \(m_e^{(d)}\) is the graph-rescaled Step2b polynomial label before multiplicative noise. This is the hardest block in the experiment because it combines nonlinear and noisy misspecification.
+  where \(m_e^{(d)}\) is the same graph-rescaled polynomial label defined in Step2b before multiplicative noise. This is the hardest block in the experiment because it combines nonlinear and noisy misspecification.
 \end{itemize}
 
 \paragraph{Methods and checkpoint rules.}
@@ -146,7 +167,9 @@ Step2c polynomial d8 + noise & 0.08400 & 0.07436 & 0.07431 \\
 
 \section{Figures and Interpretation}
 
-This section presents dataset validation, primary performance, checkpoint-selection behavior, parameter diagnostics, and representative per-graph/trajectory diagnostics. Figures 1--8 and 15--18 summarize the main evidence; Figures 9--14 provide representative diagnostics for interpreting the aggregate results.
+This section presents dataset validation, primary performance, checkpoint-selection behavior, parameter diagnostics, and representative per-graph/trajectory diagnostics. The first group of figures summarizes the main evidence, while the later figures provide selector, parameter, per-graph, and trajectory diagnostics for interpreting the aggregate results.
+
+The figures support three main patterns: (i) the label regimes become progressively harder in a controlled way; (ii) 2stage is strong in near-linear regimes but loses decision quality under high-degree misspecification; and (iii) FY and SPO+ both recover decision quality in high-degree regimes, with differences mainly in checkpoint selection and parameter scaling.
 
 \subsection*{Label-regime validation}
 
@@ -287,11 +310,11 @@ This section presents dataset validation, primary performance, checkpoint-select
 \begin{figure}[H]
 \centering
 \stepfig{11_hard_graph_attribution.png}{0.98}
-\caption{Hard-graph attribution. The x-axis is graph label-to-clean mean ratio, and the y-axis is per-graph normalized-gap improvement over 2stage. Panels show representative regimes at train size 1200. Colors compare FY and SPO+. The vertical line at ratio 1 marks no graph-level label-scale shift; the horizontal line marks no improvement. The figure asks whether decision-focused gains are associated with graph-level label rescaling or distortion.}
+\caption{Hard-graph attribution. The x-axis is graph label-to-clean mean ratio, and the y-axis is per-graph normalized-gap improvement over 2stage. Columns show representative regimes at train size 1200; rows separate FY and SPO+. The vertical line at ratio 1 marks no graph-level label-scale shift; the horizontal line marks no improvement. The figure asks whether decision-focused gains are associated with graph-level label rescaling or distortion.}
 \label{fig:hard-graph-attribution}
 \end{figure}
 
-\noindent\textbf{How to read.} Points above the horizontal line are graphs where FY or SPO+ improves over 2stage. If improvements concentrate away from ratio 1, then decision-focused gains are associated with graph-level label distortion rather than uniformly distributed across all graphs.
+\noindent\textbf{How to read.} Each subplot contains the full unseen10000 graph set for one method and one regime. Points above the horizontal line are graphs where the method improves over 2stage. Comparing the two rows shows whether FY and SPO+ improve the same label-rescaling regions or behave differently.
 
 \begin{figure}[H]
 \centering
@@ -320,6 +343,8 @@ This section presents dataset validation, primary performance, checkpoint-select
 
 \noindent\textbf{How to read.} Step2c d8 combines nonlinear labels with multiplicative noise, so checkpoint selection can be less smooth. Compare validation surrogate objective, validation decision gap, and parameter movement to see whether the selected checkpoint is driven by stable progress or by a noisy validation signal.
 
+\clearpage
+
 \section{Main Conclusions}
 
 \begin{enumerate}
@@ -339,6 +364,6 @@ This section presents dataset validation, primary performance, checkpoint-select
 \end{enumerate}
 
 \paragraph{Limitations.}
-Figures 9--14 are representative diagnostics rather than exhaustive visualizations of every run and every graph. All reported quantities are synthetic-label decision quality under designed synthetic regimes. They should not be interpreted as real clinical outcome regret or as claims about actual transplant outcomes.
+The per-graph and trajectory diagnostics are representative rather than exhaustive visualizations of every run and every graph. The current plots summarize one fixed seed/protocol grid; additional seed repetitions and a dedicated paired-improvement CI significance figure would be useful before making stronger claims about method dominance. All reported quantities are synthetic-label decision quality under designed synthetic regimes. They should not be interpreted as real clinical outcome regret or as claims about actual transplant outcomes.
 
 \end{document}

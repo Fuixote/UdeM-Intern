@@ -683,16 +683,21 @@ def plot_hard_graph_attribution(
     formats: list[str],
 ) -> list[str]:
     regimes = ["step2a_additive_rho050", "step2b_poly_d8", "step2c_poly_d8_mult_eps050"]
+    methods = [
+        ("fy_val_fy_loss", "FY (val FY)"),
+        ("spoplus_val_spoplus_loss", "SPO+ (val SPO+)"),
+    ]
     graph_index = {
         (str(row["regime"]), str(row["split"]), str(row["graph"])): row
         for row in graph_records
     }
 
-    fig, axes = plt.subplots(1, 3, figsize=(15, 4.8), sharey=False)
+    fig, axes = plt.subplots(2, 3, figsize=(15, 8.2), sharex="col", sharey="col")
     any_data = False
-    for ax, regime in zip(axes, regimes):
+    for col_idx, regime in enumerate(regimes):
         per_graph = load_per_graph_subset(step2_root, regime, 1200)
-        for checkpoint in ("fy_val_fy_loss", "spoplus_val_spoplus_loss"):
+        for row_idx, (checkpoint, method_title) in enumerate(methods):
+            ax = axes[row_idx, col_idx]
             xs, ys = [], []
             for graph, values in per_graph.items():
                 diag = graph_index.get((regime, "unseen10000", graph))
@@ -713,19 +718,21 @@ def plot_hard_graph_attribution(
                 s=8,
                 alpha=0.16,
                 color=METHOD_COLORS[checkpoint],
-                label=METHOD_LABELS[checkpoint],
                 rasterized=True,
             )
-        ax.axhline(0, color="#333333", linewidth=1)
-        ax.axvline(1, color="#777777", linestyle="--", linewidth=1, alpha=0.8)
-        ax.set_title(f"{display_regime(regime)}, n=1200")
-        ax.set_xlabel("Graph label-to-clean mean ratio")
-        ax.set_ylabel("Per-graph normalized-gap improvement")
-        ax.legend(frameon=False)
+            ax.axhline(0, color="#333333", linewidth=1)
+            ax.axvline(1, color="#777777", linestyle="--", linewidth=1, alpha=0.8)
+            if row_idx == 0:
+                ax.set_title(f"{display_regime(regime)}, n=1200")
+            if col_idx == 0:
+                ax.set_ylabel(f"{method_title}\nPer-graph normalized-gap improvement")
+            if row_idx == len(methods) - 1:
+                ax.set_xlabel("Graph label-to-clean mean ratio")
     if not any_data:
         plt.close(fig)
         return []
     fig.suptitle("Hard-Graph Attribution: Improvement vs Graph Label Rescaling", y=1.02)
+    fig.subplots_adjust(top=0.90, hspace=0.20, wspace=0.18)
     return save_figure(fig, out_dir, "11_hard_graph_attribution", formats)
 
 
