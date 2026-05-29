@@ -13,6 +13,8 @@ from typing import Dict, List, Mapping, Sequence
 import common
 
 
+DependencyStatus = common.DependencyStatus
+
 OUTPUT_FIELDS = (
     "implementation",
     "method",
@@ -38,6 +40,15 @@ OUTPUT_FIELDS = (
     "learning_rate",
 )
 
+PRESET_NAMES = (
+    "smoke",
+    "pilot",
+    "pyepo-pilot",
+    "middle-row",
+    "middle-row-pyepo",
+    "full",
+)
+
 
 def _timestamp() -> str:
     return datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -46,15 +57,15 @@ def _timestamp() -> str:
 def _preset_defaults(preset: str) -> Dict[str, object]:
     if preset == "smoke":
         return {
-            "degrees": (1, 8),
-            "noise_half_widths": (0.0, 0.5),
-            "trials": 3,
-            "n_train": 1000,
-            "n_val": 250,
-            "n_test": 2000,
+            "degrees": (1,),
+            "noise_half_widths": (0.0,),
+            "trials": 1,
+            "n_train": 20,
+            "n_val": 8,
+            "n_test": 12,
             "lambda_grid": (0.0,),
-            "spoplus_iterations": 50,
-            "batch_size": 32,
+            "spoplus_iterations": 3,
+            "batch_size": 5,
             "learning_rate": 0.05,
             "methods": ("ls", "ours-spoplus"),
         }
@@ -72,7 +83,11 @@ def _preset_defaults(preset: str) -> Dict[str, object]:
             "learning_rate": 0.05,
             "methods": ("ls", "ours-spoplus"),
         }
-    if preset == "full":
+    if preset == "pyepo-pilot":
+        options = _preset_defaults("pilot")
+        options["methods"] = ("ls", "ours-spoplus", "pyepo-spoplus")
+        return options
+    if preset in {"middle-row", "full"}:
         return {
             "degrees": common.DEFAULT_DEGREES,
             "noise_half_widths": common.DEFAULT_NOISE_HALF_WIDTHS,
@@ -86,6 +101,10 @@ def _preset_defaults(preset: str) -> Dict[str, object]:
             "learning_rate": 0.05,
             "methods": ("ls", "ours-spoplus"),
         }
+    if preset == "middle-row-pyepo":
+        options = _preset_defaults("middle-row")
+        options["methods"] = ("ls", "ours-spoplus", "pyepo-spoplus")
+        return options
     raise ValueError(f"unknown preset: {preset}")
 
 
@@ -93,7 +112,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Run the synthetic shortest-path benchmark from the SPO paper."
     )
-    parser.add_argument("--preset", choices=("smoke", "pilot", "full"), default="smoke")
+    parser.add_argument("--preset", choices=PRESET_NAMES, default="smoke")
     parser.add_argument("--degrees", nargs="+", default=None)
     parser.add_argument("--noise-half-widths", nargs="+", default=None)
     parser.add_argument("--trials", type=int, default=None)
@@ -112,6 +131,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--learning-rate", type=float, default=None)
     parser.add_argument("--seed", type=int, default=20260529)
     parser.add_argument("--output-dir", type=Path, default=None)
+    parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--fail-if-pyepo-missing", action="store_true")
     return parser
 
 
@@ -146,7 +167,105 @@ def resolve_options(args: argparse.Namespace) -> Dict[str, object]:
         )
     else:
         options["output_dir"] = args.output_dir
+    options["preset"] = args.preset
     return options
+
+
+def pyepo_requested(options: Mapping[str, object]) -> bool:
+    return "pyepo-spoplus" in tuple(options["methods"])
+
+
+def validate_pyepo_request(
+    options: Mapping[str, object],
+    fail_if_missing: bool,
+    status_checker=common.check_pyepo_dependencies,
+) -> DependencyStatus:
+    status = status_checker()
+    if pyepo_requested(options) and fail_if_missing and not status.available:
+        raise RuntimeError(
+            "PyEPO SPO+ was requested but the reference dependencies are unavailable: "
+            f"{status.message}; details={dict(status.details)}"
+        )
+    return status
+
+
+def estimate_model_fits(options: Mapping[str, object]) -> int:
+    regimes = (
+        len(tuple(options["degrees"]))
+        * len(tuple(options["noise_half_widths"]))
+        * int(options["trials"])
+    )
+    return regimes * len(tuple(options["methods"])) * len(tuple(options["lambda_grid"]))
+
+
+def estimate_ours_spoplus_oracle_calls(options: Mapping[str, object]) -> int:
+    if "ours-spoplus" not in tuple(options["methods"]):
+        return 0
+    regimes = (
+        len(tuple(options["degrees"]))
+        * len(tuple(options["noise_half_widths"]))
+        * int(options["trials"])
+    )
+    return (
+        regimes
+        * len(tuple(options["lambda_grid"]))
+        * int(options["spoplus_iterations"])
+        * int(options["batch_size"])
+    )
+
+
+def print_dry_run_plan(
+    options: Mapping[str, object],
+    pyepo_status: DependencyStatus,
+) -> None:
+    print("Resolved SPO paper shortest-path plan")
+    print(f"preset: {options['preset']}")
+    print(f"degrees: {tuple(options['degrees'])}")
+    print(f"noise_half_widths: {tuple(options['noise_half_widths'])}")
+    print(f"trials: {options['trials']}")
+    print(f"n_train/n_val/n_test: {options['n_train']}/{options['n_val']}/{options['n_test']}")
+    print(f"methods: {tuple(options['methods'])}")
+    print(f"lambda_grid_length: {len(tuple(options['lambda_grid']))}")
+    print(f"estimated_model_fits: {estimate_model_fits(options)}")
+    print(
+        "estimated_ours_spoplus_oracle_calls: "
+        f"{estimate_ours_spoplus_oracle_calls(options)}"
+    )
+    print(f"pyepo_requested: {pyepo_requested(options)}")
+    print(f"pyepo_available: {pyepo_status.available}")
+    if pyepo_requested(options):
+        print(f"pyepo_status: {pyepo_status.message}")
+
+
+def build_metadata(
+    options: Mapping[str, object],
+    config: common.PaperShortestPathConfig,
+    pyepo_status: DependencyStatus,
+) -> Dict[str, object]:
+    return {
+        "paper_experiment": "shortest_path_middle_row",
+        "normalized_spo_definition": "sum_regret_over_sum_oracle_cost",
+        "grid_shape": list(config.grid_shape),
+        "feature_dim": config.feature_dim,
+        "edge_dim": common.paper_edge_count(config.grid_shape),
+        "lambda_grid": [float(value) for value in options["lambda_grid"]],
+        "methods": list(options["methods"]),
+        "optimizer_ours_spoplus": (
+            "stochastic subgradient with step_size=learning_rate/sqrt(iteration), "
+            "L1 subgradient on non-intercept weights"
+        ),
+        "optimizer_pyepo_spoplus": "torch Adam on linear model with optional L1 penalty",
+        "pyepo_requested": pyepo_requested(options),
+        "pyepo_available": bool(pyepo_status.available),
+        "pyepo_status": pyepo_status.message,
+        "pyepo_dependency_details": dict(pyepo_status.details),
+        "estimated_model_fits": estimate_model_fits(options),
+        "estimated_ours_spoplus_oracle_calls": estimate_ours_spoplus_oracle_calls(options),
+        **{
+            key: (str(value) if isinstance(value, Path) else value)
+            for key, value in options.items()
+        },
+    }
 
 
 def _method_result(
@@ -234,6 +353,18 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = build_arg_parser()
     args = parser.parse_args(argv)
     options = resolve_options(args)
+    try:
+        pyepo_status = validate_pyepo_request(
+            options,
+            fail_if_missing=args.fail_if_pyepo_missing or not args.dry_run,
+        )
+    except RuntimeError as exc:
+        parser.exit(2, f"{exc}\n")
+
+    if args.dry_run:
+        print_dry_run_plan(options, pyepo_status)
+        return 0
+
     output_dir = Path(options["output_dir"])
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -279,10 +410,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     )
 
     summary_path = write_summary(output_dir, rows)
-    metadata = {
-        key: (str(value) if isinstance(value, Path) else value)
-        for key, value in options.items()
-    }
+    metadata = build_metadata(options, config, pyepo_status)
     with (output_dir / "metadata.json").open("w", encoding="utf-8") as handle:
         json.dump(metadata, handle, indent=2, sort_keys=True)
     print(f"wrote {summary_path}")

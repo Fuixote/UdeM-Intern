@@ -1,5 +1,6 @@
 import csv
 import importlib.util
+import json
 import subprocess
 import sys
 import tempfile
@@ -22,6 +23,16 @@ def load_common():
     spec = importlib.util.spec_from_file_location(
         "paper_shortest_path_common", PAPER_DIR / "common.py"
     )
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def load_module(filename: str, name: str):
+    if str(PAPER_DIR) not in sys.path:
+        sys.path.insert(0, str(PAPER_DIR))
+    spec = importlib.util.spec_from_file_location(name, PAPER_DIR / filename)
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
@@ -107,27 +118,6 @@ class PaperShortestPathExperimentTest(unittest.TestCase):
                     str(PAPER_DIR / "run_paper_shortest_path.py"),
                     "--preset",
                     "smoke",
-                    "--degrees",
-                    "1",
-                    "--noise-half-widths",
-                    "0",
-                    "--trials",
-                    "1",
-                    "--n-train",
-                    "20",
-                    "--n-val",
-                    "8",
-                    "--n-test",
-                    "12",
-                    "--lambda-grid",
-                    "0",
-                    "--methods",
-                    "ls",
-                    "ours-spoplus",
-                    "--spoplus-iterations",
-                    "3",
-                    "--batch-size",
-                    "5",
                     "--output-dir",
                     temp_dir,
                 ],
@@ -143,9 +133,12 @@ class PaperShortestPathExperimentTest(unittest.TestCase):
                 f"runner failed\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}",
             )
             summary_path = Path(temp_dir) / "summary.csv"
+            metadata_path = Path(temp_dir) / "metadata.json"
             self.assertTrue(summary_path.exists())
+            self.assertTrue(metadata_path.exists())
             with summary_path.open(newline="", encoding="utf-8") as handle:
                 rows = list(csv.DictReader(handle))
+            metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
 
             self.assertEqual(
                 {row["implementation"] for row in rows},
@@ -156,6 +149,166 @@ class PaperShortestPathExperimentTest(unittest.TestCase):
                 self.assertEqual(row["degree"], "1")
                 self.assertEqual(row["noise_half_width"], "0.0")
                 self.assertTrue(float(row["test_norm_spo"]) >= 0.0)
+            self.assertEqual(
+                metadata["normalized_spo_definition"],
+                "sum_regret_over_sum_oracle_cost",
+            )
+            self.assertEqual(metadata["paper_experiment"], "shortest_path_middle_row")
+            self.assertEqual(metadata["grid_shape"], [5, 5])
+            self.assertEqual(metadata["feature_dim"], 5)
+            self.assertEqual(metadata["edge_dim"], 40)
+            self.assertFalse(metadata["pyepo_requested"])
+
+    def test_middle_row_preset_resolves_to_paper_middle_row(self):
+        runner = load_module("run_paper_shortest_path.py", "paper_runner_presets")
+        args = runner.build_arg_parser().parse_args(["--preset", "middle-row"])
+
+        options = runner.resolve_options(args)
+
+        self.assertEqual(options["degrees"], (1, 2, 4, 6, 8))
+        self.assertEqual(options["noise_half_widths"], (0.0, 0.5))
+        self.assertEqual(options["trials"], 50)
+        self.assertEqual(options["n_train"], 1000)
+        self.assertEqual(options["n_val"], 250)
+        self.assertEqual(options["n_test"], 10000)
+        self.assertEqual(len(options["lambda_grid"]), 10)
+        self.assertEqual(options["methods"], ("ls", "ours-spoplus"))
+
+    def test_pyepo_pilot_preset_includes_pyepo_spoplus(self):
+        runner = load_module("run_paper_shortest_path.py", "paper_runner_pyepo_preset")
+        args = runner.build_arg_parser().parse_args(["--preset", "pyepo-pilot"])
+
+        options = runner.resolve_options(args)
+
+        self.assertEqual(options["degrees"], (1, 8))
+        self.assertEqual(options["noise_half_widths"], (0.0, 0.5))
+        self.assertIn("pyepo-spoplus", options["methods"])
+
+    def test_dry_run_reports_middle_row_plan_without_writing_outputs(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_dir = Path(temp_dir) / "dry-run-output"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(PAPER_DIR / "run_paper_shortest_path.py"),
+                    "--preset",
+                    "middle-row",
+                    "--dry-run",
+                    "--output-dir",
+                    str(output_dir),
+                ],
+                cwd=REPO_ROOT,
+                check=False,
+                text=True,
+                capture_output=True,
+            )
+
+            self.assertEqual(
+                result.returncode,
+                0,
+                f"dry-run failed\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}",
+            )
+            self.assertIn("preset: middle-row", result.stdout)
+            self.assertIn("degrees: (1, 2, 4, 6, 8)", result.stdout)
+            self.assertIn("noise_half_widths: (0.0, 0.5)", result.stdout)
+            self.assertIn("n_train/n_val/n_test: 1000/250/10000", result.stdout)
+            self.assertIn("lambda_grid_length: 10", result.stdout)
+            self.assertIn("estimated_model_fits: 10000", result.stdout)
+            self.assertIn("estimated_ours_spoplus_oracle_calls: 160000000", result.stdout)
+            self.assertFalse(output_dir.exists())
+
+    def test_fail_if_pyepo_missing_uses_clear_dependency_error(self):
+        runner = load_module("run_paper_shortest_path.py", "paper_runner_pyepo_gate")
+        missing = runner.DependencyStatus(
+            available=False,
+            message="forced missing dependency",
+            details={"torch": "missing"},
+        )
+
+        with self.assertRaisesRegex(RuntimeError, "PyEPO SPO\\+ was requested"):
+            runner.validate_pyepo_request(
+                {"methods": ("ls", "pyepo-spoplus")},
+                fail_if_missing=True,
+                status_checker=lambda: missing,
+            )
+
+    def test_plot_script_runs_on_tiny_summary_csv_when_matplotlib_is_available(self):
+        if importlib.util.find_spec("matplotlib") is None:
+            self.skipTest("matplotlib is not installed in this Python environment")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            summary_path = Path(temp_dir) / "summary.csv"
+            fields = [
+                "implementation",
+                "trial",
+                "degree",
+                "noise_half_width",
+                "test_norm_spo",
+            ]
+            with summary_path.open("w", newline="", encoding="utf-8") as handle:
+                writer = csv.DictWriter(handle, fieldnames=fields)
+                writer.writeheader()
+                for noise in (0.0, 0.5):
+                    for implementation, value in (
+                        ("ls", 0.20 + noise),
+                        ("ours-spoplus", 0.12 + noise),
+                    ):
+                        writer.writerow(
+                            {
+                                "implementation": implementation,
+                                "trial": 0,
+                                "degree": 1,
+                                "noise_half_width": noise,
+                                "test_norm_spo": value,
+                            }
+                        )
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(PAPER_DIR / "plot_paper_shortest_path.py"),
+                    str(summary_path),
+                    "--output-dir",
+                    str(Path(temp_dir) / "plots"),
+                ],
+                cwd=REPO_ROOT,
+                check=False,
+                text=True,
+                capture_output=True,
+            )
+
+            self.assertEqual(
+                result.returncode,
+                0,
+                f"plotter failed\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}",
+            )
+            self.assertTrue(
+                (Path(temp_dir) / "plots" / "paper_shortest_path_middle_row.png").exists()
+            )
+
+    def test_forward_loss_comparison_allows_missing_pyepo_when_requested(self):
+        if all(
+            importlib.util.find_spec(name) is not None
+            for name in ("torch", "pyepo", "gurobipy")
+        ):
+            self.skipTest("PyEPO imports are present; missing-dependency path is not active")
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(PAPER_DIR / "compare_pyepo_forward_loss.py"),
+                "--allow-missing-pyepo",
+            ],
+            cwd=REPO_ROOT,
+            check=False,
+            text=True,
+            capture_output=True,
+        )
+
+        self.assertEqual(
+            result.returncode,
+            0,
+            f"forward-loss script failed\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}",
+        )
+        self.assertIn("pyepo_available", result.stdout)
 
 
 if __name__ == "__main__":

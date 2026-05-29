@@ -1,16 +1,18 @@
 # SPO Paper Synthetic Shortest-Path Validation
 
 This sub-experiment is a focused positive control for the Step1c/Step2 SPO+
-implementation.  It is intentionally separate from the existing three
-`SPO_validation` checks:
+implementation.  It reproduces the middle-row synthetic shortest-path setting
+from Smart "Predict, then Optimize" and compares:
+
+- Least Squares
+- our Step1c-core SPO+ implementation
+- PyEPO SPO+ reference implementation, when requested
+
+It is intentionally separate from the existing three `SPO_validation` checks:
 
 1. `01_compare_spoplus_formula_toy_shortest_path.py`
 2. `05_validate_kep_spoplus_code_path.py`
 3. `03_compare_warcraft_pyepo_vs_ours.py`
-
-The purpose here is narrower: reproduce the synthetic shortest-path setting
-from the SPO paper and compare LS vs SPO+ on the canonical cost-minimization
-problem before returning to KEP multi-seed runs.
 
 ## Paper Setting
 
@@ -23,7 +25,7 @@ For each `(trial, degree, noise_half_width)`:
 ```text
 x_i ~ N(0, I_p)
 B*_{j,k} ~ Bernoulli(0.5)
-c_ij = (((B* x_i)_j / sqrt(p) + 3)^degree + 1) * epsilon_ij
+c_ij = [((B* x_i)_j / sqrt(p) + 3)^degree + 1] * epsilon_ij
 epsilon_ij ~ Uniform(1 - noise_half_width, 1 + noise_half_width)
 ```
 
@@ -36,15 +38,55 @@ n_test = 10000
 degree = {1, 2, 4, 6, 8}
 noise_half_width = {0, 0.5}
 trials = 50
-lambda_grid = logspace(-6, 0, 10)
+lambda_grid = 10 values log-spaced from 1e-6 to 1e0
 ```
 
-Some copies/screenshots label this plot as Figure 4, while the paper PDF I
-checked labels the shortest-path experiment as Figure 2.  To avoid ambiguity,
-use the name "SPO paper synthetic shortest-path middle row" in notes and
-advisor updates.
+The model class is linear cost prediction from features with an unregularized
+intercept.  L1 regularization is selected on the validation set by normalized
+SPO loss.
 
-## Implemented Files
+The evaluation metric is the paper's ratio-of-sums normalized SPO loss:
+
+```text
+sum_i [ c_i^T z*(c_hat_i) - c_i^T z*(c_i) ]
+/
+sum_i [ c_i^T z*(c_i) ]
+```
+
+Lower is better.  Some screenshots label this as Figure 4, while the paper PDF
+I checked labels the shortest-path experiment as Figure 2.  To avoid ambiguity,
+use "SPO paper synthetic shortest-path middle row" in notes and advisor updates.
+
+## Implementation Audit
+
+As of this version, `common.py` matches the requested paper setup on the core
+data and metric definitions:
+
+- `grid_shape = (5, 5)`, east/south only, source northwest, target southeast;
+- `edge_dim = 40` through the shared `spoplus_shortest_path.grid_edges` order;
+- `feature_dim = 5`;
+- default middle-row sizes `n_train = 1000`, `n_val = 250`, `n_test = 10000`;
+- default degrees `{1, 2, 4, 6, 8}` and noise half-widths `{0, 0.5}`;
+- default lambda grid `logspace(-6, 0, 10)`;
+- normalized SPO loss implemented as sum of regrets divided by sum of oracle
+  costs, not mean per-instance relative regret.
+
+## Important Scope Note
+
+The original paper used a reformulation/JuMP/Gurobi approach for shortest-path
+SPO+ ERM.  The default `ours-spoplus` path here uses the oracle-based stochastic
+subgradient formula:
+
+```text
+z_shifted = z*(2*c_hat - c)
+grad_c_hat = 2 * (z*(c) - z_shifted)
+```
+
+Therefore, the goal is qualitative paper-trend validation and implementation
+validation against PyEPO, not pixel-perfect reproduction of the original paper
+unless a paper-exact reformulation is added later.
+
+## Files
 
 ```text
 common.py
@@ -55,48 +97,42 @@ run_paper_shortest_path.py
   Main experiment runner.  Writes summary.csv and metadata.json.
 
 plot_paper_shortest_path.py
-  Optional plotting script for LS-vs-SPO+ boxplots and PyEPO-vs-ours scatter.
+  Paper-style middle-row plot plus PyEPO-vs-ours diagnostics.
+
+compare_pyepo_forward_loss.py
+  Tiny direct PyEPO SPOPlus forward-loss comparison against our local formula.
 ```
 
-The local default Python environment currently lacks `torch`, `pyepo`,
-`sklearn`, `pytest`, and `matplotlib`, so the core implementation avoids
-`sklearn` and can run smoke tests with only NumPy.  PyEPO is imported only when
-`--methods pyepo-spoplus` is requested.
+## Presets
 
-## Local Smoke
+```text
+smoke
+  Tiny dependency-light local test.
 
-From repo root:
+pilot
+  Small but meaningful LS vs ours-SPO+ run.
 
-```bash
-python -m unittest tests.test_paper_shortest_path_experiment -v
+pyepo-pilot
+  Same as pilot, with pyepo-spoplus included.
+
+middle-row
+  Paper middle-row reproduction with LS and ours-SPO+.
+
+middle-row-pyepo
+  Paper middle-row reproduction with LS, ours-SPO+, and PyEPO SPO+.
 ```
 
-Run a tiny end-to-end smoke:
+The old `full` preset is kept as an alias for `middle-row`.
+
+## Commands
+
+Advisor-facing dry run:
 
 ```bash
 python surrogate_experiment_results/SPO_validation/paper_shortest_path/run_paper_shortest_path.py \
-  --preset smoke \
-  --degrees 1 \
-  --noise-half-widths 0 \
-  --trials 1 \
-  --n-train 20 \
-  --n-val 8 \
-  --n-test 12 \
-  --lambda-grid 0 \
-  --methods ls ours-spoplus \
-  --spoplus-iterations 3 \
-  --batch-size 5 \
-  --output-dir /tmp/spo_paper_smoke
+  --preset middle-row \
+  --dry-run
 ```
-
-Expected output:
-
-```text
-/tmp/spo_paper_smoke/summary.csv
-/tmp/spo_paper_smoke/metadata.json
-```
-
-## Pilot and Full Runs
 
 Pilot:
 
@@ -106,23 +142,40 @@ python surrogate_experiment_results/SPO_validation/paper_shortest_path/run_paper
   --output-dir surrogate_experiment_results/SPO_validation/paper_shortest_path/results/pilot_$(date +%Y%m%d_%H%M%S)
 ```
 
-Full paper-style middle row:
+PyEPO pilot:
 
 ```bash
 python surrogate_experiment_results/SPO_validation/paper_shortest_path/run_paper_shortest_path.py \
-  --preset full \
-  --output-dir surrogate_experiment_results/SPO_validation/paper_shortest_path/results/full_$(date +%Y%m%d_%H%M%S)
+  --preset pyepo-pilot \
+  --fail-if-pyepo-missing \
+  --output-dir surrogate_experiment_results/SPO_validation/paper_shortest_path/results/pyepo_pilot_$(date +%Y%m%d_%H%M%S)
 ```
 
-On an environment with PyEPO/Gurobi/Torch installed, add PyEPO to the method
-list:
+Full middle-row run:
 
 ```bash
 python surrogate_experiment_results/SPO_validation/paper_shortest_path/run_paper_shortest_path.py \
-  --preset pilot \
-  --methods ls ours-spoplus pyepo-spoplus \
-  --output-dir surrogate_experiment_results/SPO_validation/paper_shortest_path/results/pilot_pyepo_$(date +%Y%m%d_%H%M%S)
+  --preset middle-row \
+  --output-dir surrogate_experiment_results/SPO_validation/paper_shortest_path/results/middle_row_$(date +%Y%m%d_%H%M%S)
 ```
+
+Full PyEPO middle-row run:
+
+```bash
+python surrogate_experiment_results/SPO_validation/paper_shortest_path/run_paper_shortest_path.py \
+  --preset middle-row-pyepo \
+  --fail-if-pyepo-missing \
+  --output-dir surrogate_experiment_results/SPO_validation/paper_shortest_path/results/middle_row_pyepo_$(date +%Y%m%d_%H%M%S)
+```
+
+Direct PyEPO forward-loss check:
+
+```bash
+python surrogate_experiment_results/SPO_validation/paper_shortest_path/compare_pyepo_forward_loss.py
+```
+
+Use `--allow-missing-pyepo` only for local dependency smoke checks.  Real PyEPO
+validation should fail clearly if PyEPO/Torch/Gurobi are not importable.
 
 ## Plotting
 
@@ -136,8 +189,9 @@ python surrogate_experiment_results/SPO_validation/paper_shortest_path/plot_pape
 This writes:
 
 ```text
-plots/paper_shortest_path_ls_vs_spoplus.png
-plots/pyepo_vs_ours_spoplus.png   # only when paired PyEPO and ours rows exist
+plots/paper_shortest_path_middle_row.png
+plots/pyepo_vs_ours_spoplus_scatter.png       # when paired PyEPO and ours rows exist
+plots/pyepo_vs_ours_spoplus_difference.png    # when paired PyEPO and ours rows exist
 ```
 
 ## Output Schema
@@ -170,10 +224,25 @@ learning_rate
 `implementation` is the concrete code path (`ls`, `ours-spoplus`,
 `pyepo-spoplus`).
 
+`metadata.json` includes audit fields:
+
+```text
+paper_experiment = shortest_path_middle_row
+grid_shape
+feature_dim
+edge_dim
+lambda_grid
+methods
+optimizer_ours_spoplus
+optimizer_pyepo_spoplus
+pyepo_requested
+pyepo_available
+normalized_spo_definition = sum_regret_over_sum_oracle_cost
+```
+
 ## Success Criteria
 
-This is not meant to be a pixel-perfect paper reproduction.  The validation is
-successful if:
+This validation is successful if:
 
 - cost-min SPO+ formula and oracle sanity tests pass;
 - LS and SPO+ reproduce the qualitative paper trend on the synthetic
@@ -182,7 +251,7 @@ successful if:
   model class, lambda grid, and seeds;
 - there is no systematic sign reversal or gradient-direction failure.
 
-If these checks pass, the appropriate advisor-facing conclusion is:
+Advisor-facing summary if checks pass:
 
 > Regarding the SPO+ implementation, the validation results look good so far.
 > We verified it on the synthetic shortest-path problem from the SPO paper and

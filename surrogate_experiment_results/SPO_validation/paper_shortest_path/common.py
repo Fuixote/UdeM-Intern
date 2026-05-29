@@ -9,6 +9,7 @@ the PyEPO method is requested.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import importlib
 from pathlib import Path
 from typing import Dict, Iterable, List, Mapping, Sequence, Tuple
 
@@ -77,6 +78,31 @@ class ModelResult:
     selected_lambda: float
     val_metrics: Mapping[str, float]
     train_loss: float | None = None
+
+
+@dataclass(frozen=True)
+class DependencyStatus:
+    available: bool
+    message: str
+    details: Mapping[str, str]
+
+
+def check_pyepo_dependencies() -> DependencyStatus:
+    """Return import-level availability for the PyEPO reference path."""
+
+    details: Dict[str, str] = {}
+    available = True
+    for name in ("torch", "pyepo", "gurobipy"):
+        try:
+            module = importlib.import_module(name)
+        except Exception as exc:  # pragma: no cover - exact env dependent
+            available = False
+            details[name] = f"{type(exc).__name__}: {exc}"
+        else:
+            details[name] = getattr(module, "__version__", "importable")
+    if available:
+        return DependencyStatus(True, "PyEPO/Torch/Gurobi imports are available", details)
+    return DependencyStatus(False, "PyEPO reference dependencies are not importable", details)
 
 
 def paper_edge_count(grid_shape: Sequence[int] = DEFAULT_GRID_SHAPE) -> int:
@@ -205,6 +231,8 @@ def evaluate_predictions(
     split: PaperSplit,
     grid_shape: Sequence[int] = DEFAULT_GRID_SHAPE,
 ) -> Dict[str, float]:
+    """Evaluate predictions with the paper's ratio-of-sums normalized SPO loss."""
+
     pred = np.asarray(pred_costs, dtype=float)
     if pred.shape != split.costs.shape:
         raise ValueError(f"pred_costs shape {pred.shape} does not match {split.costs.shape}")
