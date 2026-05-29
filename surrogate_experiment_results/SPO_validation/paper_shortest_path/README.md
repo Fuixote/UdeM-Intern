@@ -94,7 +94,12 @@ common.py
   our Step1c-core SPO+ trainer, and optional PyEPO SPO+ trainer.
 
 run_paper_shortest_path.py
-  Main experiment runner.  Writes summary.csv and metadata.json.
+  Main experiment runner.  Writes summary.csv, training_diagnostics.csv, and
+  metadata.json.
+
+run_protocol_sweep.py
+  Fixed high-degree training-protocol sweep for diagnosing why stochastic
+  SPO+ may stay too close to LS.
 
 plot_paper_shortest_path.py
   Paper-style middle-row plot plus PyEPO-vs-ours diagnostics.
@@ -177,6 +182,67 @@ python surrogate_experiment_results/SPO_validation/paper_shortest_path/compare_p
 Use `--allow-missing-pyepo` only for local dependency smoke checks.  Real PyEPO
 validation should fail clearly if PyEPO/Torch/Gurobi are not importable.
 
+## Training-Protocol Diagnostics
+
+Current pilot and reduced middle-row results show that the SPO+ formula agrees
+with PyEPO at forward-loss level, but the stochastic training protocol has not
+yet reproduced the paper's high-degree SPO+ advantage.  Before running the full
+50-trial middle row, diagnose whether SPO+ is actually leaving the LS
+initialization.
+
+Latest local protocol sweep status: `baseline-current`, `smaller-batch`,
+`no-l1`, and `averaged-iterate` stayed essentially LS-equivalent at degree 8.
+`zero-init-diagnostic` did improve degree 6/8 substantially, which points to
+the LS initialization / checkpoint-selection protocol as the current bottleneck
+rather than the SPO+ forward-loss formula.
+
+Run a degree-8 baseline diagnostic:
+
+```bash
+python surrogate_experiment_results/SPO_validation/paper_shortest_path/run_paper_shortest_path.py \
+  --preset middle-row \
+  --degrees 8 \
+  --trials 5 \
+  --output-dir surrogate_experiment_results/SPO_validation/paper_shortest_path/results/diag_degree8_baseline_$(date +%Y%m%d_%H%M%S)
+```
+
+Run the fixed high-degree protocol sweep:
+
+```bash
+python surrogate_experiment_results/SPO_validation/paper_shortest_path/run_protocol_sweep.py \
+  --degrees 6 8 \
+  --noise-half-widths 0 0.5 \
+  --trials 3 \
+  --n-test 2000 \
+  --output-dir surrogate_experiment_results/SPO_validation/paper_shortest_path/results/protocol_sweep_$(date +%Y%m%d_%H%M%S)
+```
+
+The sweep variants are:
+
+```text
+baseline-current      raw iterate, LS init, batch_size=32, lr=0.05, iterations=1000
+smaller-batch         raw iterate, LS init, batch_size=10, lr=0.01, iterations=3000
+no-l1                 raw iterate, LS init, lambda_grid=(0,)
+averaged-iterate      averaged iterate, LS init
+zero-init-diagnostic  raw iterate, zero init
+```
+
+Use `training_diagnostics.csv` to check:
+
+```text
+initial_val_norm_spo
+best_val_norm_spo
+final_val_norm_spo
+best_step
+coef_delta_norm_from_ls
+val_path_change_rate_from_ls
+```
+
+If `coef_delta_norm_from_ls` and path-change rates are near zero at degree 8,
+the selected SPO+ model is LS-equivalent.  If they are nonzero but validation
+still selects LS-like checkpoints, tune the stochastic optimizer before any
+full 50-trial claim.
+
 ## Plotting
 
 If `matplotlib` is available:
@@ -218,6 +284,12 @@ n_test
 spoplus_iterations
 batch_size
 learning_rate
+spoplus_variant
+spoplus_init
+best_step
+coef_delta_norm_from_ls
+val_path_change_rate_from_ls
+test_path_change_rate_from_ls
 ```
 
 `method` is the paper-level method family (`LS` or `SPO+`).
@@ -239,6 +311,9 @@ pyepo_requested
 pyepo_available
 normalized_spo_definition = sum_regret_over_sum_oracle_cost
 ```
+
+`training_diagnostics.csv` contains one row per trained SPO+ lambda value and
+records the validation trajectory and distance from the LS initialization.
 
 ## Success Criteria
 

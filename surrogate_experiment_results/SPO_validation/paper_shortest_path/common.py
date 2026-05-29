@@ -8,7 +8,7 @@ the PyEPO method is requested.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import importlib
 from pathlib import Path
 from typing import Dict, Iterable, List, Mapping, Sequence, Tuple
@@ -78,6 +78,9 @@ class ModelResult:
     selected_lambda: float
     val_metrics: Mapping[str, float]
     train_loss: float | None = None
+    diagnostics: Mapping[str, object] = field(default_factory=dict)
+    lambda_diagnostics: Tuple[Mapping[str, object], ...] = field(default_factory=tuple)
+    reference_coefficients: np.ndarray | None = None
 
 
 @dataclass(frozen=True)
@@ -385,6 +388,25 @@ def _spoplus_batch_gradient(
     return grad, train_loss
 
 
+def path_change_rate_from_coefficients(
+    split: PaperSplit,
+    reference_coefficients: np.ndarray,
+    candidate_coefficients: np.ndarray,
+    grid_shape: Sequence[int] = DEFAULT_GRID_SHAPE,
+) -> float:
+    """Return the fraction of instances whose chosen path changes."""
+
+    reference_predictions = predict_costs(split.features, reference_coefficients)
+    candidate_predictions = predict_costs(split.features, candidate_coefficients)
+    changed = 0
+    for reference_costs, candidate_costs in zip(reference_predictions, candidate_predictions):
+        reference_solution, _ = solve_shortest_path(reference_costs, grid_shape)
+        candidate_solution, _ = solve_shortest_path(candidate_costs, grid_shape)
+        if not np.array_equal(reference_solution, candidate_solution):
+            changed += 1
+    return float(changed) / float(split.features.shape[0])
+
+
 def train_spoplus_ours(
     train: PaperSplit,
     val: PaperSplit,
@@ -395,6 +417,8 @@ def train_spoplus_ours(
     seed: int = 0,
     grid_shape: Sequence[int] = DEFAULT_GRID_SHAPE,
     eval_period: int = 50,
+    spoplus_iterate: str = "raw",
+    spoplus_init: str = "ls",
 ) -> ModelResult:
     """Train a linear model with the Step1c-core cost-min SPO+ formula."""
 
@@ -402,14 +426,27 @@ def train_spoplus_ours(
         raise ValueError("iterations must be positive")
     if batch_size <= 0:
         raise ValueError("batch_size must be positive")
+    if spoplus_iterate not in {"raw", "averaged"}:
+        raise ValueError("spoplus_iterate must be 'raw' or 'averaged'")
+    if spoplus_init not in {"ls", "zero"}:
+        raise ValueError("spoplus_init must be 'ls' or 'zero'")
     rng = _as_rng(seed)
-    coefficients = fit_least_squares(train, lambda_value=0.0)
+    ls_coefficients = fit_least_squares(train, lambda_value=0.0)
+    if spoplus_init == "ls":
+        coefficients = ls_coefficients.copy()
+    else:
+        coefficients = np.zeros_like(ls_coefficients)
+    averaged_coefficients = coefficients.copy()
+    averaged_count = 0
     best_coefficients = coefficients.copy()
+    best_step = 0
     best_metrics = evaluate_predictions(
         predict_costs(val.features, best_coefficients),
         val,
         grid_shape=grid_shape,
     )
+    initial_metrics = best_metrics
+    final_metrics = best_metrics
     last_loss: float | None = None
     n_samples = train.features.shape[0]
     eval_period = max(1, int(eval_period))
@@ -425,15 +462,40 @@ def train_spoplus_ours(
         )
         step_size = float(learning_rate) / np.sqrt(float(step))
         coefficients -= step_size * grad
+        averaged_count += 1
+        averaged_coefficients += (coefficients - averaged_coefficients) / float(averaged_count)
+        eval_coefficients = (
+            averaged_coefficients if spoplus_iterate == "averaged" else coefficients
+        )
         if step % eval_period == 0 or step == iterations:
             metrics = evaluate_predictions(
-                predict_costs(val.features, coefficients),
+                predict_costs(val.features, eval_coefficients),
                 val,
                 grid_shape=grid_shape,
             )
+            final_metrics = metrics
             if metrics["normalized_spo_loss"] < best_metrics["normalized_spo_loss"]:
                 best_metrics = metrics
-                best_coefficients = coefficients.copy()
+                best_coefficients = eval_coefficients.copy()
+                best_step = step
+
+    diagnostics = {
+        "lambda_value": float(lambda_value),
+        "spoplus_variant": spoplus_iterate,
+        "spoplus_init": spoplus_init,
+        "initial_val_norm_spo": float(initial_metrics["normalized_spo_loss"]),
+        "best_val_norm_spo": float(best_metrics["normalized_spo_loss"]),
+        "final_val_norm_spo": float(final_metrics["normalized_spo_loss"]),
+        "best_step": int(best_step),
+        "train_loss_last": "" if last_loss is None else float(last_loss),
+        "coef_delta_norm_from_ls": float(np.linalg.norm(best_coefficients - ls_coefficients)),
+        "val_path_change_rate_from_ls": path_change_rate_from_coefficients(
+            val,
+            ls_coefficients,
+            best_coefficients,
+            grid_shape=grid_shape,
+        ),
+    }
 
     return ModelResult(
         method="ours-spoplus",
@@ -441,6 +503,8 @@ def train_spoplus_ours(
         selected_lambda=float(lambda_value),
         val_metrics=best_metrics,
         train_loss=last_loss,
+        diagnostics=diagnostics,
+        reference_coefficients=ls_coefficients,
     )
 
 
@@ -453,8 +517,13 @@ def select_spoplus_ours_model(
     learning_rate: float = 0.05,
     seed: int = 0,
     grid_shape: Sequence[int] = DEFAULT_GRID_SHAPE,
+    eval_period: int = 50,
+    spoplus_iterate: str = "raw",
+    spoplus_init: str = "ls",
 ) -> ModelResult:
     best: ModelResult | None = None
+    best_idx = -1
+    candidates: List[ModelResult] = []
     for lambda_idx, lambda_value in enumerate(lambdas):
         candidate = train_spoplus_ours(
             train,
@@ -465,15 +534,34 @@ def select_spoplus_ours_model(
             learning_rate=learning_rate,
             seed=int(seed) + 7919 * lambda_idx,
             grid_shape=grid_shape,
+            eval_period=eval_period,
+            spoplus_iterate=spoplus_iterate,
+            spoplus_init=spoplus_init,
         )
+        candidates.append(candidate)
         if best is None or (
             candidate.val_metrics["normalized_spo_loss"]
             < best.val_metrics["normalized_spo_loss"]
         ):
             best = candidate
+            best_idx = lambda_idx
     if best is None:
         raise ValueError("at least one lambda must be provided")
-    return best
+    lambda_diagnostics = []
+    for lambda_idx, candidate in enumerate(candidates):
+        row = dict(candidate.diagnostics)
+        row["selected"] = lambda_idx == best_idx
+        lambda_diagnostics.append(row)
+    return ModelResult(
+        method=best.method,
+        coefficients=best.coefficients,
+        selected_lambda=best.selected_lambda,
+        val_metrics=best.val_metrics,
+        train_loss=best.train_loss,
+        diagnostics=best.diagnostics,
+        lambda_diagnostics=tuple(lambda_diagnostics),
+        reference_coefficients=best.reference_coefficients,
+    )
 
 
 def _build_pyepo_grid_optmodel(grid_shape: Sequence[int] = DEFAULT_GRID_SHAPE):

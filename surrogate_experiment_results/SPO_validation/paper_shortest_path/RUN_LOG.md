@@ -299,3 +299,136 @@ checks:
    spoplus_iterations in {1000, 3000}
 4. Compare no-L1 vs L1 behavior for SPO+ on degree 8.
 ```
+
+## 2026-05-29 16:25 America/Toronto
+
+### Training-Protocol Diagnostics Added
+
+Implemented the next-stage audit recommended above.  The runner now writes:
+
+```text
+summary.csv
+training_diagnostics.csv
+metadata.json
+```
+
+New selected-model summary fields:
+
+```text
+spoplus_variant
+spoplus_init
+best_step
+coef_delta_norm_from_ls
+val_path_change_rate_from_ls
+test_path_change_rate_from_ls
+```
+
+New per-lambda diagnostics in `training_diagnostics.csv`:
+
+```text
+initial_val_norm_spo
+best_val_norm_spo
+final_val_norm_spo
+best_step
+train_loss_last
+coef_delta_norm_from_ls
+val_path_change_rate_from_ls
+```
+
+The default behavior remains the previous protocol:
+
+```text
+spoplus_iterate = raw
+spoplus_init = ls
+eval_period = 50
+```
+
+Additional switches were added for audit runs:
+
+```text
+--spoplus-iterate raw|averaged
+--spoplus-init ls|zero
+--eval-period <int>
+```
+
+Also added `run_protocol_sweep.py`, which runs fixed high-degree diagnostic
+variants: baseline-current, smaller-batch, no-l1, averaged-iterate, and
+zero-init-diagnostic.
+
+Current recommendation is unchanged: run diagnostics/sweep before any full
+50-trial middle-row experiment.
+
+## 2026-05-29 16:37 America/Toronto
+
+### Local Protocol Sweep
+
+Command:
+
+```bash
+python surrogate_experiment_results/SPO_validation/paper_shortest_path/run_protocol_sweep.py \
+  --degrees 6 8 \
+  --noise-half-widths 0 0.5 \
+  --trials 3 \
+  --n-test 2000 \
+  --output-dir surrogate_experiment_results/SPO_validation/paper_shortest_path/results/protocol_sweep_20260529_163730
+```
+
+Output:
+
+```text
+surrogate_experiment_results/SPO_validation/paper_shortest_path/results/protocol_sweep_20260529_163730
+```
+
+Mean `test_norm_spo` by variant:
+
+```text
+baseline-current:
+  degree=6, noise=0.0: LS=0.059904, ours=0.059537, ours-LS=-0.000368
+  degree=6, noise=0.5: LS=0.133105, ours=0.132830, ours-LS=-0.000275
+  degree=8, noise=0.0: LS=0.157113, ours=0.157113, ours-LS=+0.000000
+  degree=8, noise=0.5: LS=0.197521, ours=0.197521, ours-LS=+0.000000
+
+smaller-batch:
+  degree=6, noise=0.0: LS=0.059904, ours=0.059683, ours-LS=-0.000222
+  degree=6, noise=0.5: LS=0.133105, ours=0.133105, ours-LS=+0.000000
+  degree=8, noise=0.0: LS=0.157113, ours=0.157113, ours-LS=+0.000000
+  degree=8, noise=0.5: LS=0.197521, ours=0.197521, ours-LS=+0.000000
+
+no-l1:
+  degree=6, noise=0.0: LS=0.059893, ours=0.059542, ours-LS=-0.000351
+  degree=6, noise=0.5: LS=0.133105, ours=0.132830, ours-LS=-0.000275
+  degree=8, noise=0.0: LS=0.157113, ours=0.157113, ours-LS=+0.000000
+  degree=8, noise=0.5: LS=0.197521, ours=0.197521, ours-LS=+0.000000
+
+averaged-iterate:
+  degree=6, noise=0.0: LS=0.059904, ours=0.059678, ours-LS=-0.000226
+  degree=6, noise=0.5: LS=0.133105, ours=0.133102, ours-LS=-0.000003
+  degree=8, noise=0.0: LS=0.157113, ours=0.157113, ours-LS=+0.000000
+  degree=8, noise=0.5: LS=0.197521, ours=0.197521, ours-LS=+0.000000
+
+zero-init-diagnostic:
+  degree=6, noise=0.0: LS=0.059904, ours=0.047432, ours-LS=-0.012472
+  degree=6, noise=0.5: LS=0.133105, ours=0.123755, ours-LS=-0.009350
+  degree=8, noise=0.0: LS=0.157113, ours=0.101746, ours-LS=-0.055366
+  degree=8, noise=0.5: LS=0.197521, ours=0.154887, ours-LS=-0.042634
+```
+
+Selected diagnostic summary:
+
+```text
+baseline-current: mean_coef_delta=1.752635, mean_val_path_change=0.001667, best_step_zero=8/12
+smaller-batch: mean_coef_delta=0.090243, mean_val_path_change=0.000333, best_step_zero=11/12
+no-l1: mean_coef_delta=1.128559, mean_val_path_change=0.001333, best_step_zero=9/12
+averaged-iterate: mean_coef_delta=4.813177, mean_val_path_change=0.001333, best_step_zero=8/12
+zero-init-diagnostic: mean_coef_delta=154632.286280, mean_val_path_change=0.565333, best_step_zero=0/12
+```
+
+Interpretation: the default LS-initialized protocol is often selecting the
+initial LS-equivalent checkpoint, especially at degree 8.  The zero-init
+diagnostic produces very different paths and substantially lower normalized SPO
+loss in this 3-trial sweep.  This is strong evidence that the next issue is the
+training/checkpoint protocol, not the SPO+ forward-loss formula.
+
+Recommended next step: do **not** run full 50 trials yet.  Run a reduced
+middle-row with a zero-init SPO+ variant, then compare it against the current
+LS-init baseline and, if possible, PyEPO with matching initialization.

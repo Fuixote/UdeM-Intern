@@ -38,6 +38,34 @@ OUTPUT_FIELDS = (
     "spoplus_iterations",
     "batch_size",
     "learning_rate",
+    "spoplus_variant",
+    "spoplus_init",
+    "best_step",
+    "coef_delta_norm_from_ls",
+    "val_path_change_rate_from_ls",
+    "test_path_change_rate_from_ls",
+)
+
+DIAGNOSTIC_FIELDS = (
+    "implementation",
+    "trial",
+    "degree",
+    "noise_half_width",
+    "seed",
+    "lambda_value",
+    "selected",
+    "spoplus_iterations",
+    "batch_size",
+    "learning_rate",
+    "spoplus_variant",
+    "spoplus_init",
+    "initial_val_norm_spo",
+    "best_val_norm_spo",
+    "final_val_norm_spo",
+    "best_step",
+    "train_loss_last",
+    "coef_delta_norm_from_ls",
+    "val_path_change_rate_from_ls",
 )
 
 PRESET_NAMES = (
@@ -67,6 +95,9 @@ def _preset_defaults(preset: str) -> Dict[str, object]:
             "spoplus_iterations": 3,
             "batch_size": 5,
             "learning_rate": 0.05,
+            "spoplus_iterate": "raw",
+            "spoplus_init": "ls",
+            "eval_period": 50,
             "methods": ("ls", "ours-spoplus"),
         }
     if preset == "pilot":
@@ -81,6 +112,9 @@ def _preset_defaults(preset: str) -> Dict[str, object]:
             "spoplus_iterations": 300,
             "batch_size": 32,
             "learning_rate": 0.05,
+            "spoplus_iterate": "raw",
+            "spoplus_init": "ls",
+            "eval_period": 50,
             "methods": ("ls", "ours-spoplus"),
         }
     if preset == "pyepo-pilot":
@@ -99,6 +133,9 @@ def _preset_defaults(preset: str) -> Dict[str, object]:
             "spoplus_iterations": 1000,
             "batch_size": 32,
             "learning_rate": 0.05,
+            "spoplus_iterate": "raw",
+            "spoplus_init": "ls",
+            "eval_period": 50,
             "methods": ("ls", "ours-spoplus"),
         }
     if preset == "middle-row-pyepo":
@@ -129,6 +166,9 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--spoplus-iterations", type=int, default=None)
     parser.add_argument("--batch-size", type=int, default=None)
     parser.add_argument("--learning-rate", type=float, default=None)
+    parser.add_argument("--spoplus-iterate", choices=("raw", "averaged"), default=None)
+    parser.add_argument("--spoplus-init", choices=("ls", "zero"), default=None)
+    parser.add_argument("--eval-period", type=int, default=None)
     parser.add_argument("--seed", type=int, default=20260529)
     parser.add_argument("--output-dir", type=Path, default=None)
     parser.add_argument("--dry-run", action="store_true")
@@ -160,6 +200,12 @@ def resolve_options(args: argparse.Namespace) -> Dict[str, object]:
         options["batch_size"] = args.batch_size
     if args.learning_rate is not None:
         options["learning_rate"] = args.learning_rate
+    if args.spoplus_iterate is not None:
+        options["spoplus_iterate"] = args.spoplus_iterate
+    if args.spoplus_init is not None:
+        options["spoplus_init"] = args.spoplus_init
+    if args.eval_period is not None:
+        options["eval_period"] = args.eval_period
     options["seed"] = args.seed
     if args.output_dir is None:
         options["output_dir"] = (
@@ -226,6 +272,9 @@ def print_dry_run_plan(
     print(f"n_train/n_val/n_test: {options['n_train']}/{options['n_val']}/{options['n_test']}")
     print(f"methods: {tuple(options['methods'])}")
     print(f"lambda_grid_length: {len(tuple(options['lambda_grid']))}")
+    print(f"spoplus_iterate: {options['spoplus_iterate']}")
+    print(f"spoplus_init: {options['spoplus_init']}")
+    print(f"eval_period: {options['eval_period']}")
     print(f"estimated_model_fits: {estimate_model_fits(options)}")
     print(
         "estimated_ours_spoplus_oracle_calls: "
@@ -252,6 +301,7 @@ def build_metadata(
         "methods": list(options["methods"]),
         "optimizer_ours_spoplus": (
             "stochastic subgradient with step_size=learning_rate/sqrt(iteration), "
+            "optional averaged iterate, optional LS/zero initialization, "
             "L1 subgradient on non-intercept weights"
         ),
         "optimizer_pyepo_spoplus": "torch Adam on linear model with optional L1 penalty",
@@ -275,6 +325,9 @@ def _method_result(
     spoplus_iterations: int,
     batch_size: int,
     learning_rate: float,
+    spoplus_iterate: str,
+    spoplus_init: str,
+    eval_period: int,
 ) -> common.ModelResult:
     if method == "ls":
         return common.select_least_squares_model(
@@ -290,6 +343,9 @@ def _method_result(
             iterations=spoplus_iterations,
             batch_size=batch_size,
             learning_rate=learning_rate,
+            eval_period=eval_period,
+            spoplus_iterate=spoplus_iterate,
+            spoplus_init=spoplus_init,
             seed=instance.seed,
         )
     if method == "pyepo-spoplus":
@@ -312,6 +368,14 @@ def _row_for_result(
 ) -> Dict[str, object]:
     predictions = common.predict_costs(instance.test.features, result.coefficients)
     test_metrics = common.evaluate_predictions(predictions, instance.test)
+    diagnostics = dict(result.diagnostics)
+    test_path_change_rate = ""
+    if result.reference_coefficients is not None:
+        test_path_change_rate = common.path_change_rate_from_coefficients(
+            instance.test,
+            result.reference_coefficients,
+            result.coefficients,
+        )
     return {
         "implementation": result.method,
         "method": "SPO+" if result.method.endswith("spoplus") else "LS",
@@ -335,7 +399,37 @@ def _row_for_result(
         "spoplus_iterations": options["spoplus_iterations"],
         "batch_size": options["batch_size"],
         "learning_rate": options["learning_rate"],
+        "spoplus_variant": diagnostics.get("spoplus_variant", ""),
+        "spoplus_init": diagnostics.get("spoplus_init", ""),
+        "best_step": diagnostics.get("best_step", ""),
+        "coef_delta_norm_from_ls": diagnostics.get("coef_delta_norm_from_ls", ""),
+        "val_path_change_rate_from_ls": diagnostics.get(
+            "val_path_change_rate_from_ls", ""
+        ),
+        "test_path_change_rate_from_ls": test_path_change_rate,
     }
+
+
+def _diagnostic_rows_for_result(
+    result: common.ModelResult,
+    instance: common.PaperTrialInstance,
+    options: Mapping[str, object],
+) -> List[Dict[str, object]]:
+    rows = []
+    for diagnostics in result.lambda_diagnostics:
+        row = {
+            "implementation": result.method,
+            "trial": instance.trial,
+            "degree": instance.degree,
+            "noise_half_width": instance.noise_half_width,
+            "seed": instance.seed,
+            "spoplus_iterations": options["spoplus_iterations"],
+            "batch_size": options["batch_size"],
+            "learning_rate": options["learning_rate"],
+        }
+        row.update(diagnostics)
+        rows.append(row)
+    return rows
 
 
 def write_summary(output_dir: Path, rows: Sequence[Mapping[str, object]]) -> Path:
@@ -347,6 +441,20 @@ def write_summary(output_dir: Path, rows: Sequence[Mapping[str, object]]) -> Pat
         for row in rows:
             writer.writerow(row)
     return summary_path
+
+
+def write_training_diagnostics(
+    output_dir: Path,
+    rows: Sequence[Mapping[str, object]],
+) -> Path:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    diagnostics_path = output_dir / "training_diagnostics.csv"
+    with diagnostics_path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=DIAGNOSTIC_FIELDS)
+        writer.writeheader()
+        for row in rows:
+            writer.writerow({field: row.get(field, "") for field in DIAGNOSTIC_FIELDS})
+    return diagnostics_path
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -375,6 +483,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     lambdas = tuple(float(value) for value in options["lambda_grid"])
     rows: List[Dict[str, object]] = []
+    diagnostic_rows: List[Dict[str, object]] = []
     for trial in range(int(options["trials"])):
         for degree in options["degrees"]:
             for noise_half_width in options["noise_half_widths"]:
@@ -393,9 +502,15 @@ def main(argv: Sequence[str] | None = None) -> int:
                         spoplus_iterations=int(options["spoplus_iterations"]),
                         batch_size=int(options["batch_size"]),
                         learning_rate=float(options["learning_rate"]),
+                        spoplus_iterate=str(options["spoplus_iterate"]),
+                        spoplus_init=str(options["spoplus_init"]),
+                        eval_period=int(options["eval_period"]),
                     )
                     row = _row_for_result(result, instance, options)
                     rows.append(row)
+                    diagnostic_rows.extend(
+                        _diagnostic_rows_for_result(result, instance, options)
+                    )
                     print(
                         "completed",
                         row["implementation"],
@@ -410,10 +525,12 @@ def main(argv: Sequence[str] | None = None) -> int:
                     )
 
     summary_path = write_summary(output_dir, rows)
+    diagnostics_path = write_training_diagnostics(output_dir, diagnostic_rows)
     metadata = build_metadata(options, config, pyepo_status)
     with (output_dir / "metadata.json").open("w", encoding="utf-8") as handle:
         json.dump(metadata, handle, indent=2, sort_keys=True)
     print(f"wrote {summary_path}")
+    print(f"wrote {diagnostics_path}")
     return 0
 
 

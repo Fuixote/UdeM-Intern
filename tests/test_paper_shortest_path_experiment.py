@@ -133,11 +133,15 @@ class PaperShortestPathExperimentTest(unittest.TestCase):
                 f"runner failed\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}",
             )
             summary_path = Path(temp_dir) / "summary.csv"
+            diagnostics_path = Path(temp_dir) / "training_diagnostics.csv"
             metadata_path = Path(temp_dir) / "metadata.json"
             self.assertTrue(summary_path.exists())
+            self.assertTrue(diagnostics_path.exists())
             self.assertTrue(metadata_path.exists())
             with summary_path.open(newline="", encoding="utf-8") as handle:
                 rows = list(csv.DictReader(handle))
+            with diagnostics_path.open(newline="", encoding="utf-8") as handle:
+                diagnostics = list(csv.DictReader(handle))
             metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
 
             self.assertEqual(
@@ -149,6 +153,20 @@ class PaperShortestPathExperimentTest(unittest.TestCase):
                 self.assertEqual(row["degree"], "1")
                 self.assertEqual(row["noise_half_width"], "0.0")
                 self.assertTrue(float(row["test_norm_spo"]) >= 0.0)
+            ours_row = next(row for row in rows if row["implementation"] == "ours-spoplus")
+            self.assertEqual(ours_row["spoplus_variant"], "raw")
+            self.assertEqual(ours_row["spoplus_init"], "ls")
+            self.assertIn("best_step", ours_row)
+            self.assertIn("coef_delta_norm_from_ls", ours_row)
+            self.assertIn("val_path_change_rate_from_ls", ours_row)
+            self.assertIn("test_path_change_rate_from_ls", ours_row)
+            self.assertEqual(len(diagnostics), 1)
+            self.assertEqual(diagnostics[0]["implementation"], "ours-spoplus")
+            self.assertEqual(diagnostics[0]["lambda_value"], "0.0")
+            self.assertEqual(diagnostics[0]["selected"], "True")
+            self.assertIn("initial_val_norm_spo", diagnostics[0])
+            self.assertIn("best_val_norm_spo", diagnostics[0])
+            self.assertIn("final_val_norm_spo", diagnostics[0])
             self.assertEqual(
                 metadata["normalized_spo_definition"],
                 "sum_regret_over_sum_oracle_cost",
@@ -173,6 +191,55 @@ class PaperShortestPathExperimentTest(unittest.TestCase):
         self.assertEqual(options["n_test"], 10000)
         self.assertEqual(len(options["lambda_grid"]), 10)
         self.assertEqual(options["methods"], ("ls", "ours-spoplus"))
+        self.assertEqual(options["spoplus_iterate"], "raw")
+        self.assertEqual(options["spoplus_init"], "ls")
+        self.assertEqual(options["eval_period"], 50)
+
+    def test_spoplus_training_protocol_options_resolve(self):
+        runner = load_module("run_paper_shortest_path.py", "paper_runner_protocol_options")
+        args = runner.build_arg_parser().parse_args(
+            [
+                "--preset",
+                "pilot",
+                "--spoplus-iterate",
+                "averaged",
+                "--spoplus-init",
+                "zero",
+                "--eval-period",
+                "7",
+            ]
+        )
+
+        options = runner.resolve_options(args)
+
+        self.assertEqual(options["spoplus_iterate"], "averaged")
+        self.assertEqual(options["spoplus_init"], "zero")
+        self.assertEqual(options["eval_period"], 7)
+
+    def test_protocol_sweep_defines_expected_variants(self):
+        sweep = load_module("run_protocol_sweep.py", "paper_protocol_sweep")
+
+        variants = sweep.protocol_variants()
+        by_name = {variant.name: variant for variant in variants}
+
+        self.assertEqual(
+            set(by_name),
+            {
+                "baseline-current",
+                "smaller-batch",
+                "no-l1",
+                "averaged-iterate",
+                "zero-init-diagnostic",
+            },
+        )
+        self.assertEqual(by_name["baseline-current"].spoplus_iterate, "raw")
+        self.assertEqual(by_name["baseline-current"].spoplus_init, "ls")
+        self.assertEqual(by_name["smaller-batch"].batch_size, 10)
+        self.assertEqual(by_name["smaller-batch"].learning_rate, 0.01)
+        self.assertEqual(by_name["smaller-batch"].spoplus_iterations, 3000)
+        self.assertEqual(by_name["no-l1"].lambda_grid, (0.0,))
+        self.assertEqual(by_name["averaged-iterate"].spoplus_iterate, "averaged")
+        self.assertEqual(by_name["zero-init-diagnostic"].spoplus_init, "zero")
 
     def test_pyepo_pilot_preset_includes_pyepo_spoplus(self):
         runner = load_module("run_paper_shortest_path.py", "paper_runner_pyepo_preset")
@@ -215,6 +282,9 @@ class PaperShortestPathExperimentTest(unittest.TestCase):
             self.assertIn("lambda_grid_length: 10", result.stdout)
             self.assertIn("estimated_model_fits: 10000", result.stdout)
             self.assertIn("estimated_ours_spoplus_oracle_calls: 160000000", result.stdout)
+            self.assertIn("spoplus_iterate: raw", result.stdout)
+            self.assertIn("spoplus_init: ls", result.stdout)
+            self.assertIn("eval_period: 50", result.stdout)
             self.assertFalse(output_dir.exists())
 
     def test_fail_if_pyepo_missing_uses_clear_dependency_error(self):
