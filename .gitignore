@@ -12,6 +12,8 @@ dataset/raw/
 dataset/processed/
 results/
 solutions/
+surrogate_experiment_results/SPO_validation/warcraft_maps.tar.gz
+surrogate_experiment_results/SPO_validation/warcraft_shortest_path_oneskin/
 
 # Generated documents / intermediate files
 main.pdf
