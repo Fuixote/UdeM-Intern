@@ -1,4 +1,4 @@
-"""Level 1.5 validation for the current Step1c KEP SPO+ code path.
+"""Validation for the current Step1c KEP SPO+ code path.
 
 This module deliberately tests the exact public Step1c function
 ``step1c_common.spo_plus_loss_and_grad`` while keeping the oracle small and
@@ -147,7 +147,7 @@ def load_step1c_common():
 
 
 def validate_step1c_code_path() -> Dict[str, object]:
-    """Run the Level 1.5 Step1c code-path checks and return diagnostics."""
+    """Run the Step1c code-path checks and return diagnostics."""
 
     common = load_step1c_common()
     record = make_toy_kep_record()

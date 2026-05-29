@@ -110,29 +110,25 @@ class SpoPlusShortestPathValidationTest(unittest.TestCase):
         self.assertEqual(obj_first, obj_second)
         np.testing.assert_array_equal(z_first, np.array([1.0, 0.0, 1.0, 0.0]))
 
-    def test_readme_level1_scripts_exist_and_run(self):
+    def test_formula_script_exists_and_runs(self):
         repo_root = Path(__file__).resolve().parents[1]
         script_dir = repo_root / "surrogate_experiment_results" / "SPO_validation"
-        scripts = [
-            "01_compare_spoplus_formula_toy_shortest_path.py",
-            "02_compare_reward_max_sign_conversion.py",
-        ]
+        script_path = script_dir / "01_compare_spoplus_formula_toy_shortest_path.py"
 
-        for script_name in scripts:
-            script_path = script_dir / script_name
-            self.assertTrue(script_path.exists(), f"missing {script_path}")
-            result = subprocess.run(
-                [sys.executable, str(script_path)],
-                cwd=repo_root,
-                check=False,
-                text=True,
-                capture_output=True,
-            )
-            self.assertEqual(
-                result.returncode,
-                0,
-                f"{script_name} failed\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}",
-            )
+        self.assertTrue(script_path.exists(), f"missing {script_path}")
+        result = subprocess.run(
+            [sys.executable, str(script_path)],
+            cwd=repo_root,
+            check=False,
+            text=True,
+            capture_output=True,
+        )
+        self.assertEqual(
+            result.returncode,
+            0,
+            f"{script_path.name} failed\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}",
+        )
+        self.assertIn("Reward-max / cost-min SPO+ sign conversion checks passed", result.stdout)
 
     def test_pyepo_comparison_has_no_failure_fallback(self):
         repo_root = Path(__file__).resolve().parents[1]

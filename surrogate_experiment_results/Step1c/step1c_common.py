@@ -11,6 +11,14 @@ import numpy as np
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 STEP1A_PATH = PROJECT_ROOT / "surrogate_experiment_results" / "Step1a" / "Step1.py"
+STEP1C_DIR = Path(__file__).resolve().parent
+if str(STEP1C_DIR) not in sys.path:
+    sys.path.insert(0, str(STEP1C_DIR))
+
+from spoplus_core import (  # noqa: E402
+    reward_max_prediction_gradient,
+    reward_max_spoplus_loss,
+)
 
 PROBE = {
     "feature_names": ["utility", "recipient_cPRA"],
@@ -122,12 +130,8 @@ def spo_plus_loss_and_grad(
     shifted_w = 2.0 * w_hat - w_true
     y_adv = np.asarray(step1a.solve_once(shifted_w, record["graph"], env), dtype=float)
 
-    loss = (
-        float(np.dot(shifted_w, y_adv))
-        - 2.0 * float(np.dot(w_hat, y_optimal))
-        + float(np.dot(w_true, y_optimal))
-    )
-    grad = 2.0 * (X.T @ (y_adv - y_optimal))
+    loss = reward_max_spoplus_loss(w_hat, w_true, y_optimal, y_adv)
+    grad = X.T @ reward_max_prediction_gradient(y_optimal, y_adv)
 
     if normalize:
         denominator = abs(float(np.dot(w_true, y_optimal))) + normalizer_epsilon

@@ -17,9 +17,8 @@ def load_module(path, name):
 
 
 class WarcraftLevel2FilesTest(unittest.TestCase):
-    def test_readme_level2_entrypoints_exist(self):
-        self.assertTrue((SPO_DIR / "03_run_warcraft_pyepo_reference.py").exists())
-        self.assertTrue((SPO_DIR / "04_run_warcraft_our_spoplus.py").exists())
+    def test_canonical_level2_entrypoint_exists(self):
+        self.assertTrue((SPO_DIR / "03_compare_warcraft_pyepo_vs_ours.py").exists())
         self.assertTrue((SPO_DIR / "warcraft_level2_common.py").exists())
 
     def test_default_config_matches_warcraft_notebook(self):
@@ -42,20 +41,15 @@ class WarcraftLevel2FilesTest(unittest.TestCase):
             SPO_DIR / "warcraft_shortest_path_oneskin",
         )
 
-    def test_level2_entrypoints_expose_consistent_cli(self):
-        pyepo_ref = load_module(
-            SPO_DIR / "03_run_warcraft_pyepo_reference.py",
-            "warcraft_level2_pyepo_reference_cli",
-        )
-        ours = load_module(
-            SPO_DIR / "04_run_warcraft_our_spoplus.py",
-            "warcraft_level2_our_spoplus_cli",
+    def test_level2_entrypoint_exposes_expected_cli(self):
+        comparison = load_module(
+            SPO_DIR / "03_compare_warcraft_pyepo_vs_ours.py",
+            "warcraft_level2_comparison_cli",
         )
 
-        pyepo_options = {
-            action.dest for action in pyepo_ref.build_arg_parser()._actions
+        comparison_options = {
+            action.dest for action in comparison.build_arg_parser()._actions
         }
-        ours_options = {action.dest for action in ours.build_arg_parser()._actions}
         expected = {
             "batch_size",
             "data_root",
@@ -70,8 +64,7 @@ class WarcraftLevel2FilesTest(unittest.TestCase):
             "train_limit",
         }
 
-        self.assertEqual(pyepo_options, ours_options)
-        self.assertTrue(expected.issubset(pyepo_options))
+        self.assertTrue(expected.issubset(comparison_options))
 
     def test_missing_default_warcraft_data_is_hard_failure(self):
         common = load_module(
@@ -81,26 +74,26 @@ class WarcraftLevel2FilesTest(unittest.TestCase):
         with self.assertRaises(FileNotFoundError):
             common.load_warcraft_arrays(SPO_DIR / "does-not-exist", grid_size=12)
 
-    def test_output_schema_is_shared_by_reference_and_ours(self):
+    def test_output_schema_is_shared_by_comparison_entrypoint(self):
         common = load_module(
             SPO_DIR / "warcraft_level2_common.py", "warcraft_level2_common_schema"
         )
-        pyepo_ref = load_module(
-            SPO_DIR / "03_run_warcraft_pyepo_reference.py",
-            "warcraft_level2_pyepo_reference_schema",
-        )
-        ours = load_module(
-            SPO_DIR / "04_run_warcraft_our_spoplus.py",
-            "warcraft_level2_our_spoplus_schema",
+        comparison = load_module(
+            SPO_DIR / "03_compare_warcraft_pyepo_vs_ours.py",
+            "warcraft_level2_comparison_schema",
         )
 
-        self.assertEqual(pyepo_ref.OUTPUT_FIELDS, common.OUTPUT_FIELDS)
-        self.assertEqual(ours.OUTPUT_FIELDS, common.OUTPUT_FIELDS)
+        self.assertEqual(comparison.OUTPUT_FIELDS, common.OUTPUT_FIELDS)
+
+    def test_our_spoplus_reuses_shared_step1c_core(self):
+        source = (SPO_DIR / "warcraft_level2_common.py").read_text(encoding="utf-8")
+
+        self.assertIn("cost_min_spoplus_loss", source)
+        self.assertNotIn("class OurSPOPlusFunction", source)
 
     def test_level2_scripts_have_no_failure_fallback_wording(self):
         for filename in [
-            "03_run_warcraft_pyepo_reference.py",
-            "04_run_warcraft_our_spoplus.py",
+            "03_compare_warcraft_pyepo_vs_ours.py",
             "warcraft_level2_common.py",
         ]:
             source = (SPO_DIR / filename).read_text(encoding="utf-8").lower()

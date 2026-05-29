@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Level 1.5: validate the current Step1c KEP SPO+ code path."""
+"""Validate the current Step1c KEP SPO+ code path."""
 
 from __future__ import annotations
 

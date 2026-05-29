@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""README Step A: toy cost-min shortest-path SPO+ formula checks.
+"""Formula-level toy shortest-path SPO+ checks.
 
 This script is intentionally small.  It checks the local cost-min SPO+ formula,
-the upper-bound property, and a stable finite-difference gradient direction.
-It also delegates to the PyEPO comparison.  Missing PyEPO/Gurobi dependencies
-or Gurobi license/network failures are hard failures.
+the reward-max sign adapter, the upper-bound property, and a stable
+finite-difference gradient direction.  It also delegates to the PyEPO
+comparison.  Missing PyEPO/Gurobi dependencies or Gurobi license/network
+failures are hard failures.
 """
 
 from __future__ import annotations
@@ -23,6 +24,7 @@ from compare_with_pyepo_spoplus import compare_with_pyepo  # noqa: E402
 from spoplus_shortest_path import (  # noqa: E402
     grid_edges,
     solve_shortest_path,
+    spo_plus_max_loss_and_grad,
     spo_plus_min_loss_and_grad,
 )
 
@@ -69,10 +71,29 @@ def _check_finite_difference_gradient() -> None:
     np.testing.assert_allclose(float(np.dot(grad, direction)), finite_difference, atol=1e-7)
 
 
+def _check_reward_max_sign_conversion() -> None:
+    grid_shape = (4, 3)
+    rng = np.random.RandomState(11)
+    n_edges = len(grid_edges(grid_shape))
+
+    for _ in range(30):
+        w = rng.uniform(-2.0, 2.0, size=n_edges)
+        w_hat = rng.uniform(-2.0, 2.0, size=n_edges)
+
+        max_loss, max_grad = spo_plus_max_loss_and_grad(w_hat, w, grid_shape)
+        min_loss, min_grad = spo_plus_min_loss_and_grad(-w_hat, -w, grid_shape)
+
+        np.testing.assert_allclose(max_loss, min_loss, atol=1e-10)
+        np.testing.assert_allclose(max_grad, -min_grad, atol=1e-10)
+
+    print("Reward-max / cost-min SPO+ sign conversion checks passed.")
+
+
 def main() -> int:
     _check_perfect_prediction()
     _check_upper_bound()
     _check_finite_difference_gradient()
+    _check_reward_max_sign_conversion()
     print("Local cost-min SPO+ toy formula checks passed.")
     return compare_with_pyepo()
 

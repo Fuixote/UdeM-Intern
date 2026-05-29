@@ -1,7 +1,7 @@
-"""Shared Warcraft Level-2 validation utilities.
+"""Shared Warcraft PyEPO comparison utilities.
 
-The Level-2 scripts intentionally mirror the PyEPO Warcraft notebook defaults
-while keeping the command-line entrypoints small and consistently named.
+The comparison mirrors the PyEPO Warcraft notebook defaults while keeping one
+small command-line entrypoint.
 """
 
 from __future__ import annotations
@@ -10,6 +10,7 @@ import argparse
 import csv
 import json
 import random
+import sys
 import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -18,11 +19,16 @@ from typing import Callable, Dict, Iterable, List, Mapping, Tuple
 import numpy as np
 import torch
 from torch import nn
-from torch.autograd import Function
 from torch.utils.data import DataLoader, Dataset
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
+STEP1C_DIR = SCRIPT_DIR.parent / "Step1c"
+if str(STEP1C_DIR) not in sys.path:
+    sys.path.insert(0, str(STEP1C_DIR))
+
+from spoplus_core import cost_min_spoplus_loss  # noqa: E402
+
 DEFAULT_DATA_ROOT = SCRIPT_DIR / "warcraft_shortest_path_oneskin"
 DEFAULT_OUTPUT_ROOT = SCRIPT_DIR / "plot_results"
 
@@ -277,33 +283,22 @@ def solve_batch(costs: torch.Tensor, optmodel) -> Tuple[torch.Tensor, torch.Tens
     )
 
 
-class OurSPOPlusFunction(Function):
-    @staticmethod
-    def forward(ctx, pred_cost, true_cost, true_sol, true_obj, optmodel):
-        cp = pred_cost.detach()
-        c = true_cost.detach()
-        w = true_sol.detach()
-        z = true_obj.detach()
-        shifted_sol, shifted_obj = solve_batch(2.0 * cp - c, optmodel)
-        loss = -shifted_obj + 2.0 * torch.einsum("bi,bi->b", cp, w) - z.squeeze(dim=-1)
-        ctx.save_for_backward(w, shifted_sol)
-        return loss
-
-    @staticmethod
-    def backward(ctx, grad_output):
-        true_sol, shifted_sol = ctx.saved_tensors
-        grad = 2.0 * (true_sol - shifted_sol)
-        return grad_output.unsqueeze(1) * grad, None, None, None, None
-
-
 class OurSPOPlus(nn.Module):
     def __init__(self, optmodel):
         super().__init__()
         self.optmodel = optmodel
 
     def forward(self, pred_cost, true_cost, true_sol, true_obj):
-        return OurSPOPlusFunction.apply(
-            pred_cost, true_cost, true_sol, true_obj, self.optmodel
+        del true_obj
+        shifted_sol, _ = solve_batch(
+            2.0 * pred_cost.detach() - true_cost.detach(),
+            self.optmodel,
+        )
+        return cost_min_spoplus_loss(
+            pred_cost,
+            true_cost.detach(),
+            true_sol.detach(),
+            shifted_sol.detach(),
         )
 
 

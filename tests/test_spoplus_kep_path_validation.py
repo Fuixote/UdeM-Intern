@@ -23,6 +23,38 @@ def load_module(path, name):
 
 
 class KepSpoPlusCodePathValidationTest(unittest.TestCase):
+    def test_shared_spoplus_core_matches_step1c_reward_max_formula(self):
+        spec = importlib.util.spec_from_file_location(
+            "step1c_spoplus_core",
+            REPO_ROOT / "surrogate_experiment_results" / "Step1c" / "spoplus_core.py",
+        )
+        core = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = core
+        spec.loader.exec_module(core)
+
+        pred_reward = np.array([0.5, -1.0, 2.0], dtype=float)
+        true_reward = np.array([1.0, 0.25, 1.5], dtype=float)
+        optimal_solution = np.array([1.0, 0.0, 1.0], dtype=float)
+        adversarial_solution = np.array([0.0, 1.0, 1.0], dtype=float)
+
+        expected_loss = (
+            np.dot(2.0 * pred_reward - true_reward, adversarial_solution)
+            - 2.0 * np.dot(pred_reward, optimal_solution)
+            + np.dot(true_reward, optimal_solution)
+        )
+        expected_grad = 2.0 * (adversarial_solution - optimal_solution)
+
+        self.assertAlmostEqual(
+            core.reward_max_spoplus_loss(
+                pred_reward, true_reward, optimal_solution, adversarial_solution
+            ),
+            expected_loss,
+        )
+        np.testing.assert_allclose(
+            core.reward_max_prediction_gradient(optimal_solution, adversarial_solution),
+            expected_grad,
+        )
+
     def test_reference_matches_step1c_code_path_loss_and_gradient(self):
         validation = load_module(
             SPO_DIR / "spoplus_kep_path_validation.py",
@@ -93,7 +125,7 @@ class KepSpoPlusCodePathValidationTest(unittest.TestCase):
         self.assertEqual(
             result.returncode,
             0,
-            f"Level 1.5 script failed\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}",
+            f"KEP code-path script failed\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}",
         )
         self.assertIn("KEP SPO+ Step1c code-path validation passed", result.stdout)
 
