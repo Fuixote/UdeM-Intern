@@ -1,0 +1,12 @@
+Resolved SPO paper shortest-path plan
+preset: middle-row
+degrees: (1, 2, 4, 6, 8)
+noise_half_widths: (0.0, 0.5)
+trials: 50
+n_train/n_val/n_test: 1000/250/10000
+methods: ('ls', 'ours-spoplus')
+lambda_grid_length: 10
+estimated_model_fits: 10000
+estimated_ours_spoplus_oracle_calls: 160000000
+pyepo_requested: False
+pyepo_available: False

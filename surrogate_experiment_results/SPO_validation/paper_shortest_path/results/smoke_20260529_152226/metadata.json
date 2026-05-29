@@ -1,0 +1,45 @@
+{
+  "batch_size": 5,
+  "degrees": [
+    1
+  ],
+  "edge_dim": 40,
+  "estimated_model_fits": 2,
+  "estimated_ours_spoplus_oracle_calls": 15,
+  "feature_dim": 5,
+  "grid_shape": [
+    5,
+    5
+  ],
+  "lambda_grid": [
+    0.0
+  ],
+  "learning_rate": 0.05,
+  "methods": [
+    "ls",
+    "ours-spoplus"
+  ],
+  "n_test": 12,
+  "n_train": 20,
+  "n_val": 8,
+  "noise_half_widths": [
+    0.0
+  ],
+  "normalized_spo_definition": "sum_regret_over_sum_oracle_cost",
+  "optimizer_ours_spoplus": "stochastic subgradient with step_size=learning_rate/sqrt(iteration), L1 subgradient on non-intercept weights",
+  "optimizer_pyepo_spoplus": "torch Adam on linear model with optional L1 penalty",
+  "output_dir": "surrogate_experiment_results/SPO_validation/paper_shortest_path/results/smoke_20260529_152226",
+  "paper_experiment": "shortest_path_middle_row",
+  "preset": "smoke",
+  "pyepo_available": false,
+  "pyepo_dependency_details": {
+    "gurobipy": "ModuleNotFoundError: No module named 'gurobipy'",
+    "pyepo": "ModuleNotFoundError: No module named 'pyepo'",
+    "torch": "ModuleNotFoundError: No module named 'torch'"
+  },
+  "pyepo_requested": false,
+  "pyepo_status": "PyEPO reference dependencies are not importable",
+  "seed": 20260529,
+  "spoplus_iterations": 3,
+  "trials": 1
+}
