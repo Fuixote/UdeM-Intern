@@ -432,3 +432,207 @@ training/checkpoint protocol, not the SPO+ forward-loss formula.
 Recommended next step: do **not** run full 50 trials yet.  Run a reduced
 middle-row with a zero-init SPO+ variant, then compare it against the current
 LS-init baseline and, if possible, PyEPO with matching initialization.
+
+## 2026-05-29 17:51 America/Toronto
+
+### Zero-Init 10-Trial Middle-Row Sanity Run
+
+Command:
+
+```bash
+python surrogate_experiment_results/SPO_validation/paper_shortest_path/run_paper_shortest_path.py \
+  --preset middle-row \
+  --trials 10 \
+  --spoplus-init zero \
+  --spoplus-iterations 1000 \
+  --batch-size 32 \
+  --learning-rate 0.05 \
+  --eval-period 10 \
+  --output-dir surrogate_experiment_results/SPO_validation/paper_shortest_path/results/middle_row_zero_10trials_20260529_170844
+```
+
+Output:
+
+```text
+surrogate_experiment_results/SPO_validation/paper_shortest_path/results/middle_row_zero_10trials_20260529_170844/summary.csv
+surrogate_experiment_results/SPO_validation/paper_shortest_path/results/middle_row_zero_10trials_20260529_170844/training_diagnostics.csv
+surrogate_experiment_results/SPO_validation/paper_shortest_path/results/middle_row_zero_10trials_20260529_170844/metadata.json
+surrogate_experiment_results/SPO_validation/paper_shortest_path/results/middle_row_zero_10trials_20260529_170844/plots/paper_shortest_path_middle_row.png
+```
+
+Overall:
+
+```text
+rows = 200
+negative normalized SPO loss = 0 rows
+LS mean test_norm_spo        = 0.093260
+zero-init SPO+ mean          = 0.081545
+ours-LS                     = -0.011715
+```
+
+By degree and noise:
+
+```text
+degree=1, noise=0.0: LS=0.000000, zero-init SPO+=0.000015, ours-LS=+0.000015, wins/ties/losses=0/0/10
+degree=1, noise=0.5: LS=0.156219, zero-init SPO+=0.159823, ours-LS=+0.003604, wins/ties/losses=0/0/10
+degree=2, noise=0.0: LS=0.001357, zero-init SPO+=0.001811, ours-LS=+0.000454, wins/ties/losses=0/0/10
+degree=2, noise=0.5: LS=0.107533, zero-init SPO+=0.110418, ours-LS=+0.002884, wins/ties/losses=1/0/9
+degree=4, noise=0.0: LS=0.018330, zero-init SPO+=0.024447, ours-LS=+0.006117, wins/ties/losses=1/0/9
+degree=4, noise=0.5: LS=0.088756, zero-init SPO+=0.087798, ours-LS=-0.000958, wins/ties/losses=6/0/4
+degree=6, noise=0.0: LS=0.066926, zero-init SPO+=0.054075, ours-LS=-0.012851, wins/ties/losses=9/0/1
+degree=6, noise=0.5: LS=0.124977, zero-init SPO+=0.115845, ours-LS=-0.009132, wins/ties/losses=7/0/3
+degree=8, noise=0.0: LS=0.159264, zero-init SPO+=0.104268, ours-LS=-0.054996, wins/ties/losses=8/0/2
+degree=8, noise=0.5: LS=0.209239, zero-init SPO+=0.156953, ours-LS=-0.052286, wins/ties/losses=9/0/1
+```
+
+Aggregated by degree:
+
+```text
+degree=1: LS=0.078110, zero-init SPO+=0.079919, ours-LS=+0.001809, wins/ties/losses=0/0/20
+degree=2: LS=0.054445, zero-init SPO+=0.056114, ours-LS=+0.001669, wins/ties/losses=1/0/19
+degree=4: LS=0.053543, zero-init SPO+=0.056122, ours-LS=+0.002579, wins/ties/losses=7/0/13
+degree=6: LS=0.095952, zero-init SPO+=0.084960, ours-LS=-0.010991, wins/ties/losses=16/0/4
+degree=8: LS=0.184252, zero-init SPO+=0.130611, ours-LS=-0.053641, wins/ties/losses=17/0/3
+```
+
+Selected diagnostics:
+
+```text
+selected rows = 100
+mean coef_delta_norm_from_ls = 59620.233359
+mean val_path_change_rate_from_ls = 0.391920
+best_step_zero = 0/100
+```
+
+Interpretation: zero-init is not a safe unconditional replacement for LS-init,
+because it consistently hurts degree 1/2 and is mixed at degree 4.  However, it
+strongly improves degree 6/8 and always selects a post-training checkpoint in
+this run.  This supports the expert's recommendation to formalize a
+validation-selected multi-start protocol that includes both LS-init and
+zero-init candidates.
+
+Recommended next step: implement multi-start SPO+ candidate selection and
+matching PyEPO zero-init / validation-best checkpoint support before any full
+50-trial middle-row run.
+
+## 2026-05-29 18:05 America/Toronto
+
+### Fair PyEPO Protocol Support
+
+Implemented fair PyEPO trainer protocol support for the synthetic shortest-path
+experiment:
+
+```text
+train_spoplus_pyepo(..., spoplus_init="ls|zero", eval_period=50)
+```
+
+The PyEPO path now:
+
+```text
+1. supports LS or zero initialization;
+2. evaluates validation normalized SPO loss every eval_period steps;
+3. returns the validation-best checkpoint instead of the final Adam iterate;
+4. records the same diagnostic fields used by ours-spoplus:
+   initial_val_norm_spo, best_val_norm_spo, final_val_norm_spo,
+   best_step, coef_delta_norm_from_ls, val_path_change_rate_from_ls.
+```
+
+This makes the following small PyEPO zero-init comparison meaningful:
+
+```bash
+python surrogate_experiment_results/SPO_validation/paper_shortest_path/run_paper_shortest_path.py \
+  --preset middle-row-pyepo \
+  --trials 3 \
+  --n-test 2000 \
+  --spoplus-init zero \
+  --spoplus-iterations 300 \
+  --batch-size 32 \
+  --learning-rate 0.05 \
+  --eval-period 10 \
+  --fail-if-pyepo-missing \
+  --output-dir surrogate_experiment_results/SPO_validation/paper_shortest_path/results/middle_row_pyepo_zero_3trials_$(date +%Y%m%d_%H%M%S)
+```
+
+## 2026-05-29 18:44 America/Toronto
+
+### PyEPO Zero-Init 3-Trial Paired Run
+
+Command:
+
+```bash
+python surrogate_experiment_results/SPO_validation/paper_shortest_path/run_paper_shortest_path.py \
+  --preset middle-row-pyepo \
+  --trials 3 \
+  --n-test 2000 \
+  --spoplus-init zero \
+  --spoplus-iterations 300 \
+  --batch-size 32 \
+  --learning-rate 0.05 \
+  --eval-period 10 \
+  --fail-if-pyepo-missing \
+  --output-dir surrogate_experiment_results/SPO_validation/paper_shortest_path/results/middle_row_pyepo_zero_3trials_20260529_184401
+```
+
+Output:
+
+```text
+surrogate_experiment_results/SPO_validation/paper_shortest_path/results/middle_row_pyepo_zero_3trials_20260529_184401/summary.csv
+surrogate_experiment_results/SPO_validation/paper_shortest_path/results/middle_row_pyepo_zero_3trials_20260529_184401/training_diagnostics.csv
+surrogate_experiment_results/SPO_validation/paper_shortest_path/results/middle_row_pyepo_zero_3trials_20260529_184401/metadata.json
+surrogate_experiment_results/SPO_validation/paper_shortest_path/results/middle_row_pyepo_zero_3trials_20260529_184401/plots/paper_shortest_path_middle_row.png
+surrogate_experiment_results/SPO_validation/paper_shortest_path/results/middle_row_pyepo_zero_3trials_20260529_184401/plots/pyepo_vs_ours_spoplus_scatter.png
+surrogate_experiment_results/SPO_validation/paper_shortest_path/results/middle_row_pyepo_zero_3trials_20260529_184401/plots/pyepo_vs_ours_spoplus_difference.png
+```
+
+Metadata:
+
+```text
+methods = [ls, ours-spoplus, pyepo-spoplus]
+spoplus_init = zero
+eval_period = 10
+spoplus_iterations = 300
+pyepo_available = true
+negative normalized SPO loss = 0 rows
+```
+
+Overall mean `test_norm_spo`:
+
+```text
+LS          = 0.092844
+ours-SPO+   = 0.082095  (ours-LS = -0.010749)
+PyEPO-SPO+  = 0.087295  (PyEPO-LS = -0.005549)
+ours-PyEPO  = -0.005200
+```
+
+Aggregated by degree:
+
+```text
+degree=1: LS=0.079677, ours=0.081658, PyEPO=0.083108
+degree=2: LS=0.057809, ours=0.060655, PyEPO=0.058175
+degree=4: LS=0.052913, ours=0.055216, PyEPO=0.052349
+degree=6: LS=0.096505, ours=0.084793, PyEPO=0.101513
+degree=8: LS=0.177317, ours=0.128155, PyEPO=0.141333
+```
+
+Paired wins/ties/losses over 30 `(trial, degree, noise)` regimes:
+
+```text
+ours vs LS:   13 / 0 / 17, mean_diff=-0.010749
+PyEPO vs LS:  13 / 0 / 17, mean_diff=-0.005549
+ours vs PyEPO: 19 / 0 / 11, mean_diff=-0.005200
+```
+
+Selected diagnostic summary:
+
+```text
+ours-spoplus:  mean_coef_delta=62054.323891, mean_val_path_change=0.407733, best_step_zero=0/30
+pyepo-spoplus: mean_coef_delta=62043.008988, mean_val_path_change=0.422133, best_step_zero=0/30
+```
+
+Interpretation: both zero-init SPO+ implementations recover the qualitative
+high-degree trend at degree 8.  Ours is lower than PyEPO on average in this
+small run, especially at degree 6/noise 0.5 and degree 8/noise 0.5, but the
+important sign check is now positive: PyEPO zero-init also improves over LS at
+degree 8.  Low-degree regimes remain mixed or worse than LS, so the next
+protocol improvement should be validation-selected multi-start rather than
+using zero-init unconditionally.

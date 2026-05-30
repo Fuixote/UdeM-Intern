@@ -304,7 +304,10 @@ def build_metadata(
             "optional averaged iterate, optional LS/zero initialization, "
             "L1 subgradient on non-intercept weights"
         ),
-        "optimizer_pyepo_spoplus": "torch Adam on linear model with optional L1 penalty",
+        "optimizer_pyepo_spoplus": (
+            "torch Adam on linear model with optional L1 penalty, "
+            "configurable LS/zero initialization, validation-best checkpoint"
+        ),
         "pyepo_requested": pyepo_requested(options),
         "pyepo_available": bool(pyepo_status.available),
         "pyepo_status": pyepo_status.message,
@@ -356,6 +359,8 @@ def _method_result(
             iterations=spoplus_iterations,
             batch_size=batch_size,
             learning_rate=learning_rate,
+            eval_period=eval_period,
+            spoplus_init=spoplus_init,
             seed=instance.seed,
         )
     raise ValueError(f"unknown method: {method}")

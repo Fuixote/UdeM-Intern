@@ -1,4 +1,5 @@
 import csv
+import inspect
 import importlib.util
 import json
 import subprocess
@@ -6,6 +7,8 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
+from unittest import mock
 
 import numpy as np
 
@@ -250,6 +253,51 @@ class PaperShortestPathExperimentTest(unittest.TestCase):
         self.assertEqual(options["degrees"], (1, 8))
         self.assertEqual(options["noise_half_widths"], (0.0, 0.5))
         self.assertIn("pyepo-spoplus", options["methods"])
+
+    def test_pyepo_trainer_accepts_init_and_checkpoint_options(self):
+        common = load_common()
+
+        signature = inspect.signature(common.train_spoplus_pyepo)
+
+        self.assertIn("spoplus_init", signature.parameters)
+        self.assertEqual(signature.parameters["spoplus_init"].default, "ls")
+        self.assertIn("eval_period", signature.parameters)
+        self.assertEqual(signature.parameters["eval_period"].default, 50)
+
+    def test_pyepo_method_receives_spoplus_protocol_options(self):
+        runner = load_module("run_paper_shortest_path.py", "paper_runner_pyepo_protocol")
+        sentinel = object()
+        instance = SimpleNamespace(train="train-split", val="val-split", seed=101)
+
+        with mock.patch.object(
+            runner.common,
+            "train_spoplus_pyepo",
+            return_value=sentinel,
+        ) as trainer:
+            result = runner._method_result(
+                "pyepo-spoplus",
+                instance,
+                lambdas=(0.0,),
+                spoplus_iterations=30,
+                batch_size=7,
+                learning_rate=0.02,
+                spoplus_iterate="raw",
+                spoplus_init="zero",
+                eval_period=10,
+            )
+
+        self.assertIs(result, sentinel)
+        trainer.assert_called_once_with(
+            "train-split",
+            "val-split",
+            lambdas=(0.0,),
+            iterations=30,
+            batch_size=7,
+            learning_rate=0.02,
+            spoplus_init="zero",
+            eval_period=10,
+            seed=101,
+        )
 
     def test_dry_run_reports_middle_row_plan_without_writing_outputs(self):
         with tempfile.TemporaryDirectory() as temp_dir:

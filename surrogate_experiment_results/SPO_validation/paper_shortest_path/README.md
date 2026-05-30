@@ -182,6 +182,41 @@ python surrogate_experiment_results/SPO_validation/paper_shortest_path/compare_p
 Use `--allow-missing-pyepo` only for local dependency smoke checks.  Real PyEPO
 validation should fail clearly if PyEPO/Torch/Gurobi are not importable.
 
+Fair PyEPO zero-init smoke:
+
+```bash
+python surrogate_experiment_results/SPO_validation/paper_shortest_path/run_paper_shortest_path.py \
+  --preset middle-row-pyepo \
+  --degrees 8 \
+  --noise-half-widths 0 0.5 \
+  --trials 1 \
+  --n-test 500 \
+  --lambda-grid 0 \
+  --spoplus-init zero \
+  --spoplus-iterations 30 \
+  --batch-size 32 \
+  --learning-rate 0.05 \
+  --eval-period 10 \
+  --fail-if-pyepo-missing \
+  --output-dir surrogate_experiment_results/SPO_validation/paper_shortest_path/results/pyepo_zero_smoke_$(date +%Y%m%d_%H%M%S)
+```
+
+Fair PyEPO zero-init pilot:
+
+```bash
+python surrogate_experiment_results/SPO_validation/paper_shortest_path/run_paper_shortest_path.py \
+  --preset middle-row-pyepo \
+  --trials 3 \
+  --n-test 2000 \
+  --spoplus-init zero \
+  --spoplus-iterations 300 \
+  --batch-size 32 \
+  --learning-rate 0.05 \
+  --eval-period 10 \
+  --fail-if-pyepo-missing \
+  --output-dir surrogate_experiment_results/SPO_validation/paper_shortest_path/results/middle_row_pyepo_zero_3trials_$(date +%Y%m%d_%H%M%S)
+```
+
 ## Training-Protocol Diagnostics
 
 Current pilot and reduced middle-row results show that the SPO+ formula agrees
@@ -195,6 +230,23 @@ Latest local protocol sweep status: `baseline-current`, `smaller-batch`,
 `zero-init-diagnostic` did improve degree 6/8 substantially, which points to
 the LS initialization / checkpoint-selection protocol as the current bottleneck
 rather than the SPO+ forward-loss formula.
+
+Latest zero-init middle-row sanity status: a 10-trial run with all degrees and
+both noise levels confirms the same high-degree signal.  Zero-init SPO+ improves
+degree 6 and 8 substantially, but it is worse than LS at degree 1/2 and mixed at
+degree 4.  This supports using zero init as a candidate start in a validation-
+selected multi-start protocol, rather than replacing LS-init with zero-init
+unconditionally.
+
+PyEPO fairness status: `pyepo-spoplus` now uses the same `--spoplus-init` and
+`--eval-period` protocol knobs as `ours-spoplus`.  It supports zero
+initialization and selects the validation-best checkpoint instead of always
+returning the final Adam iterate.
+
+Latest 3-trial PyEPO zero-init paired run: both `ours-spoplus` and
+`pyepo-spoplus` recover the high-degree advantage over LS at degree 8.  Ours is
+lower on average in this small run, but both implementations show the same
+qualitative high-degree trend.
 
 Run a degree-8 baseline diagnostic:
 

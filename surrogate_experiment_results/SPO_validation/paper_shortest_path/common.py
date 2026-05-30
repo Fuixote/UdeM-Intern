@@ -626,15 +626,23 @@ def train_spoplus_pyepo(
     learning_rate: float = 0.05,
     seed: int = 0,
     grid_shape: Sequence[int] = DEFAULT_GRID_SHAPE,
+    eval_period: int = 50,
+    spoplus_init: str = "ls",
 ) -> ModelResult:
     """Optional PyEPO SPO+ trainer for Orange/Gurobi environments."""
+
+    if iterations <= 0:
+        raise ValueError("iterations must be positive")
+    if batch_size <= 0:
+        raise ValueError("batch_size must be positive")
+    if spoplus_init not in {"ls", "zero"}:
+        raise ValueError("spoplus_init must be 'ls' or 'zero'")
 
     import torch
     from torch import nn
     import pyepo
 
     torch.manual_seed(int(seed))
-    rng = _as_rng(seed)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     optmodel = _build_pyepo_grid_optmodel(grid_shape)
     loss_module = pyepo.func.SPOPlus(optmodel, processes=1, reduction="none")
@@ -648,17 +656,57 @@ def train_spoplus_pyepo(
         device=device,
     )
 
+    def model_coefficients(model: nn.Linear) -> np.ndarray:
+        with torch.no_grad():
+            return np.hstack(
+                [
+                    model.weight.detach().cpu().numpy(),
+                    model.bias.detach().cpu().numpy().reshape(-1, 1),
+                ]
+            )
+
+    ls_coefficients = fit_least_squares(train, lambda_value=0.0)
     best_result: ModelResult | None = None
+    best_idx = -1
+    candidates: List[ModelResult] = []
+    eval_period = max(1, int(eval_period))
     for lambda_idx, lambda_value in enumerate(lambdas):
         torch.manual_seed(int(seed) + 7919 * lambda_idx)
+        rng = _as_rng(int(seed) + 7919 * lambda_idx)
         model = nn.Linear(train.features.shape[1], train.costs.shape[1], bias=True).to(device)
-        init = fit_least_squares(train, lambda_value=0.0)
         with torch.no_grad():
-            model.weight.copy_(torch.as_tensor(init[:, :-1], dtype=torch.float32, device=device))
-            model.bias.copy_(torch.as_tensor(init[:, -1], dtype=torch.float32, device=device))
+            if spoplus_init == "ls":
+                model.weight.copy_(
+                    torch.as_tensor(
+                        ls_coefficients[:, :-1],
+                        dtype=torch.float32,
+                        device=device,
+                    )
+                )
+                model.bias.copy_(
+                    torch.as_tensor(
+                        ls_coefficients[:, -1],
+                        dtype=torch.float32,
+                        device=device,
+                    )
+                )
+            else:
+                model.weight.zero_()
+                model.bias.zero_()
         optimizer = torch.optim.Adam(model.parameters(), lr=float(learning_rate))
+        initial_coefficients = model_coefficients(model)
+        best_coefficients = initial_coefficients.copy()
+        best_metrics = evaluate_predictions(
+            predict_costs(val.features, best_coefficients),
+            val,
+            grid_shape=grid_shape,
+        )
+        initial_metrics = best_metrics
+        final_metrics = best_metrics
+        best_step = 0
+        last_loss: float | None = None
         n_samples = train.features.shape[0]
-        for _ in range(int(iterations)):
+        for step in range(1, int(iterations) + 1):
             size = min(int(batch_size), n_samples)
             batch_indices = rng.choice(n_samples, size=size, replace=n_samples < size)
             index = torch.as_tensor(batch_indices, dtype=torch.long, device=device)
@@ -666,37 +714,74 @@ def train_spoplus_pyepo(
             loss = loss_module(pred, c_train[index], sol_train[index], obj_train[index]).mean()
             if float(lambda_value) > 0.0:
                 loss = loss + float(lambda_value) * model.weight.abs().sum()
+            last_loss = float(loss.detach().cpu().item())
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+            if step % eval_period == 0 or step == iterations:
+                coefficients = model_coefficients(model)
+                metrics = evaluate_predictions(
+                    predict_costs(val.features, coefficients),
+                    val,
+                    grid_shape=grid_shape,
+                )
+                final_metrics = metrics
+                if metrics["normalized_spo_loss"] < best_metrics["normalized_spo_loss"]:
+                    best_metrics = metrics
+                    best_coefficients = coefficients.copy()
+                    best_step = step
 
-        with torch.no_grad():
-            coefficients = np.hstack(
-                [
-                    model.weight.detach().cpu().numpy(),
-                    model.bias.detach().cpu().numpy().reshape(-1, 1),
-                ]
-            )
-        metrics = evaluate_predictions(
-            predict_costs(val.features, coefficients),
-            val,
-            grid_shape=grid_shape,
-        )
+        diagnostics = {
+            "lambda_value": float(lambda_value),
+            "spoplus_variant": "adam-best",
+            "spoplus_init": spoplus_init,
+            "initial_val_norm_spo": float(initial_metrics["normalized_spo_loss"]),
+            "best_val_norm_spo": float(best_metrics["normalized_spo_loss"]),
+            "final_val_norm_spo": float(final_metrics["normalized_spo_loss"]),
+            "best_step": int(best_step),
+            "train_loss_last": "" if last_loss is None else float(last_loss),
+            "coef_delta_norm_from_ls": float(np.linalg.norm(best_coefficients - ls_coefficients)),
+            "val_path_change_rate_from_ls": path_change_rate_from_coefficients(
+                val,
+                ls_coefficients,
+                best_coefficients,
+                grid_shape=grid_shape,
+            ),
+        }
         candidate = ModelResult(
             method="pyepo-spoplus",
-            coefficients=coefficients,
+            coefficients=best_coefficients,
             selected_lambda=float(lambda_value),
-            val_metrics=metrics,
+            val_metrics=best_metrics,
+            train_loss=last_loss,
+            diagnostics=diagnostics,
+            reference_coefficients=ls_coefficients,
         )
+        candidates.append(candidate)
         if best_result is None or (
             candidate.val_metrics["normalized_spo_loss"]
             < best_result.val_metrics["normalized_spo_loss"]
         ):
             best_result = candidate
+            best_idx = lambda_idx
 
     if best_result is None:
         raise ValueError("at least one lambda must be provided")
-    return best_result
+    lambda_diagnostics = []
+    for lambda_idx, candidate in enumerate(candidates):
+        row = dict(candidate.diagnostics)
+        row["selected"] = lambda_idx == best_idx
+        lambda_diagnostics.append(row)
+    return ModelResult(
+        method=best_result.method,
+        coefficients=best_result.coefficients,
+        selected_lambda=best_result.selected_lambda,
+        val_metrics=best_result.val_metrics,
+        train_loss=best_result.train_loss,
+        diagnostics=best_result.diagnostics,
+        lambda_diagnostics=tuple(lambda_diagnostics),
+        reference_coefficients=best_result.reference_coefficients,
+    )
 
 
 def parse_float_list(values: Iterable[str]) -> Tuple[float, ...]:
