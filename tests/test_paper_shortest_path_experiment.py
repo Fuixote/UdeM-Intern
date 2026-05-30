@@ -175,6 +175,14 @@ class PaperShortestPathExperimentTest(unittest.TestCase):
                 "sum_regret_over_sum_oracle_cost",
             )
             self.assertEqual(metadata["paper_experiment"], "shortest_path_middle_row")
+            self.assertEqual(
+                metadata["paper_reference_source"],
+                "https://github.com/paulgrigas/SmartPredictThenOptimize",
+            )
+            self.assertEqual(
+                metadata["paper_reference_commit"],
+                "4002e9fe94a539c95d1e7520afd4f84d3063adf8",
+            )
             self.assertEqual(metadata["grid_shape"], [5, 5])
             self.assertEqual(metadata["feature_dim"], 5)
             self.assertEqual(metadata["edge_dim"], 40)
@@ -193,6 +201,8 @@ class PaperShortestPathExperimentTest(unittest.TestCase):
         self.assertEqual(options["n_val"], 250)
         self.assertEqual(options["n_test"], 10000)
         self.assertEqual(len(options["lambda_grid"]), 10)
+        self.assertAlmostEqual(options["lambda_grid"][0], 1e-6)
+        self.assertAlmostEqual(options["lambda_grid"][-1], 100.0)
         self.assertEqual(options["methods"], ("ls", "ours-spoplus"))
         self.assertEqual(options["spoplus_iterate"], "raw")
         self.assertEqual(options["spoplus_init"], "ls")
@@ -328,6 +338,7 @@ class PaperShortestPathExperimentTest(unittest.TestCase):
             self.assertIn("noise_half_widths: (0.0, 0.5)", result.stdout)
             self.assertIn("n_train/n_val/n_test: 1000/250/10000", result.stdout)
             self.assertIn("lambda_grid_length: 10", result.stdout)
+            self.assertIn("lambda_grid_min/max: 1e-06/100.0", result.stdout)
             self.assertIn("estimated_model_fits: 10000", result.stdout)
             self.assertIn("estimated_ours_spoplus_oracle_calls: 160000000", result.stdout)
             self.assertIn("spoplus_iterate: raw", result.stdout)

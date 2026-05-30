@@ -1,3 +1,0 @@
-implementation,method,trial,degree,noise_half_width,seed,selected_lambda,val_norm_spo,val_avg_regret,val_path_accuracy,val_optimality_ratio,test_norm_spo,test_avg_regret,test_avg_relative_regret,test_path_accuracy,test_optimality_ratio,n_train,n_val,n_test,spoplus_iterations,batch_size,learning_rate
-ls,LS,0,1,0.0,20270536,0.0,0.0,0.0,1.0,1.0,0.0,0.0,0.0,1.0,1.0,20,8,12,3,5,0.05
-ours-spoplus,SPO+,0,1,0.0,20270536,0.0,0.0,0.0,1.0,1.0,0.0,0.0,0.0,1.0,1.0,20,8,12,3,5,0.05
