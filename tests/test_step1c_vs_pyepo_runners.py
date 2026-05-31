@@ -11,6 +11,9 @@ from surrogate_experiment_results.SPO_validation.step1c_vs_pyepo import (
 from surrogate_experiment_results.SPO_validation.step1c_vs_pyepo import (
     run_my_spoplus,
 )
+from surrogate_experiment_results.SPO_validation.step1c_vs_pyepo import (
+    compare_my_vs_pyepo_csv,
+)
 
 
 class Step1cVsPyepoRunnerTests(unittest.TestCase):
@@ -91,6 +94,106 @@ class Step1cVsPyepoRunnerTests(unittest.TestCase):
             rtol=1e-6,
             atol=1e-6,
         )
+
+    def test_compare_csv_pair_reports_max_mean_and_worst_row(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            left = Path(tmp) / "left.csv"
+            right = Path(tmp) / "right.csv"
+            pd.DataFrame(
+                {
+                    "True SPO": [0.1, 0.2],
+                    "Unamb SPO": [0.3, 0.4],
+                    "MSE": [1.0, 2.0],
+                    "Elapsed": [10.0, 11.0],
+                    "Epochs": [0, 0],
+                }
+            ).to_csv(left, index=False)
+            pd.DataFrame(
+                {
+                    "True SPO": [0.1, 0.25],
+                    "Unamb SPO": [0.33, 0.4],
+                    "MSE": [1.5, 2.0],
+                    "Elapsed": [9.0, 12.0],
+                    "Epochs": [0, 1],
+                }
+            ).to_csv(right, index=False)
+
+            report = compare_my_vs_pyepo_csv.compare_csv_pair(
+                left,
+                right,
+                columns=["True SPO", "Unamb SPO", "MSE", "Epochs"],
+                tolerances={
+                    "True SPO": 0.1,
+                    "Unamb SPO": 0.1,
+                    "MSE": 0.6,
+                    "Epochs": 0.0,
+                },
+            )
+
+            self.assertEqual(report.row_count, 2)
+            self.assertAlmostEqual(report.stats["True SPO"].max_abs_diff, 0.05)
+            self.assertAlmostEqual(report.stats["True SPO"].mean_abs_diff, 0.025)
+            self.assertEqual(report.stats["True SPO"].worst_row, 1)
+            self.assertFalse(report.passed)
+            self.assertFalse(report.stats["Epochs"].passed)
+
+    def test_compare_csv_pair_rejects_row_count_mismatch(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            left = Path(tmp) / "left.csv"
+            right = Path(tmp) / "right.csv"
+            pd.DataFrame(
+                {
+                    "True SPO": [0.1],
+                    "Unamb SPO": [0.3],
+                    "MSE": [1.0],
+                    "Elapsed": [10.0],
+                    "Epochs": [0],
+                }
+            ).to_csv(left, index=False)
+            pd.DataFrame(
+                {
+                    "True SPO": [0.1, 0.2],
+                    "Unamb SPO": [0.3, 0.4],
+                    "MSE": [1.0, 2.0],
+                    "Elapsed": [10.0, 11.0],
+                    "Epochs": [0, 0],
+                }
+            ).to_csv(right, index=False)
+
+            with self.assertRaises(ValueError):
+                compare_my_vs_pyepo_csv.compare_csv_pair(left, right)
+
+    def test_compare_csv_pair_can_limit_rows_for_smoke_outputs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            left = Path(tmp) / "left.csv"
+            right = Path(tmp) / "right.csv"
+            pd.DataFrame(
+                {
+                    "True SPO": [0.1, 0.9],
+                    "Unamb SPO": [0.3, 0.9],
+                    "MSE": [1.0, 9.0],
+                    "Elapsed": [10.0, 11.0],
+                    "Epochs": [0, 0],
+                }
+            ).to_csv(left, index=False)
+            pd.DataFrame(
+                {
+                    "True SPO": [0.1],
+                    "Unamb SPO": [0.3],
+                    "MSE": [1.0],
+                    "Elapsed": [10.0],
+                    "Epochs": [0],
+                }
+            ).to_csv(right, index=False)
+
+            report = compare_my_vs_pyepo_csv.compare_csv_pair(
+                left,
+                right,
+                limit_rows=1,
+            )
+
+            self.assertEqual(report.row_count, 1)
+            self.assertTrue(report.passed)
 
 
 if __name__ == "__main__":

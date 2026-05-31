@@ -354,6 +354,7 @@ one-step update 均在 `1e-6` 内对齐。
 ```text
 run_my_2stage_lr.py
 run_my_spoplus.py
+compare_my_vs_pyepo_csv.py
 plot_with_my_methods.py
 ```
 
@@ -439,3 +440,53 @@ my_spoplus n=100,d=1,e=0.0,seed=0,epochs=1:
   Unamb SPO = 0.0740341
   MSE       = 1.70881
 ```
+
+## CSV row-by-row comparison
+
+`compare_my_vs_pyepo_csv.py` 是数值验收工具，不画图。它逐 CSV、逐 seed
+比较 PyEPO 原结果和 my methods 结果：
+
+```bash
+python3 surrogate_experiment_results/SPO_validation/step1c_vs_pyepo/compare_my_vs_pyepo_csv.py \
+  --pair lr
+
+python3 surrogate_experiment_results/SPO_validation/step1c_vs_pyepo/compare_my_vs_pyepo_csv.py \
+  --pair spo
+```
+
+`--pair lr` 默认比较：
+
+```text
+PyEPO 2-stage LR: n{n}p5-d{d}-e{e}_2s-lr.csv
+my 2stage LR:    n{n}p5-d{d}-e{e}_my-2stage-lr.csv
+```
+
+`--pair spo` 默认比较：
+
+```text
+PyEPO SPO+: n{n}p5-d{d}-e{e}_spo_lr_adam0.01_bs32_l10.0l20.0_c1.csv
+my SPO+:    n{n}p5-d{d}-e{e}_my-spoplus.csv
+```
+
+正式比较要求两边 CSV 行数一致。若只检查 smoke 的前 1 行，可以显式使用：
+
+```bash
+python3 surrogate_experiment_results/SPO_validation/step1c_vs_pyepo/compare_my_vs_pyepo_csv.py \
+  --pair lr --train-sizes 100 --degs 1 --noises 0.0 --limit-rows 1
+```
+
+当前 `my_2stage_lr` 全量结果：
+
+```text
+result files: 24 / 24
+result rows:  240 / 240
+
+PyEPO LR vs my 2stage LR row-by-row comparison:
+  True SPO   global max_abs_diff = 3.11892e-19
+  Unamb SPO  global max_abs_diff = 2.06866e-19
+  MSE        global max_abs_diff = 1.09476e-47
+  Epochs     global max_abs_diff = 0
+```
+
+这说明在 fixed-data shortest-path protocol 下，my 2stage LR 的数据读取、
+模型 convention、metric convention 和 CSV layout 已经与 PyEPO LR 对齐。
