@@ -1,0 +1,84 @@
+{
+  "dataset": "/home/weikang/projects/UdeM-Intern/Exps/surrogate_experiment_results/SPO_validation/data/sp/h5w5/train100-test1000-p5-d1-e0.0-seed0.npz",
+  "results": [
+    {
+      "name": "level0_solution_max_abs_diff",
+      "value": 0.0,
+      "threshold": 0.0,
+      "passed": true
+    },
+    {
+      "name": "level0_objective_max_abs_diff",
+      "value": 0.0,
+      "threshold": 1e-08,
+      "passed": true
+    },
+    {
+      "name": "level1_lr_weight_max_abs_diff",
+      "value": 0.0,
+      "threshold": 1e-10,
+      "passed": true
+    },
+    {
+      "name": "level1_lr_bias_max_abs_diff",
+      "value": 0.0,
+      "threshold": 1e-10,
+      "passed": true
+    },
+    {
+      "name": "level1_lr_test_pred_cost_max_abs_diff",
+      "value": 2.220446049250313e-16,
+      "threshold": 1e-08,
+      "passed": true
+    },
+    {
+      "name": "level1_lr_test_mse_diff",
+      "value": 4.992010415851576e-35,
+      "threshold": 1e-10,
+      "passed": true
+    },
+    {
+      "name": "level1_lr_test_norm_regret_diff",
+      "value": 0.0,
+      "threshold": 1e-10,
+      "passed": true
+    },
+    {
+      "name": "level2_forward_loss_max_abs_diff",
+      "value": 5.811452865600586e-07,
+      "threshold": 1e-05,
+      "passed": true
+    },
+    {
+      "name": "level3_grad_pred_max_abs_diff",
+      "value": 0.0,
+      "threshold": 1e-06,
+      "passed": true
+    },
+    {
+      "name": "level3_grad_weight_max_abs_diff",
+      "value": 9.685754776000977e-08,
+      "threshold": 1e-06,
+      "passed": true
+    },
+    {
+      "name": "level3_grad_bias_max_abs_diff",
+      "value": 0.0,
+      "threshold": 1e-06,
+      "passed": true
+    },
+    {
+      "name": "level4_sgd_weight_update_max_abs_diff",
+      "value": 9.313225746154785e-09,
+      "threshold": 1e-06,
+      "passed": true
+    },
+    {
+      "name": "level4_sgd_bias_update_max_abs_diff",
+      "value": 1.4901161138336505e-09,
+      "threshold": 1e-06,
+      "passed": true
+    }
+  ],
+  "passed": true
+}
