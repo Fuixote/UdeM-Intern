@@ -799,6 +799,91 @@ deferred:
 而且后续可以按 regime 批量加载同一个 unseen10000 dataset 后评估 50 个
 subset seeds。
 
+2026-05-30 heldout400 summary:
+
+```text
+Main comparison:
+  2stage selected by validation_mse_loss
+  vs
+  SPO+ selected by validation_spoplus_loss
+
+Metric:
+  mean normalized decision gap on the Step1c heldout400 split, shown as %
+
+Regime                         2stage mean   SPO+ mean    reduction    win rate
+step2b_poly_d1                    0.0023%      0.0000%      0.0023pp   100%
+step2b_poly_d2                    0.1046%      0.0800%      0.0245pp   100%
+step2b_poly_d4                    1.0415%      0.7986%      0.2429pp   100%
+step2b_poly_d8                    6.1107%      4.9338%      1.1769pp   100%
+step2c_poly_d1_mult_eps050        4.2033%      4.2034%     -0.0001pp    54%
+step2c_poly_d2_mult_eps050        4.1737%      4.1378%      0.0359pp    74%
+step2c_poly_d4_mult_eps050        4.7497%      4.5796%      0.1701pp   100%
+step2c_poly_d8_mult_eps050        8.7976%      7.6873%      1.1103pp   100%
+```
+
+Interpretation:
+
+```text
+Step2b:
+  SPO+ improves over 2stage in all 50 subset seeds for every degree.
+  The absolute improvement grows with degree, matching the misspecification
+  story from the original Step2 results.
+
+Step2c eps050:
+  d1 is essentially tied on heldout400: mean reduction is near zero and SPO+
+  wins 54% of seeds.
+  d2 shows a small but mostly positive improvement.
+  d4 and d8 show consistent improvement in all 50 seeds, with d8 showing a
+  large reduction comparable to Step2b d8.
+```
+
+Generated summary files:
+
+```text
+results/phase1_heldout400_per_seed.csv
+results/phase1_heldout400_summary_by_regime.csv
+results/phase1_heldout400_paired_main.csv
+```
+
+Generated plot files:
+
+```text
+plot_results/phase1_heldout400_gap_boxplot.png
+plot_results/phase1_heldout400_gap_boxplot.pdf
+plot_results/phase1_heldout400_by_block_gap_boxplot.png
+plot_results/phase1_heldout400_by_block_gap_boxplot.pdf
+plot_results/phase1_heldout400_by_block_relative_reduction_boxplot.png
+plot_results/phase1_heldout400_by_block_relative_reduction_boxplot.pdf
+plot_results/phase1_heldout400_paired_reduction_boxplot.png
+plot_results/phase1_heldout400_paired_reduction_boxplot.pdf
+```
+
+Relative reduction view:
+
+```text
+Formula:
+  (2stage normalized gap - SPO+ normalized gap) / 2stage normalized gap
+
+Regime                         mean relative reduction   median relative reduction
+step2b_poly_d1                                  99.19%                     99.35%
+step2b_poly_d2                                  23.47%                     23.35%
+step2b_poly_d4                                  23.24%                     22.65%
+step2b_poly_d8                                  19.25%                     19.12%
+step2c_poly_d1_mult_eps050                      -0.00%                      0.35%
+step2c_poly_d2_mult_eps050                       0.86%                      1.11%
+step2c_poly_d4_mult_eps050                       3.58%                      3.65%
+step2c_poly_d8_mult_eps050                      12.62%                     12.56%
+```
+
+The relative-reduction plot is easier to read for high-gap regimes, but
+`step2b_poly_d1` should be interpreted carefully because the 2stage baseline
+gap is already almost zero; tiny absolute changes can look like near-100%
+relative improvement.
+
+This is not the final `unseen10000` result. It is the train-only Phase 1
+heldout400 result from the Step1c wrapper, after checkpoint selection on the
+matching `val2000` datasets.
+
 如果 Garnet 上还没有 Step2 processed datasets，先从本地同步：
 
 ```bash
