@@ -1,0 +1,4 @@
+[submodule "surrogate_experiment_results/SPO_validation/PyEPO"]
+	path = surrogate_experiment_results/SPO_validation/PyEPO
+	url = https://github.com/Fuixote/PyEPO.git
+	branch = MPC
