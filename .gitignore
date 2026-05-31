@@ -14,6 +14,12 @@ results/
 solutions/
 surrogate_experiment_results/SPO_validation/warcraft_maps.tar.gz
 surrogate_experiment_results/SPO_validation/warcraft_shortest_path_oneskin/
+surrogate_experiment_results/SPO_validation/data/
+surrogate_experiment_results/SPO_validation/res/
+surrogate_experiment_results/SPO_validation/logs/
+surrogate_experiment_results/SPO_validation/data_*/
+surrogate_experiment_results/SPO_validation/res_*/
+surrogate_experiment_results/SPO_validation/logs_*/
 surrogate_experiment_results/SPO_validation/plot_results/
 surrogate_experiment_results/SPO_validation/remote_results/
 

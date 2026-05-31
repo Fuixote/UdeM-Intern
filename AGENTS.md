@@ -92,3 +92,17 @@ If the smoke fails before loading data, check missing Python packages in the
   enough that a future AI agent can understand the experiment purpose, setup,
   outputs, and latest known results without reconstructing the context from chat
   history.
+
+## Experiment Completion Notifications
+
+- For long-running tmux experiments in this repo, prefer the shared Brevo
+  completion-notification helper documented in `EXPERIMENT_NOTIFICATIONS.md`.
+- The reusable script is `scripts/experiment_notify.py`; pass each watched tmux
+  session with `--session`, and pass the experiment's result/log roots with
+  `--result-dir` and `--log-dir`.
+- Notification secrets live outside the repo in
+  `~/.config/experiment-notify/brevo.env`. Do not store API keys, SMTP keys,
+  app passwords, or token screenshots in git.
+- If a subproject has its own watcher script, keep its behavior consistent with
+  the shared helper: wait for tmux sessions, summarize CSV/log status, then send
+  one Brevo transactional email.
