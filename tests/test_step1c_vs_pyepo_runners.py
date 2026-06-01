@@ -14,6 +14,9 @@ from surrogate_experiment_results.SPO_validation.step1c_vs_pyepo import (
 from surrogate_experiment_results.SPO_validation.step1c_vs_pyepo import (
     compare_my_vs_pyepo_csv,
 )
+from surrogate_experiment_results.SPO_validation.step1c_vs_pyepo import (
+    plot_with_my_methods,
+)
 
 
 class Step1cVsPyepoRunnerTests(unittest.TestCase):
@@ -194,6 +197,21 @@ class Step1cVsPyepoRunnerTests(unittest.TestCase):
 
             self.assertEqual(report.row_count, 1)
             self.assertTrue(report.passed)
+
+    def test_overlay_plot_only_includes_lr_and_spoplus_pairs(self):
+        self.assertEqual(
+            plot_with_my_methods.METHODS,
+            [
+                ("pyepo-lr", "PyEPO LR"),
+                ("pyepo-spo", "PyEPO SPO+"),
+                ("my-2stage-lr", "my 2stage LR"),
+                ("my-spoplus", "my SPO+"),
+            ],
+        )
+        self.assertEqual(
+            set(plot_with_my_methods.PYEPO_FILENAMES),
+            {"pyepo-lr", "pyepo-spo"},
+        )
 
 
 if __name__ == "__main__":

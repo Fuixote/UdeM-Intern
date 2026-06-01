@@ -490,3 +490,86 @@ PyEPO LR vs my 2stage LR row-by-row comparison:
 
 这说明在 fixed-data shortest-path protocol 下，my 2stage LR 的数据读取、
 模型 convention、metric convention 和 CSV layout 已经与 PyEPO LR 对齐。
+
+当前 `my_spoplus` 全量结果：
+
+```text
+result files: 24 / 24
+result rows:  240 / 240
+
+PyEPO SPO+ vs my SPO+ row-by-row comparison:
+  PASS settings: 19 / 24
+  FAIL settings: 5 / 24
+  True SPO   global max_abs_diff = 3.61175e-04
+  Unamb SPO  global max_abs_diff = 3.61057e-04
+  MSE        global max_abs_diff = 2.70478e-03
+  Epochs     global max_abs_diff = 0
+```
+
+这说明 `my_spoplus` 已经跑完整个 fixed-data benchmark，但还不能声明 full
+benchmark output 与 PyEPO SPO+ 完全等价。当前差异不是 smoke 污染造成的：
+`Epochs` 已经对齐，`n=100/1000/5000` 分别是 `200/20/4`。
+
+### Trajectory debug: n=100, e=0.0, d=1, seed=4
+
+最小失败例子：
+
+```text
+n=100, noise=0.0, degree=1, seed=4
+```
+
+第一步训练轨迹对比发现：
+
+```text
+initial weight max_abs_diff = 0
+initial bias   max_abs_diff = 0
+first batch indices equal   = True
+batch x/c/objective diff    = 0
+true_sol max_abs_diff       = 1
+loss_mean_abs_diff          = 3.90583e-02
+grad_pred max_abs_diff      = 6.25e-02
+post_adam_weight_diff       = 2.0e-02
+```
+
+也就是说，第一处 divergence 不是模型初始化、batch order、prediction、Adam
+step count，而是 PyEPO `optDataset` 保存的 `true_sol` 不同。两个 `true_sol`
+对应的 objective 完全相同，因此这是 shortest-path oracle tie-breaking：
+同一个 cost vector 有多条最短路径，Gurobi/optDataset 两次求解可返回不同 path。
+
+对同一份 `n=100,e=0.0,d=1,seed=4` training cost 重复构造两次
+`optDataset`：
+
+```text
+sol_mismatch = 4 / 100
+max_obj_diff = 0
+all_mismatch_obj_equal = True
+```
+
+再用同一个 `trainset` 强制两边共享 `true_sol` 后，第一步训练轨迹对齐：
+
+```text
+x/c/true_sol/objective diff = 0
+pred diff                   = 0
+loss_vec max_abs_diff       = 2.62260e-06
+grad_pred diff              = 0
+grad_weight diff            = 0
+grad_bias diff              = 0
+post_adam_weight diff       = 0
+post_adam_bias diff         = 0
+loss_mean_abs_diff          = 3.36237e-07
+```
+
+因此这个最小失败例子目前支持的判断是：
+
+```text
+SPO+ algebra / manual backward / Adam first update are aligned
+when the oracle true_sol is shared.
+
+The observed full-training CSV divergence can start from
+optDataset true_sol tie-breaking, because SPO+ gradient depends on
+the solution vector, not only on the optimal objective value.
+```
+
+后续如果要把 full benchmark 做到严格 row-by-row equality，需要固定 oracle
+solution，例如在 fixed dataset 中同时保存 `train_sols/train_objs/test_sols/test_objs`，
+或者对 shortest-path costs 加 deterministic tie-breaker。

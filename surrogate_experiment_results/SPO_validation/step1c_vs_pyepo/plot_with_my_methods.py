@@ -23,17 +23,11 @@ import validation_core as core
 
 PYEPO_FILENAMES = {
     "pyepo-lr": "n{n}p{p}-d{d}-e{e}_2s-lr.csv",
-    "pyepo-rf": "n{n}p{p}-d{d}-e{e}_2s-rf.csv",
     "pyepo-spo": "n{n}p{p}-d{d}-e{e}_spo_lr_adam0.01_bs32_l10.0l20.0_c1.csv",
-    "pyepo-dbb": "n{n}p{p}-d{d}-e{e}_dbb_lr_adam0.1_bs32_l10.0l20.0_c1-lamb20.csv",
-    "pyepo-pfyl": "n{n}p{p}-d{d}-e{e}_pfyl_lr_adam0.01_bs32_l10.0l20.0_c1-samp1eps1.0.csv",
 }
 METHODS = [
     ("pyepo-lr", "PyEPO LR"),
-    ("pyepo-rf", "PyEPO RF"),
     ("pyepo-spo", "PyEPO SPO+"),
-    ("pyepo-dbb", "PyEPO DBB"),
-    ("pyepo-pfyl", "PyEPO PFYL"),
     ("my-2stage-lr", "my 2stage LR"),
     ("my-spoplus", "my SPO+"),
 ]
