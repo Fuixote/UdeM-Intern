@@ -52,54 +52,6 @@ edge-level errors are not decision-critical, while SPO+ helps when errors fall
 on decision-changing edges.
 \end{quote}
 
-\section{Overview}
-\label{sec:overview}
-
-This week's work follows the three-step plan discussed after the previous
-meeting. First, I used PyEPO as an external reference implementation to check
-whether my current codebase contains implementation bugs. Second, I ran
-subset-resampling experiments to summarize variability with box plots. Third,
-assuming the implementation is reliable, I started a decision-level analysis to
-understand why the two-stage model can sometimes remain close to
-decision-focused methods such as SPO+/FY in decision quality. This report
-analyzes SPO+ first; FY remains a planned extension.
-
-The resulting workflow is:
-
-\begin{center}
-\begin{tabular}{lll}
-\toprule
-Step & Goal & Current status \\
-\midrule
-1 & Implementation validation & Passed for LR; SPO+ algebra/gradient/trajectory validated \\
-2 & Subset-resampling variability & Box plots generated on fixed graph pools \\
-3 & Decision-level explanation & First-pass analysis completed on Step2b d8 \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-\begin{table}[h]
-\centering
-\small
-\caption{Mapping this week's work to the advisor's three requested directions.}
-\label{tab:advisor-plan-status}
-\begin{tabular}{p{0.31\linewidth}p{0.39\linewidth}p{0.20\linewidth}}
-\toprule
-Advisor direction & What was done this week & Status \\
-\midrule
-Reproduce shortest-path / check bugs
-& PyEPO-vs-my shortest-path LR and SPO+ checks; KEP Phase 0/1/2 PyEPO-reference validation.
-& Mostly complete \\
-Run resampling experiments and boxplots
-& Fixed graph pool, fixed label regime, subset-seed resampling at train size 50; heldout400 boxplots.
-& First layer complete \\
-Small-graph decision comparison
-& Step2b d8 decision replay, edge criticality, case studies, near-tie analysis, and decision-critical MSE correlations.
-& First-pass complete \\
-\bottomrule
-\end{tabular}
-\end{table}
-
 \section{Step 1: Implementation Validation with PyEPO Reference}
 \label{sec:implementation-validation}
 
@@ -290,35 +242,83 @@ seed, label-noise seed, or training initialization seed.
 \section{Step 3: Decision-Level Explanation}
 \label{sec:decision-analysis}
 
-\subsection{Motivation}
-After validating the implementation and observing subset-resampling
-variability, I investigated why 2stage can remain competitive with SPO+.
-The hypothesis is that not all edge-level prediction errors are
-decision-critical. Some large errors occur on edges that never enter the
-selected KEP solution, while other selected solutions may be near-optimal
-alternatives.
+\subsection{Research Question and Hypothesis}
+After completing the implementation validation and subset-resampling
+experiments, the next question is no longer whether the code is correct, but
+why the observed decision behavior occurs. In particular, the advisor's
+hypothesis was:
 
-\subsection{Scope}
-The first-pass decision analysis focuses on:
+\begin{quote}
+\emph{The two-stage model may remain competitive because bad edge-level
+predictions do not necessarily affect the final KEP solution.}
+\end{quote}
+
+Therefore, the goal of this section is to move from aggregate test gaps to
+decision-level evidence. The main questions are:
+
+\begin{enumerate}
+    \item When 2stage and SPO+ have similar decision quality, are they selecting
+    the same KEP solution?
+    \item If they select different solutions, are these solutions near-optimal
+    alternatives under the true objective?
+    \item Are large edge-level prediction errors actually decision-critical, or
+    do they often occur on edges that do not affect the selected solution?
+    \item When SPO+ improves over 2stage, does it reduce errors on
+    decision-changing edges?
+\end{enumerate}
+
+The central distinction is between \emph{raw prediction error} and
+\emph{decision-critical prediction error}. A large edge prediction error matters
+only if it changes the selected KEP solution or appears in the symmetric
+difference between the predicted and oracle solutions.
+
+\subsection{Analysis Scope}
+This first-pass analysis focuses on the most difficult noiseless polynomial
+misspecification setting:
+
 \[
-\texttt{Step2b d8}, \qquad n_{\mathrm{train}}=50, \qquad \texttt{heldout400}.
+\texttt{Step2b d8}, \qquad n_{\mathrm{train}} = 50,
+\qquad \texttt{evaluation} = \texttt{heldout400}.
 \]
-It compares:
+
+The two compared methods are:
+
 \[
 \text{2stage selected by validation MSE}
-\quad \text{vs.} \quad
+\qquad \text{vs.} \qquad
 \text{SPO+ selected by validation SPO+ loss}.
 \]
-Nine representative subset seeds were selected:
-\[
-\{1,25,22\} \text{ large improvement}, \quad
-\{27,21,30\} \text{ weak/borderline}, \quad
-\{41,16,33\} \text{ easy low-gap}.
-\]
 
-\subsection{Data Products}
-The analysis produced:
+This is intentionally a narrow setting. The goal is not to claim a universal
+mechanism across all regimes, but to obtain a clean first-pass explanation in a
+high-misspecification setting where 2stage and SPO+ differences are meaningful.
+
+\subsection{Analysis Design}
+The decision-level analysis has four stages:
+
+\begin{enumerate}
+    \item \textbf{Seed selection.} Select representative subset seeds from the
+    resampling results: large SPO+ improvement, weak/borderline improvement,
+    and easy low-gap cases.
+
+    \item \textbf{Per-graph decision replay.} For each selected seed and each
+    heldout graph, replay the 2stage and SPO+ checkpoints and record the
+    selected KEP solutions.
+
+    \item \textbf{Edge-level criticality analysis.} For each graph, compute
+    edge-level prediction errors and classify each edge according to whether it
+    appears in the oracle solution, predicted solution, or their symmetric
+    difference.
+
+    \item \textbf{Mechanism extraction.} Use summary plots, correlation
+    analysis, near-tie analysis, and case studies to identify why 2stage
+    sometimes remains competitive and when SPO+ helps.
+\end{enumerate}
+
+The analysis produced the following files:
+
 \begin{center}
+\small
 \begin{tabular}{lr}
 \toprule
 Output & Rows / files \\
@@ -336,9 +336,131 @@ decision-critical MSE correlations & 12 rows \\
 \end{tabular}
 \end{center}
 
-\subsection{Summary Statistics}
+\subsection{Seed Selection: Why These 9 Seeds}
+The selected seeds were chosen from the subset-resampling results, not manually
+from individual graphs. The idea is to cover three qualitatively different
+situations:
 
-\begin{table}[h]
+\begin{itemize}
+    \item \textbf{Large improvement:} 2stage has relatively high decision gap,
+    while SPO+ substantially improves over it.
+    \item \textbf{Weak or borderline improvement:} SPO+ does not strongly
+    improve over 2stage.
+    \item \textbf{Easy low-gap:} both 2stage and SPO+ have low decision gaps.
+\end{itemize}
+
+The selected seeds are:
+
+\[
+\begin{aligned}
+\text{large improvement:} &\quad \{1,25,22\},\\
+\text{weak/borderline improvement:} &\quad \{27,21,30\},\\
+\text{easy low-gap:} &\quad \{41,16,33\}.
+\end{aligned}
+\]
+
+This selection makes the later case studies interpretable: we can compare
+cases where SPO+ clearly helps, cases where both methods are already good, and
+cases where the improvement is weak.
+
+\subsection{Decision Replay: From Aggregate Gap to Per-Graph Decisions}
+Aggregate heldout400 gaps are useful, but they do not reveal what decision was
+made on each graph. Therefore, for each selected seed, I replayed the trained
+2stage and SPO+ checkpoints on every heldout graph and recorded:
+
+\begin{itemize}
+    \item the oracle solution $y^\star$ under the true reward
+    $w_{\mathrm{true}}$;
+    \item the 2stage-selected solution $y_{\mathrm{2stage}}$;
+    \item the SPO+-selected solution $y_{\mathrm{SPO+}}$;
+    \item true objective values and decision gaps;
+    \item solution overlap metrics such as Jaccard similarity with the oracle
+    solution.
+\end{itemize}
+
+For a method $m$, the decision gap is:
+
+\[
+\mathrm{gap}_m
+=
+w_{\mathrm{true}}^\top y^\star
+-
+w_{\mathrm{true}}^\top y_m,
+\]
+
+and the normalized gap is:
+
+\[
+\mathrm{normalized\ gap}_m
+=
+\frac{
+w_{\mathrm{true}}^\top y^\star
+-
+w_{\mathrm{true}}^\top y_m
+}{
+\left|w_{\mathrm{true}}^\top y^\star\right| + \epsilon
+}.
+\]
+
+To ensure that this replay follows the same evaluation path as the original
+Step2 heldout400 metrics, the replayed per-graph gaps were checked against each
+seed's existing \path{metrics/test_per_graph.csv}. The maximum differences
+were:
+
+\[
+\max |\Delta \mathrm{gap}| = 5.07\times 10^{-5}, \qquad
+\max |\Delta \mathrm{normalized\ gap}| = 1.65\times 10^{-7}.
+\]
+
+These differences are within the intended tolerance, so the following analysis
+is based on the same decision path as the existing Step2 evaluation.
+
+\subsection{Edge Criticality: From Raw Error to Decision-Changing Error}
+The advisor's hypothesis is about edge-level prediction errors. For each edge
+$e$, I computed:
+
+\[
+\mathrm{err}_e^{(m)} =
+\left|
+\hat{w}_e^{(m)} - w_{\mathrm{true},e}
+\right|,
+\]
+
+where $m$ is either 2stage or SPO+. Each edge is then classified using the
+following binary indicators:
+
+\begin{center}
+\small
+\begin{tabular}{ll}
+\toprule
+Indicator & Meaning \\
+\midrule
+\texttt{in\_opt} & edge appears in the oracle solution $y^\star$ \\
+\texttt{in\_2stage} & edge appears in $y_{\mathrm{2stage}}$ \\
+\texttt{in\_spoplus} & edge appears in $y_{\mathrm{SPO+}}$ \\
+\texttt{in\_2stage\_symdiff} & edge appears in $y^\star \triangle y_{\mathrm{2stage}}$ \\
+\texttt{in\_spoplus\_symdiff} & edge appears in $y^\star \triangle y_{\mathrm{SPO+}}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The symmetric difference is the key object:
+
+\[
+y^\star \triangle y_m
+=
+\{e: y^\star_e \neq y_{m,e}\}.
+\]
+
+Edges in this set are precisely the edges where the predicted solution differs
+from the oracle solution. Thus, prediction errors on these edges are more
+likely to be decision-critical than prediction errors on edges that are never
+selected.
+
+\subsection{First-Pass Aggregate Findings}
+Across the 9 selected seeds and 400 heldout graphs, the first-pass summary is:
+
+\begin{table}[H]
 \centering
 \small
 \caption{Decision-level summary on selected Step2b d8 heldout400 cases.}
@@ -367,6 +489,27 @@ Top-10-error symmetric-difference rate & \textbf{0.570 / 0.667} & \textbf{0.557 
 \end{tabular}
 \end{table}
 
+There are three main observations.
+
+First, SPO+ has a lower mean normalized decision gap and higher average solution
+overlap with the oracle solution. This confirms that SPO+ is not only improving
+a numerical loss but is also selecting edge sets that are closer to the oracle
+solution.
+
+Second, the top-10-error symmetric-difference rate is relatively low. For
+2stage, only 9.39\% of top-10-error edges enter the symmetric difference with
+the oracle solution. For SPO+, this rate is 7.02\%. This suggests that many
+large edge-level prediction errors are not decision-changing.
+
+Third, all-edge MSE is weakly correlated with decision gap. In contrast, error
+measures restricted to symmetric-difference edges are much more predictive.
+This suggests that raw prediction accuracy is not enough to explain decision
+quality; what matters is whether errors occur on decision-changing edges.
+
+\subsection{Summary Plots}
+The next three figures show the first-pass decision-level diagnostics. They are
+kept as separate full-width figures so each diagnostic can be read on its own.
+
 \begin{figure}[p]
 \centering
 \includegraphics[width=\textwidth]{\DecisionAnalysisPlotRoot/mse_vs_normalized_gap.png}
@@ -391,15 +534,20 @@ Top-10-error symmetric-difference rate & \textbf{0.570 / 0.667} & \textbf{0.557 
 \howtoread{The leftmost error-rank bins contain the largest prediction errors. Compare selected-rate and symmetric-difference-rate curves: high-error edges matter most when they enter the selected solution or the predicted-vs-oracle symmetric difference.}
 \end{figure}
 
-\subsection{Main Finding}
-Raw edge-level MSE is weakly correlated with decision gap. In contrast,
-symmetric-difference-focused measures are much more predictive. This suggests
-that prediction error matters most when it lands on decision-changing edges,
-not merely because an edge-level error is large.
+The MSE-vs-gap plot shows that SPO+ can have higher edge-level MSE but lower
+decision gap. The solution-overlap plot shows that lower overlap often
+increases gap, but there are also medium-overlap points with small gap,
+suggesting near-optimal alternative solutions. The high-error criticality plot
+shows that the highest-error edges are selected or enter the symmetric
+difference only at limited rates.
 
-\subsection{Case Studies}
+\subsection{Case Studies: Three Mechanisms}
+To make the aggregate patterns interpretable, I selected three types of graph
+case studies.
 
-\begin{figure}[h]
+\subsubsection*{Case A: Bad Prediction but Irrelevant}
+
+\begin{figure}[H]
 \centering
 \small
 \fbox{
@@ -418,17 +566,23 @@ Seed & Graph & 2stage gap & All-edge MSE & Top-10-error symdiff rate \\
 \end{tabular}
 
 \vspace{0.8em}
-Large prediction errors can occur on edges that do not affect the selected KEP
-solution. These examples have high all-edge MSE but zero decision gap and zero
-top-error symmetric-difference involvement.
+These graphs have large all-edge prediction error under the 2stage model, but
+the selected solution is still optimal. The top-error edges do not enter the
+optimal-vs-predicted symmetric difference. Therefore, the errors are large in
+prediction space but irrelevant in decision space.
 \end{minipage}
 }
-\caption{Large edge-level prediction errors can be non-critical.}
+\caption{Large prediction errors can be non-critical.}
 \label{fig:case-a}
 \howtoread{These rows have high all-edge MSE but zero 2stage decision gap. The key column is the top-10-error symmetric-difference rate: it is zero, so the largest prediction errors do not affect the decision-changing edge set.}
 \end{figure}
 
-\begin{figure}[h]
+This case directly supports the hypothesis that bad edge estimates do not
+necessarily affect the final solution.
+
+\subsubsection*{Case B: Different Solution but Near-Optimal}
+
+\begin{figure}[H]
 \centering
 \small
 \fbox{
@@ -447,9 +601,9 @@ Seed & Graph & 2stage gap & Jaccard with oracle & Same as oracle? \\
 \end{tabular}
 
 \vspace{0.8em}
-The selected edge set can differ from the oracle solution while the objective
-loss remains nearly zero. This indicates that some KEP graphs contain
-near-optimal alternative exchanges.
+Here, the 2stage solution is not identical to the oracle solution, and the
+Jaccard overlap is only moderate. However, the true objective gap is nearly
+zero. This suggests that the graph contains near-optimal alternative exchanges.
 \end{minipage}
 }
 \caption{Different selected solutions can be near-optimal alternatives.}
@@ -457,7 +611,13 @@ near-optimal alternative exchanges.
 \howtoread{These rows are not exact oracle solutions and have only medium Jaccard overlap, but their normalized decision gaps are close to zero. This supports the near-tie story: solution identity can change while true objective remains almost unchanged.}
 \end{figure}
 
-\begin{figure}[h]
+This explains another way in which 2stage can remain competitive: it may select
+a different exchange, but that exchange is nearly equivalent under the true
+objective.
+
+\subsubsection*{Case C: SPO+ Fixes Decision-Critical Errors}
+
+\begin{figure}[H]
 \centering
 \small
 \fbox{
@@ -477,24 +637,114 @@ Seed & Graph & 2stage gap & SPO+ gap
 \end{tabular}
 
 \vspace{0.8em}
-SPO+ helps when prediction errors affect decision-changing edges. In these
-examples, SPO+ substantially reduces decision gap and also reduces high-error
-symmetric-difference involvement.
+In these graphs, the 2stage model makes errors that affect decision-changing
+edges. SPO+ substantially reduces the decision gap and also reduces the
+involvement of high-error edges in the symmetric difference.
 \end{minipage}
 }
-\caption{SPO+ improves decisions when errors are decision-critical.}
+\caption{SPO+ helps when prediction errors are decision-critical.}
 \label{fig:case-c}
 \howtoread{Compare the 2stage and SPO+ gap columns together with the top-10-error symmetric-difference rates. SPO+ reduces the gap precisely in cases where 2stage's large errors enter decision-changing edges.}
 \end{figure}
 
-\subsection{Conclusion from Step 3}
-The first-pass decision analysis supports the advisor's hypothesis. The
-competitiveness of 2stage does not mean that it predicts every edge accurately.
-Instead, many large edge-level errors are non-critical because they do not
-change the selected exchange. In addition, some different KEP solutions are
-near-optimal alternatives under the true objective. SPO+ appears most useful
-when prediction errors affect edges in the symmetric difference between the
-predicted and oracle solutions.
+This case explains when SPO+ is useful: it helps most when prediction errors
+fall on the edges that change the selected KEP solution.
+
+\subsection{Near-Tie and Margin Analysis}
+The case studies suggest that some different selected solutions may be
+near-optimal alternatives. To quantify this, I compared the observed candidate
+solutions:
+
+\[
+y^\star,\qquad y_{\mathrm{2stage}},\qquad y_{\mathrm{SPO+}}.
+\]
+
+This is not an enumeration of all feasible KEP solutions; it only ranks the
+solutions actually observed in the replay. With a near-tie threshold of 0.01 in
+normalized gap, the first-pass summary is:
+
+\begin{center}
+\small
+\begin{tabular}{lr}
+\toprule
+Quantity & Value \\
+\midrule
+Paired graph rows & 3,600 \\
+Observed candidate rows & 10,800 \\
+Mean $| \mathrm{obj}_{2stage} - \mathrm{obj}_{SPO+} |$ & 4.3366 \\
+Median $| \mathrm{obj}_{2stage} - \mathrm{obj}_{SPO+} |$ & 0 \\
+Mean Jaccard$(2stage, SPO+)$ & 0.8271 \\
+Median Jaccard$(2stage, SPO+)$ & 1.0000 \\
+Same 2stage/SPO+ solution rate & 55.08\% \\
+2stage different-solution near-tie rate & 6.08\% \\
+SPO+ different-solution near-tie rate & 6.58\% \\
+Any-method near-tie rate & 9.17\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+This supports the near-optimal-alternative explanation. In more than half of
+the observed graph-seed pairs, 2stage and SPO+ select the same solution. When
+they differ, a nontrivial subset of cases still has normalized gap below 1\%,
+meaning that different solution identities can correspond to very similar true
+objectives.
+
+\subsection{Decision-Critical MSE Correlations}
+Finally, I tested whether different prediction-error summaries explain
+normalized decision gap. The main comparison is between all-edge MSE and
+decision-focused error summaries such as MSE on symmetric-difference edges.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Correlation between prediction-error summaries and normalized decision gap.}
+\label{tab:critical-mse-correlations}
+\begin{tabular}{p{0.38\linewidth}cc}
+\toprule
+Predictor & 2stage Pearson / Spearman & SPO+ Pearson / Spearman \\
+\midrule
+All-edge MSE & 0.095 / 0.023 & -0.021 / -0.075 \\
+MSE on selected edges & -0.260 / -0.237 & -0.112 / -0.066 \\
+MSE on symmetric-difference edges & 0.390 / 0.528 & 0.272 / 0.372 \\
+Top-10-error symmetric-difference rate & \textbf{0.570 / 0.667} & \textbf{0.557 / 0.639} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The strongest predictor for both methods is the rate at which top-error edges
+enter the symmetric difference. This provides the most direct evidence for the
+decision-critical-error hypothesis: prediction error matters primarily when it
+changes the selected solution.
+
+\subsection{Answer to the Advisor's Hypothesis and Limitations}
+The first-pass evidence supports the hypothesis. The reason 2stage can remain
+competitive is not that it predicts every edge accurately. Instead, many large
+edge-level errors are non-critical because they occur on edges that are not
+selected or do not enter the symmetric difference. In addition, KEP graphs may
+contain near-optimal alternative solutions, so two different selected edge sets
+can have very similar true objectives.
+
+SPO+ appears most helpful when the 2stage prediction errors fall on
+decision-changing edges. In those cases, SPO+ reduces both the decision gap and
+the involvement of high-error edges in the symmetric difference.
+
+This is still a first-pass analysis. The current limitations are:
+
+\begin{itemize}
+    \item only \texttt{Step2b d8} is analyzed;
+    \item only train size 50 and heldout400 are used;
+    \item only 9 representative subset seeds are selected;
+    \item only 2stage and SPO+ are compared;
+    \item FY is not yet included;
+    \item \texttt{Step2c} multiplicative-noise regimes are not yet analyzed;
+    \item the near-tie analysis uses only observed candidates
+    $y^\star$, $y_{\mathrm{2stage}}$, and $y_{\mathrm{SPO+}}$;
+    \item adversarial SPO+ solutions $y_{\mathrm{adv}}$ are not yet included.
+\end{itemize}
+
+The next step is to extend this same analysis to \texttt{Step2c d8 eps050}, add
+FY, and include $y_{\mathrm{adv}}$ to inspect how SPO+ gradients push the
+predictions away from bad decision-changing solutions.
 
 \section{Overall Conclusions and Next Steps}
 \label{sec:weekly-next-steps}
