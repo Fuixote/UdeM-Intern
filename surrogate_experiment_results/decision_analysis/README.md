@@ -577,9 +577,11 @@ edge_error_criticality.csv
 ## 2026-06-03 第一版实施记录
 
 本目录按上面的最小可行版本先实现 `step2b_poly_d8` / train size 50 /
-heldout400 / `2stage_val_mse` vs `spoplus_val_spoplus_loss`。第一版只做
-seed selection、per-graph decision replay、edge criticality 和 3 张 summary
-plots；Top-K candidate / margin / FY / case-study tables 暂未做。
+heldout400 / `2stage_val_mse` vs `spoplus_val_spoplus_loss`。第一版先做
+seed selection、per-graph decision replay、edge criticality、3 张 summary
+plots、case-study edge tables、observed-candidate margin analysis 和
+decision-critical MSE correlation summary；Top-K candidate / `y_adv_*` / FY
+暂未做。
 
 ### Scripts
 
@@ -588,6 +590,9 @@ surrogate_experiment_results/decision_analysis/scripts/select_case_seeds.py
 surrogate_experiment_results/decision_analysis/scripts/compare_decisions_per_graph.py
 surrogate_experiment_results/decision_analysis/scripts/analyze_edge_error_criticality.py
 surrogate_experiment_results/decision_analysis/scripts/plot_decision_analysis.py
+surrogate_experiment_results/decision_analysis/scripts/make_case_study_tables.py
+surrogate_experiment_results/decision_analysis/scripts/analyze_margin_near_ties.py
+surrogate_experiment_results/decision_analysis/scripts/summarize_decision_critical_mse.py
 ```
 
 ### Commands
@@ -631,6 +636,24 @@ Plots on garnet:
 python surrogate_experiment_results/decision_analysis/scripts/plot_decision_analysis.py
 ```
 
+Case-study tables from existing CSV outputs:
+
+```bash
+python3 surrogate_experiment_results/decision_analysis/scripts/make_case_study_tables.py
+```
+
+Observed-candidate margin / near-tie analysis:
+
+```bash
+python3 surrogate_experiment_results/decision_analysis/scripts/analyze_margin_near_ties.py
+```
+
+Decision-critical MSE correlations from existing CSV outputs:
+
+```bash
+python3 surrogate_experiment_results/decision_analysis/scripts/summarize_decision_critical_mse.py
+```
+
 ### Selected Seeds
 
 ```text
@@ -652,6 +675,12 @@ results/selected_case_seeds.csv                         9 rows
 results/per_graph_decision_comparison.csv               7,200 rows
 results/edge_error_criticality.csv                      879,642 rows
 results/graph_level_edge_criticality_summary.csv         7,200 rows
+results/case_studies/case_study_index.csv                    9 rows
+results/case_studies/case_*.csv                              9 tables
+results/margin_near_tie_analysis.csv                     3,600 rows
+results/observed_candidate_solution_ranking.csv         10,800 rows
+results/margin_near_tie_summary.csv                          1 row
+results/decision_critical_mse_correlations.csv              12 rows
 
 plots/mse_vs_normalized_gap.png
 plots/solution_overlap_vs_gap.png
@@ -715,3 +744,157 @@ This is consistent with the current hypothesis: many large edge prediction
 errors are not decision-critical, and the next useful step is to extract a few
 case-study graphs where errors are either irrelevant, near-tied, or actually
 fixed by SPO+.
+
+### Case-Study Tables
+
+`make_case_study_tables.py` reads the existing per-graph comparison, graph-level
+edge-criticality summary, and edge-criticality CSVs. It does not rerun KEP
+solves. The script selects three distinct graph IDs per case label and writes
+one full-graph edge table per selected case.
+
+The case-study index is:
+
+```text
+surrogate_experiment_results/decision_analysis/results/case_studies/case_study_index.csv
+```
+
+Selected cases:
+
+```text
+Case A: bad prediction but irrelevant
+  seed=41 graph=G-234.json   2stage_gap=0        mse_all_edges=19.6328 top10_symdiff=0.0
+  seed=41 graph=G-994.json   2stage_gap=0        mse_all_edges=18.1776 top10_symdiff=0.0
+  seed=25 graph=G-1516.json  2stage_gap=0        mse_all_edges=17.7713 top10_symdiff=0.0
+
+Case B: different solution but near-optimal
+  seed=1 graph=G-696.json   2stage_gap=0.000643595 jaccard=0.681818 same_opt=False
+  seed=1 graph=G-1372.json  2stage_gap=0.001173602 jaccard=0.608696 same_opt=False
+  seed=1 graph=G-607.json   2stage_gap=0.001174954 jaccard=0.714286 same_opt=False
+
+Case C: SPO+ fixes 2stage
+  seed=1  graph=G-392.json   2stage_gap=0.313849 SPO+_gap=0        2stage_top10_symdiff=0.3 SPO+_top10_symdiff=0.0
+  seed=30 graph=G-1560.json  2stage_gap=0.292305 SPO+_gap=0.011964 2stage_top10_symdiff=0.3 SPO+_top10_symdiff=0.0
+  seed=1  graph=G-39.json    2stage_gap=0.316226 SPO+_gap=0.080459 2stage_top10_symdiff=0.2 SPO+_top10_symdiff=0.1
+```
+
+Each edge table contains:
+
+```text
+edge_id, src_dst, w_true, w_hat_2stage, w_hat_spoplus,
+abs_err_2stage, abs_err_spoplus,
+in_opt, in_2stage, in_spoplus,
+in_2stage_symdiff, in_spoplus_symdiff,
+utility, recipient_cPRA
+```
+
+Interpretation: Case A shows large 2stage edge MSE with zero decision gap and
+zero top-error symdiff involvement. Case B shows non-identical 2stage solutions
+with medium overlap but near-zero objective gap. Case C shows graphs where SPO+
+substantially reduces the decision gap and also reduces high-error symdiff
+involvement.
+
+### Margin / Near-Optimal Alternative Analysis
+
+`analyze_margin_near_ties.py` uses only existing replay and edge-criticality
+outputs. It does not enumerate all feasible KEP solutions and does not yet add
+`y_adv_2stage` / `y_adv_spoplus`. The observed candidate set is:
+
+```text
+y_opt
+y_2stage
+y_spoplus
+```
+
+The main paired-graph output is:
+
+```text
+surrogate_experiment_results/decision_analysis/results/margin_near_tie_analysis.csv
+```
+
+It includes:
+
+```text
+abs(obj_2stage - obj_spoplus)
+gap_2stage
+gap_spoplus
+normalized_gap_2stage
+normalized_gap_spoplus
+edge_jaccard(2stage, SPO+)
+edge_jaccard(method, opt)
+different_solution_near_tie flags
+observed_unique_solution_count
+```
+
+The observed-candidate ranking table is:
+
+```text
+surrogate_experiment_results/decision_analysis/results/observed_candidate_solution_ranking.csv
+```
+
+It ranks `y_opt`, `y_2stage`, and `y_spoplus` by true objective for each graph.
+With `near_tie_threshold = 0.01`, the first-pass summary is:
+
+```text
+paired graph rows:                         3,600
+observed candidate rows:                  10,800
+
+mean abs(obj_2stage - obj_spoplus):        4.33655891
+median abs(obj_2stage - obj_spoplus):      0
+
+mean Jaccard(2stage, SPO+):                0.82706818
+median Jaccard(2stage, SPO+):              1.0
+
+same 2stage/SPO+ solution rate:            0.55083333  (1,983 / 3,600)
+2stage different-solution near-tie rate:   0.06083333  (219 / 3,600)
+SPO+ different-solution near-tie rate:     0.06583333  (237 / 3,600)
+any-method near-tie rate:                  0.09166667  (330 / 3,600)
+
+observed unique solution count:
+  1 unique solution:                         532 graphs
+  2 unique solutions:                       1,877 graphs
+  3 unique solutions:                       1,191 graphs
+```
+
+Interpretation: In this selected Step2b d8 subset, 2stage and SPO+ often select
+the same solution, and even when a method differs from oracle, a nontrivial
+subset has normalized gap below 1%. This supports the near-optimal-alternative
+story: solution identity can change while true objective remains very close.
+The current analysis is still limited to observed candidates; adding
+`y_adv_2stage` / `y_adv_spoplus` would require extending the replay path.
+
+### Decision-Critical MSE Correlations
+
+`summarize_decision_critical_mse.py` joins
+`graph_level_edge_criticality_summary.csv` with
+`per_graph_decision_comparison.csv` and correlates each prediction-error
+summary with normalized decision gap. The output is:
+
+```text
+surrogate_experiment_results/decision_analysis/results/decision_critical_mse_correlations.csv
+```
+
+The table is long-format, one row per method and predictor, with Pearson,
+Spearman, valid-pair count, and within-method absolute Pearson rank.
+
+First-pass Pearson / Spearman correlations with normalized gap:
+
+```text
+2stage_val_mse
+  mse_all_edges:                         0.094654 / 0.023041  (n=3,600)
+  mse_edges_in_pred:                    -0.259619 / -0.236999 (n=3,600)
+  mse_edges_in_symdiff:                  0.390390 / 0.528040  (n=2,959)
+  top10_error_edges_in_symdiff_rate:     0.569695 / 0.666985  (n=3,600)
+
+spoplus_val_spoplus_loss
+  mse_all_edges:                        -0.021118 / -0.075238 (n=3,600)
+  mse_edges_in_pred:                    -0.112396 / -0.065935 (n=3,600)
+  mse_edges_in_symdiff:                  0.272333 / 0.371808  (n=2,751)
+  top10_error_edges_in_symdiff_rate:     0.556733 / 0.639125  (n=3,600)
+```
+
+Interpretation: all-edge MSE has weak correlation with decision gap, especially
+for SPO+. In contrast, symdiff-focused measures are much more predictive:
+`top10_error_edges_in_symdiff_rate` is the strongest predictor for both methods,
+followed by `mse_edges_in_symdiff`. This supports the statement that prediction
+error matters most when it lands on decision-changing edges, not merely because
+raw edge-level error is large.
