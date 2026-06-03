@@ -27,13 +27,14 @@
 
 \newcommand{\RepoRoot}{../..}
 \newcommand{\StepTwoResamplingPlotRoot}{\RepoRoot/surrogate_experiment_results/Step2_resampling/plot_results}
+\newcommand{\SPOValidationPlotRoot}{\RepoRoot/surrogate_experiment_results/SPO_validation}
 \newcommand{\DecisionAnalysisPlotRoot}{plots}
 \newcommand{\howtoread}[1]{%
   \par\smallskip
   \noindent\textbf{How to read.} #1%
 }
 
-\title{Weekly Progress: Validation, Resampling, and Decision-Level Explanation}
+\title{Weekly Progress: Validation, Resampling, and Decision Analysis}
 \author{}
 \date{June 3, 2026}
 
@@ -86,6 +87,22 @@ Epoch diff & 0 & 0 \\
 \end{tabular}
 \end{table}
 
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{\SPOValidationPlotRoot/PyEPO/images/my-methods-sp-n1000e0.png}
+\caption{Shortest-path fixed-data comparison, train size 1000 and noise half-width 0.0.}
+\label{fig:shortest-path-n1000-e0}
+\howtoread{The blue/orange boxes are PyEPO LR/SPO+, and the green/red boxes are my 2stage LR/SPO+. The near-overlap of PyEPO LR with my 2stage LR shows exact baseline agreement; SPO+ is visually close in this setting, with remaining row-level differences interpreted through the tie-breaking caveat in Table~\ref{tab:shortest-path-validation}.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{\SPOValidationPlotRoot/PyEPO/images/my-methods-sp-n1000e5.png}
+\caption{Shortest-path fixed-data comparison, train size 1000 and noise half-width 0.5.}
+\label{fig:shortest-path-n1000-e5}
+\howtoread{This noisier shortest-path setting provides a second visual check. PyEPO LR and my 2stage LR remain aligned across degrees, while PyEPO SPO+ and my SPO+ show the same qualitative pattern; this supports the conclusion that the implementation follows the PyEPO reference up to known shortest-path tie-breaking effects.}
+\end{figure}
+
 For SPO+, the loss, gradient, and one-step update match PyEPO when the oracle
 solution is shared. The remaining full-CSV differences are explained by
 shortest-path tie-breaking: the same cost vector can have multiple optimal
@@ -135,6 +152,14 @@ Phase 2 full trajectory
 \end{tabular}
 \end{table}
 
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{\SPOValidationPlotRoot/kep_vs_pyepo/step2b_bridge_results/plots/step2b_degree_boxplot_train_size=50_seeds=0-9_test_mean_normalized_gap.png}
+\caption{KEP Step2b bridge visualization: PyEPO-reference and my implementation on the same degree regimes.}
+\label{fig:kep-step2b-bridge-boxplot}
+\howtoread{Each degree shows paired boxes for PyEPO-reference LR/SPO+ and my LR/SPO+ on the KEP Step2b bridge setting. The visual check is whether each PyEPO box overlaps its corresponding my-implementation box; the near-identical paired boxes complement the exact max-difference checks in Table~\ref{tab:kep-validation}.}
+\end{figure}
+
 \subsection{Conclusion from Step 1}
 The implementation check supports the conclusion that the Step1c SPO+
 algebra, reward-max sign convention, gradient scaling, optimizer update, KEP
@@ -181,14 +206,14 @@ Primary metric & mean normalized decision gap \\
 \end{tabular}
 \end{center}
 
-\subsection{Generated Plots}
-The current plotting script summarizes the heldout400 distribution with four
-main outputs:
+\subsection{Selected Plots}
+The plotting script generated several views of the heldout400 distribution. To
+avoid redundant evidence in the report, I keep the two most informative views:
 \begin{itemize}
-    \item overall gap boxplot;
-    \item by-block gap boxplot;
-    \item paired reduction boxplot;
-    \item relative reduction by block.
+    \item by-block normalized decision gap, which shows the absolute
+    performance distribution across regimes;
+    \item paired 2stage-minus-SPO+ reduction, which compares the two methods on
+    the same subset seeds.
 \end{itemize}
 
 \begin{figure}[p]
@@ -201,22 +226,6 @@ main outputs:
 
 \begin{figure}[p]
 \centering
-\includegraphics[width=\textwidth]{\StepTwoResamplingPlotRoot/phase1_heldout400_by_block_relative_reduction_boxplot.pdf}
-\caption{Heldout400 relative reduction versus 2stage by block.}
-\label{fig:step2-heldout400-by-block-relative-reduction}
-\howtoread{Positive values mean the decision-focused method reduces normalized gap relative to the 2stage baseline on the same subset-seed protocol. Read larger positive boxes as stronger paired improvement, and values near zero as methods behaving similarly.}
-\end{figure}
-
-\begin{figure}[p]
-\centering
-\includegraphics[width=\textwidth]{\StepTwoResamplingPlotRoot/phase1_heldout400_gap_boxplot.pdf}
-\caption{Overall heldout400 normalized decision gap distribution.}
-\label{fig:step2-heldout400-gap}
-\howtoread{This plot aggregates the heldout400 gap distribution across the selected subset-resampling settings. Compare method medians and tails: lower medians indicate better typical quality, while shorter upper tails indicate fewer hard cases.}
-\end{figure}
-
-\begin{figure}[p]
-\centering
 \includegraphics[width=\textwidth]{\StepTwoResamplingPlotRoot/phase1_heldout400_paired_reduction_boxplot.pdf}
 \caption{Paired heldout400 improvement: 2stage gap minus SPO+ gap.}
 \label{fig:step2-heldout400-paired-reduction}
@@ -224,9 +233,10 @@ main outputs:
 \end{figure}
 
 \subsection{Interpretation}
-These plots answer whether the SPO+ improvement is stable under different
-sampled training subsets from the same fixed graph pool. The paired reduction
-plot is especially important because it compares 2stage and SPO+ on the same
+These two plots answer whether the SPO+ improvement is stable under different
+sampled training subsets from the same fixed graph pool. The by-block gap plot
+shows where the absolute gaps are large, and the paired reduction plot is the
+main evidence for improvement because it compares 2stage and SPO+ on the same
 subset seed, reducing confounding from subset difficulty.
 
 The correct conclusion is limited but useful:
@@ -239,6 +249,7 @@ The current experiment should not be described as full robustness over all
 randomness. A stronger next-stage robustness test would vary graph-generation
 seed, label-noise seed, or training initialization seed.
 
+\clearpage
 \section{Step 3: Decision-Level Explanation}
 \label{sec:decision-analysis}
 
@@ -541,6 +552,7 @@ suggesting near-optimal alternative solutions. The high-error criticality plot
 shows that the highest-error edges are selected or enter the symmetric
 difference only at limited rates.
 
+\clearpage
 \subsection{Case Studies: Three Mechanisms}
 To make the aggregate patterns interpretable, I selected three types of graph
 case studies.
@@ -731,11 +743,8 @@ the involvement of high-error edges in the symmetric difference.
 This is still a first-pass analysis. The current limitations are:
 
 \begin{itemize}
-    \item only \texttt{Step2b d8} is analyzed;
     \item only train size 50 and heldout400 are used;
     \item only 9 representative subset seeds are selected;
-    \item only 2stage and SPO+ are compared;
-    \item FY is not yet included;
     \item \texttt{Step2c} multiplicative-noise regimes are not yet analyzed;
     \item the near-tie analysis uses only observed candidates
     $y^\star$, $y_{\mathrm{2stage}}$, and $y_{\mathrm{SPO+}}$;
@@ -780,37 +789,16 @@ Claim & Evidence & Limitation \\
 Step1c SPO+ implementation is reliable.
 & PyEPO-reference validation on shortest-path and KEP; KEP Phase 2 trajectory equivalence.
 & Shortest-path full CSV SPO+ is affected by oracle tie-breaking. \\
+\midrule
 SPO+ improves over 2stage in high-degree subset-resampling settings.
 & Heldout400 boxplots and paired reductions on fixed graph pools.
 & Only subset seed varied; not graph seed or label seed. \\
+\midrule
 2stage remains competitive because many errors are non-critical.
 & Case A/B/C, high-error symdiff rates, and decision-critical MSE correlations.
 & First-pass evidence on selected Step2b d8 seeds only. \\
 \bottomrule
 \end{tabular}
 \end{table}
-
-\subsection{Limitations}
-The resampling analysis currently varies only the training subset seed. It does
-not yet vary graph-generation seed, label-noise seed, or training initialization
-seed. The decision-level analysis is currently limited to \texttt{Step2b d8},
-train size 50, heldout400, selected representative seeds, and 2stage vs SPO+.
-It does not yet include FY, \texttt{Step2c d8 eps050}, full graph-seed variation,
-or adversarial SPO+ solutions $y_{\mathrm{adv}}$.
-
-\subsection{Next Steps}
-The next report should extend the explanation in three directions:
-
-\begin{enumerate}
-    \item Apply the same decision-level pipeline to \texttt{Step2c d8 eps050} to
-    check whether the same non-critical-error mechanism holds under
-    multiplicative label noise.
-    
-    \item Add FY as a third method and compare whether FY-selected solutions are
-    closer to SPO+, 2stage, or the oracle solution.
-    
-    \item Add $y_{\mathrm{adv}}$ analysis to inspect which edges the SPO+
-    gradient pushes away from or toward.
-\end{enumerate}
 
 \end{document}
