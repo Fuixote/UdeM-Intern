@@ -27,6 +27,11 @@
 
 \newcommand{\RepoRoot}{../..}
 \newcommand{\StepTwoResamplingPlotRoot}{\RepoRoot/surrogate_experiment_results/Step2_resampling/plot_results}
+\newcommand{\DecisionAnalysisPlotRoot}{plots}
+\newcommand{\howtoread}[1]{%
+  \par\smallskip
+  \noindent\textbf{How to read.} #1%
+}
 
 \title{Weekly Progress: Validation, Resampling, and Decision-Level Explanation}
 \author{}
@@ -34,6 +39,18 @@
 
 \begin{document}
 \maketitle
+
+\begin{quote}
+\textbf{Executive summary.}
+This week I closed the loop from implementation validation to empirical
+variability and decision-level explanation. First, the Step1c SPO+ code was
+validated against PyEPO references on both shortest-path and KEP oracles.
+Second, subset-resampling boxplots summarize the distribution of 2stage and
+SPO+ behavior under fixed graph pools. Third, decision-level analysis on
+Step2b d8 suggests that 2stage can remain competitive because many large
+edge-level errors are not decision-critical, while SPO+ helps when errors fall
+on decision-changing edges.
+\end{quote}
 
 \section{Overview}
 \label{sec:overview}
@@ -43,8 +60,9 @@ meeting. First, I used PyEPO as an external reference implementation to check
 whether my current codebase contains implementation bugs. Second, I ran
 subset-resampling experiments to summarize variability with box plots. Third,
 assuming the implementation is reliable, I started a decision-level analysis to
-understand why the two-stage model can sometimes remain close to SPO+/FY in
-decision quality.
+understand why the two-stage model can sometimes remain close to
+decision-focused methods such as SPO+/FY in decision quality. This report
+analyzes SPO+ first; FY remains a planned extension.
 
 The resulting workflow is:
 
@@ -59,6 +77,28 @@ Step & Goal & Current status \\
 \bottomrule
 \end{tabular}
 \end{center}
+
+\begin{table}[h]
+\centering
+\small
+\caption{Mapping this week's work to the advisor's three requested directions.}
+\label{tab:advisor-plan-status}
+\begin{tabular}{p{0.31\linewidth}p{0.39\linewidth}p{0.20\linewidth}}
+\toprule
+Advisor direction & What was done this week & Status \\
+\midrule
+Reproduce shortest-path / check bugs
+& PyEPO-vs-my shortest-path LR and SPO+ checks; KEP Phase 0/1/2 PyEPO-reference validation.
+& Mostly complete \\
+Run resampling experiments and boxplots
+& Fixed graph pool, fixed label regime, subset-seed resampling at train size 50; heldout400 boxplots.
+& First layer complete \\
+Small-graph decision comparison
+& Step2b d8 decision replay, edge criticality, case studies, near-tie analysis, and decision-critical MSE correlations.
+& First-pass complete \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \section{Step 1: Implementation Validation with PyEPO Reference}
 \label{sec:implementation-validation}
@@ -199,34 +239,36 @@ main outputs:
     \item relative reduction by block.
 \end{itemize}
 
-\begin{figure}[h]
+\begin{figure}[p]
 \centering
-\begin{subfigure}{0.48\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{\StepTwoResamplingPlotRoot/phase1_heldout400_by_block_gap_boxplot.pdf}
-    \caption{Heldout400 gap by block.}
-\end{subfigure}
-\hfill
-\begin{subfigure}{0.48\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{\StepTwoResamplingPlotRoot/phase1_heldout400_by_block_relative_reduction_boxplot.pdf}
-    \caption{Relative reduction vs 2stage.}
-\end{subfigure}
+\includegraphics[width=\textwidth]{\StepTwoResamplingPlotRoot/phase1_heldout400_by_block_gap_boxplot.pdf}
+\caption{Heldout400 normalized decision gap by block under subset resampling.}
+\label{fig:step2-heldout400-by-block-gap}
+\howtoread{Each box summarizes heldout400 normalized decision gaps across subset seeds for one regime/block and method. Lower boxes indicate better downstream decision quality; wider or higher boxes indicate stronger subset sensitivity.}
+\end{figure}
 
-\vspace{0.75em}
-\begin{subfigure}{0.48\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{\StepTwoResamplingPlotRoot/phase1_heldout400_gap_boxplot.pdf}
-    \caption{Overall gap distribution.}
-\end{subfigure}
-\hfill
-\begin{subfigure}{0.48\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{\StepTwoResamplingPlotRoot/phase1_heldout400_paired_reduction_boxplot.pdf}
-    \caption{Paired improvement: 2stage $-$ SPO+.}
-\end{subfigure}
-\caption{Subset-resampling box plots on heldout400. Positive paired reduction means SPO+ has a lower normalized decision gap than 2stage on the same subset seed.}
-\label{fig:step2-resampling-boxplots}
+\begin{figure}[p]
+\centering
+\includegraphics[width=\textwidth]{\StepTwoResamplingPlotRoot/phase1_heldout400_by_block_relative_reduction_boxplot.pdf}
+\caption{Heldout400 relative reduction versus 2stage by block.}
+\label{fig:step2-heldout400-by-block-relative-reduction}
+\howtoread{Positive values mean the decision-focused method reduces normalized gap relative to the 2stage baseline on the same subset-seed protocol. Read larger positive boxes as stronger paired improvement, and values near zero as methods behaving similarly.}
+\end{figure}
+
+\begin{figure}[p]
+\centering
+\includegraphics[width=\textwidth]{\StepTwoResamplingPlotRoot/phase1_heldout400_gap_boxplot.pdf}
+\caption{Overall heldout400 normalized decision gap distribution.}
+\label{fig:step2-heldout400-gap}
+\howtoread{This plot aggregates the heldout400 gap distribution across the selected subset-resampling settings. Compare method medians and tails: lower medians indicate better typical quality, while shorter upper tails indicate fewer hard cases.}
+\end{figure}
+
+\begin{figure}[p]
+\centering
+\includegraphics[width=\textwidth]{\StepTwoResamplingPlotRoot/phase1_heldout400_paired_reduction_boxplot.pdf}
+\caption{Paired heldout400 improvement: 2stage gap minus SPO+ gap.}
+\label{fig:step2-heldout400-paired-reduction}
+\howtoread{Each value compares 2stage and SPO+ on the same subset seed. Positive values mean SPO+ has a lower normalized decision gap; the paired view reduces confounding from subset difficulty.}
 \end{figure}
 
 \subsection{Interpretation}
@@ -325,6 +367,30 @@ Top-10-error symmetric-difference rate & \textbf{0.570 / 0.667} & \textbf{0.557 
 \end{tabular}
 \end{table}
 
+\begin{figure}[p]
+\centering
+\includegraphics[width=\textwidth]{\DecisionAnalysisPlotRoot/mse_vs_normalized_gap.png}
+\caption{Prediction MSE versus normalized decision gap.}
+\label{fig:decision-mse-vs-gap}
+\howtoread{Each point is a method/graph evaluation from the selected Step2b d8 heldout400 cases. If raw prediction MSE fully explained decision quality, points would align strongly upward; the weak pattern shows that edge error alone is not enough to explain KEP regret.}
+\end{figure}
+
+\begin{figure}[p]
+\centering
+\includegraphics[width=\textwidth]{\DecisionAnalysisPlotRoot/solution_overlap_vs_gap.png}
+\caption{Solution overlap with the oracle versus normalized decision gap.}
+\label{fig:decision-overlap-vs-gap}
+\howtoread{The x-axis measures edge-set overlap with the oracle solution, and the y-axis measures normalized gap. Lower-overlap points with small gaps indicate near-optimal alternative exchanges: the selected solution can differ while remaining close in true objective.}
+\end{figure}
+
+\begin{figure}[p]
+\centering
+\includegraphics[width=\textwidth]{\DecisionAnalysisPlotRoot/high_error_edge_selected_symdiff_rate.png}
+\caption{High-error edge selected and symmetric-difference rates.}
+\label{fig:decision-high-error-criticality}
+\howtoread{The leftmost error-rank bins contain the largest prediction errors. Compare selected-rate and symmetric-difference-rate curves: high-error edges matter most when they enter the selected solution or the predicted-vs-oracle symmetric difference.}
+\end{figure}
+
 \subsection{Main Finding}
 Raw edge-level MSE is weakly correlated with decision gap. In contrast,
 symmetric-difference-focused measures are much more predictive. This suggests
@@ -337,7 +403,7 @@ not merely because an edge-level error is large.
 \centering
 \small
 \fbox{
-\begin{minipage}{0.94\linewidth}
+\begin{minipage}{0.97\textwidth}
 \textbf{Case A: Bad prediction but irrelevant.}
 
 \vspace{0.5em}
@@ -359,13 +425,14 @@ top-error symmetric-difference involvement.
 }
 \caption{Large edge-level prediction errors can be non-critical.}
 \label{fig:case-a}
+\howtoread{These rows have high all-edge MSE but zero 2stage decision gap. The key column is the top-10-error symmetric-difference rate: it is zero, so the largest prediction errors do not affect the decision-changing edge set.}
 \end{figure}
 
 \begin{figure}[h]
 \centering
 \small
 \fbox{
-\begin{minipage}{0.94\linewidth}
+\begin{minipage}{0.97\textwidth}
 \textbf{Case B: Different solution but near-optimal.}
 
 \vspace{0.5em}
@@ -387,13 +454,14 @@ near-optimal alternative exchanges.
 }
 \caption{Different selected solutions can be near-optimal alternatives.}
 \label{fig:case-b}
+\howtoread{These rows are not exact oracle solutions and have only medium Jaccard overlap, but their normalized decision gaps are close to zero. This supports the near-tie story: solution identity can change while true objective remains almost unchanged.}
 \end{figure}
 
 \begin{figure}[h]
 \centering
 \small
 \fbox{
-\begin{minipage}{0.94\linewidth}
+\begin{minipage}{0.97\textwidth}
 \textbf{Case C: SPO+ fixes 2stage decision-critical errors.}
 
 \vspace{0.5em}
@@ -416,6 +484,7 @@ symmetric-difference involvement.
 }
 \caption{SPO+ improves decisions when errors are decision-critical.}
 \label{fig:case-c}
+\howtoread{Compare the 2stage and SPO+ gap columns together with the top-10-error symmetric-difference rates. SPO+ reduces the gap precisely in cases where 2stage's large errors enter decision-changing edges.}
 \end{figure}
 
 \subsection{Conclusion from Step 3}
@@ -448,6 +517,28 @@ This week's work forms a closed loop:
     decision-critical, and some different selected exchanges are near-optimal.
     SPO+ improves most when errors occur on decision-changing edges.
 \end{enumerate}
+
+\begin{table}[h]
+\centering
+\small
+\caption{Safe claims supported by the current evidence.}
+\label{tab:safe-claims}
+\begin{tabular}{p{0.29\linewidth}p{0.39\linewidth}p{0.22\linewidth}}
+\toprule
+Claim & Evidence & Limitation \\
+\midrule
+Step1c SPO+ implementation is reliable.
+& PyEPO-reference validation on shortest-path and KEP; KEP Phase 2 trajectory equivalence.
+& Shortest-path full CSV SPO+ is affected by oracle tie-breaking. \\
+SPO+ improves over 2stage in high-degree subset-resampling settings.
+& Heldout400 boxplots and paired reductions on fixed graph pools.
+& Only subset seed varied; not graph seed or label seed. \\
+2stage remains competitive because many errors are non-critical.
+& Case A/B/C, high-error symdiff rates, and decision-critical MSE correlations.
+& First-pass evidence on selected Step2b d8 seeds only. \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \subsection{Limitations}
 The resampling analysis currently varies only the training subset seed. It does
