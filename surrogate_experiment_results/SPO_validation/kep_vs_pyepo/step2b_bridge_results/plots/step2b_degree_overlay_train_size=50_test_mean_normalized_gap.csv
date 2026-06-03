@@ -1,0 +1,17 @@
+degree,method,label,value,metric,source,epoch,source_train_size,bridge_train_size,validation_size,selection_metric,evaluation
+1,pyepo_lr,PyEPO LR,2.257789704091851e-05,test_mean_normalized_gap,formal_test_summary_mirrored_by_bridge,500,50,,,validation_mse_loss,formal_test_summary
+1,pyepo_spoplus,PyEPO SPO+,1.2605535273287417e-07,test_mean_normalized_gap,formal_test_summary_mirrored_by_bridge,190,50,,,validation_spoplus_loss,formal_test_summary
+1,step1c_lr,my LR,2.257789704091851e-05,test_mean_normalized_gap,formal_test_summary_mirrored_by_bridge,500,50,,,validation_mse_loss,formal_test_summary
+1,step1c_spoplus,my SPO+,1.2605535273287417e-07,test_mean_normalized_gap,formal_test_summary_mirrored_by_bridge,190,50,,,validation_spoplus_loss,formal_test_summary
+2,pyepo_lr,PyEPO LR,0.0010501014523532472,test_mean_normalized_gap,formal_test_summary_mirrored_by_bridge,500,50,,,validation_mse_loss,formal_test_summary
+2,pyepo_spoplus,PyEPO SPO+,0.0008335809767181828,test_mean_normalized_gap,formal_test_summary_mirrored_by_bridge,500,50,,,validation_spoplus_loss,formal_test_summary
+2,step1c_lr,my LR,0.0010501014523532472,test_mean_normalized_gap,formal_test_summary_mirrored_by_bridge,500,50,,,validation_mse_loss,formal_test_summary
+2,step1c_spoplus,my SPO+,0.0008335809767181828,test_mean_normalized_gap,formal_test_summary_mirrored_by_bridge,500,50,,,validation_spoplus_loss,formal_test_summary
+4,pyepo_lr,PyEPO LR,0.010403201844018556,test_mean_normalized_gap,formal_test_summary_mirrored_by_bridge,500,50,,,validation_mse_loss,formal_test_summary
+4,pyepo_spoplus,PyEPO SPO+,0.007981404941946657,test_mean_normalized_gap,formal_test_summary_mirrored_by_bridge,500,50,,,validation_spoplus_loss,formal_test_summary
+4,step1c_lr,my LR,0.010403201844018556,test_mean_normalized_gap,formal_test_summary_mirrored_by_bridge,500,50,,,validation_mse_loss,formal_test_summary
+4,step1c_spoplus,my SPO+,0.007981404941946657,test_mean_normalized_gap,formal_test_summary_mirrored_by_bridge,500,50,,,validation_spoplus_loss,formal_test_summary
+8,pyepo_lr,PyEPO LR,0.06133506149564834,test_mean_normalized_gap,formal_test_summary_mirrored_by_bridge,500,50,,,validation_mse_loss,formal_test_summary
+8,pyepo_spoplus,PyEPO SPO+,0.04906840174454459,test_mean_normalized_gap,formal_test_summary_mirrored_by_bridge,500,50,,,validation_spoplus_loss,formal_test_summary
+8,step1c_lr,my LR,0.06133506149564834,test_mean_normalized_gap,formal_test_summary_mirrored_by_bridge,500,50,,,validation_mse_loss,formal_test_summary
+8,step1c_spoplus,my SPO+,0.04906840174454459,test_mean_normalized_gap,formal_test_summary_mirrored_by_bridge,500,50,,,validation_spoplus_loss,formal_test_summary

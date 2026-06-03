@@ -1,0 +1,27 @@
+[
+  {
+    "index": 0,
+    "graph_id": 0,
+    "path": "dataset/processed/step2b_poly_d8_val2000_seed20260523/G-0.json"
+  },
+  {
+    "index": 1,
+    "graph_id": 1,
+    "path": "dataset/processed/step2b_poly_d8_val2000_seed20260523/G-1.json"
+  },
+  {
+    "index": 2,
+    "graph_id": 2,
+    "path": "dataset/processed/step2b_poly_d8_val2000_seed20260523/G-2.json"
+  },
+  {
+    "index": 3,
+    "graph_id": 3,
+    "path": "dataset/processed/step2b_poly_d8_val2000_seed20260523/G-3.json"
+  },
+  {
+    "index": 4,
+    "graph_id": 4,
+    "path": "dataset/processed/step2b_poly_d8_val2000_seed20260523/G-4.json"
+  }
+]

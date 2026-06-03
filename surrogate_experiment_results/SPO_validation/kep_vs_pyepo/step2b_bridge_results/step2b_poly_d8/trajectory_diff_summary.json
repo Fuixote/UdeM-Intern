@@ -1,0 +1,98 @@
+[
+  {
+    "name": "phase2_epoch_max_abs_diff",
+    "value": 0,
+    "threshold": 0.0,
+    "passed": true
+  },
+  {
+    "name": "phase2_theta_1_max_abs_diff",
+    "value": 0.0,
+    "threshold": 1e-06,
+    "passed": true
+  },
+  {
+    "name": "phase2_theta_2_max_abs_diff",
+    "value": 0.0,
+    "threshold": 1e-06,
+    "passed": true
+  },
+  {
+    "name": "phase2_theta_norm_max_abs_diff",
+    "value": 0.0,
+    "threshold": 1e-06,
+    "passed": true
+  },
+  {
+    "name": "phase2_train_spoplus_loss_max_abs_diff",
+    "value": 3.7549201294950763e-06,
+    "threshold": 1e-05,
+    "passed": true
+  },
+  {
+    "name": "phase2_validation_spoplus_loss_max_abs_diff",
+    "value": 6.9683763399552845e-06,
+    "threshold": 1e-05,
+    "passed": true
+  },
+  {
+    "name": "phase2_train_normalized_spoplus_loss_max_abs_diff",
+    "value": 2.131340670619153e-08,
+    "threshold": 1e-05,
+    "passed": true
+  },
+  {
+    "name": "phase2_validation_normalized_spoplus_loss_max_abs_diff",
+    "value": 3.6836890315861126e-08,
+    "threshold": 1e-05,
+    "passed": true
+  },
+  {
+    "name": "phase2_train_decision_gap_max_abs_diff",
+    "value": 0.0,
+    "threshold": 1e-09,
+    "passed": true
+  },
+  {
+    "name": "phase2_validation_decision_gap_max_abs_diff",
+    "value": 0.0,
+    "threshold": 1e-09,
+    "passed": true
+  },
+  {
+    "name": "phase2_train_normalized_decision_gap_max_abs_diff",
+    "value": 0.0,
+    "threshold": 1e-12,
+    "passed": true
+  },
+  {
+    "name": "phase2_validation_normalized_decision_gap_max_abs_diff",
+    "value": 0.0,
+    "threshold": 1e-12,
+    "passed": true
+  },
+  {
+    "name": "phase2_train_y_adv_oracle_equal_rate_max_abs_diff",
+    "value": 0.0,
+    "threshold": 1e-12,
+    "passed": true
+  },
+  {
+    "name": "phase2_validation_y_adv_oracle_equal_rate_max_abs_diff",
+    "value": 0.0,
+    "threshold": 1e-12,
+    "passed": true
+  },
+  {
+    "name": "phase2_train_y_pred_oracle_equal_rate_max_abs_diff",
+    "value": 0.0,
+    "threshold": 1e-12,
+    "passed": true
+  },
+  {
+    "name": "phase2_validation_y_pred_oracle_equal_rate_max_abs_diff",
+    "value": 0.0,
+    "threshold": 1e-12,
+    "passed": true
+  }
+]

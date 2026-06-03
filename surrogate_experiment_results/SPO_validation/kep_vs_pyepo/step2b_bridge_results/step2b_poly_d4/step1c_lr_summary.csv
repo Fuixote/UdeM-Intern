@@ -1,0 +1,2 @@
+method,theta_1,theta_2,theta_norm,train_mse_loss,validation_mse_loss,train_decision_gap,validation_decision_gap,train_normalized_gap,validation_normalized_gap
+step1c_lr,10.273526381151816,5.995557910700934,11.895043462080787,1.811278194881897,1.7785173838182313,0.9766201496124267,1.5508201360702514,0.006346036046557368,0.011194717633861378

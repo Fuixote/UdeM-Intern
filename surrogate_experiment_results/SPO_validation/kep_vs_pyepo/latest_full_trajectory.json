@@ -1,0 +1,192 @@
+{
+  "phase": "phase2",
+  "purpose": "KEP full trajectory equivalence",
+  "data_dir": "/home/weikang/projects/UdeM-Intern/Exps/dataset/processed/step1_noisy_linear_sigma010",
+  "split_path": "/home/weikang/projects/UdeM-Intern/Exps/results/step1b_splits/master_split_seed=42.json",
+  "output_dir": "/home/weikang/projects/UdeM-Intern/Exps/surrogate_experiment_results/SPO_validation/kep_vs_pyepo/phase2_results/train_size=5",
+  "train_size": 5,
+  "validation_size": 5,
+  "subset_seed": 42,
+  "theta_seed": 42,
+  "theta_init": [
+    1.6236203565420875,
+    3.3521429192297485
+  ],
+  "gurobi_seed": 42,
+  "optimizer": "adam",
+  "lr": 0.05,
+  "n_epochs": 3,
+  "metric_stride": 1,
+  "epoch_indices": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "train_subset": [
+    {
+      "index": 1027,
+      "graph_id": 1027,
+      "path": "dataset/processed/step1_noisy_linear_sigma010/G-1027.json"
+    },
+    {
+      "index": 520,
+      "graph_id": 520,
+      "path": "dataset/processed/step1_noisy_linear_sigma010/G-520.json"
+    },
+    {
+      "index": 1592,
+      "graph_id": 1592,
+      "path": "dataset/processed/step1_noisy_linear_sigma010/G-1592.json"
+    },
+    {
+      "index": 1164,
+      "graph_id": 1164,
+      "path": "dataset/processed/step1_noisy_linear_sigma010/G-1164.json"
+    },
+    {
+      "index": 1862,
+      "graph_id": 1862,
+      "path": "dataset/processed/step1_noisy_linear_sigma010/G-1862.json"
+    }
+  ],
+  "validation_set": [
+    {
+      "index": 1357,
+      "graph_id": 1357,
+      "path": "dataset/processed/step1_noisy_linear_sigma010/G-1357.json"
+    },
+    {
+      "index": 258,
+      "graph_id": 258,
+      "path": "dataset/processed/step1_noisy_linear_sigma010/G-258.json"
+    },
+    {
+      "index": 1572,
+      "graph_id": 1572,
+      "path": "dataset/processed/step1_noisy_linear_sigma010/G-1572.json"
+    },
+    {
+      "index": 1278,
+      "graph_id": 1278,
+      "path": "dataset/processed/step1_noisy_linear_sigma010/G-1278.json"
+    },
+    {
+      "index": 41,
+      "graph_id": 41,
+      "path": "dataset/processed/step1_noisy_linear_sigma010/G-41.json"
+    }
+  ],
+  "train_graphs": [
+    "dataset/processed/step1_noisy_linear_sigma010/G-1027.json",
+    "dataset/processed/step1_noisy_linear_sigma010/G-520.json",
+    "dataset/processed/step1_noisy_linear_sigma010/G-1592.json",
+    "dataset/processed/step1_noisy_linear_sigma010/G-1164.json",
+    "dataset/processed/step1_noisy_linear_sigma010/G-1862.json"
+  ],
+  "validation_graphs": [
+    "dataset/processed/step1_noisy_linear_sigma010/G-1357.json",
+    "dataset/processed/step1_noisy_linear_sigma010/G-258.json",
+    "dataset/processed/step1_noisy_linear_sigma010/G-1572.json",
+    "dataset/processed/step1_noisy_linear_sigma010/G-1278.json",
+    "dataset/processed/step1_noisy_linear_sigma010/G-41.json"
+  ],
+  "artifacts": {
+    "pyepo_loss_curve_csv": "/home/weikang/projects/UdeM-Intern/Exps/surrogate_experiment_results/SPO_validation/kep_vs_pyepo/phase2_results/train_size=5/pyepo_spoplus_loss_curve.csv",
+    "step1c_loss_curve_csv": "/home/weikang/projects/UdeM-Intern/Exps/surrogate_experiment_results/SPO_validation/kep_vs_pyepo/phase2_results/train_size=5/step1c_spoplus_loss_curve.csv",
+    "diff_summary_csv": "/home/weikang/projects/UdeM-Intern/Exps/surrogate_experiment_results/SPO_validation/kep_vs_pyepo/phase2_results/train_size=5/trajectory_diff_summary.csv",
+    "diff_summary_json": "/home/weikang/projects/UdeM-Intern/Exps/surrogate_experiment_results/SPO_validation/kep_vs_pyepo/phase2_results/train_size=5/trajectory_diff_summary.json",
+    "run_config_json": "/home/weikang/projects/UdeM-Intern/Exps/surrogate_experiment_results/SPO_validation/kep_vs_pyepo/phase2_results/train_size=5/run_config.json",
+    "train_subset_json": "/home/weikang/projects/UdeM-Intern/Exps/surrogate_experiment_results/SPO_validation/kep_vs_pyepo/phase2_results/train_size=5/train_subset.json",
+    "validation_set_json": "/home/weikang/projects/UdeM-Intern/Exps/surrogate_experiment_results/SPO_validation/kep_vs_pyepo/phase2_results/train_size=5/validation_set.json",
+    "pyepo_trajectory_npy": "/home/weikang/projects/UdeM-Intern/Exps/surrogate_experiment_results/SPO_validation/kep_vs_pyepo/phase2_results/train_size=5/trajectory_pyepo_spoplus.npy",
+    "step1c_trajectory_npy": "/home/weikang/projects/UdeM-Intern/Exps/surrogate_experiment_results/SPO_validation/kep_vs_pyepo/phase2_results/train_size=5/trajectory_step1c_spoplus.npy"
+  },
+  "results": [
+    {
+      "name": "phase2_epoch_max_abs_diff",
+      "value": 0,
+      "threshold": 0.0,
+      "passed": true
+    },
+    {
+      "name": "phase2_theta_1_max_abs_diff",
+      "value": 0.0,
+      "threshold": 1e-06,
+      "passed": true
+    },
+    {
+      "name": "phase2_theta_2_max_abs_diff",
+      "value": 0.0,
+      "threshold": 1e-06,
+      "passed": true
+    },
+    {
+      "name": "phase2_theta_norm_max_abs_diff",
+      "value": 0.0,
+      "threshold": 1e-06,
+      "passed": true
+    },
+    {
+      "name": "phase2_train_spoplus_loss_max_abs_diff",
+      "value": 3.2974675008290433e-06,
+      "threshold": 1e-05,
+      "passed": true
+    },
+    {
+      "name": "phase2_validation_spoplus_loss_max_abs_diff",
+      "value": 2.2323840980220666e-06,
+      "threshold": 1e-05,
+      "passed": true
+    },
+    {
+      "name": "phase2_train_normalized_spoplus_loss_max_abs_diff",
+      "value": 2.7551197157027474e-08,
+      "threshold": 1e-05,
+      "passed": true
+    },
+    {
+      "name": "phase2_validation_normalized_spoplus_loss_max_abs_diff",
+      "value": 1.5989919444070466e-08,
+      "threshold": 1e-05,
+      "passed": true
+    },
+    {
+      "name": "phase2_train_decision_gap_max_abs_diff",
+      "value": 0.0,
+      "threshold": 1e-09,
+      "passed": true
+    },
+    {
+      "name": "phase2_validation_decision_gap_max_abs_diff",
+      "value": 0.0,
+      "threshold": 1e-09,
+      "passed": true
+    },
+    {
+      "name": "phase2_train_y_adv_oracle_equal_rate_max_abs_diff",
+      "value": 0.0,
+      "threshold": 1e-12,
+      "passed": true
+    },
+    {
+      "name": "phase2_validation_y_adv_oracle_equal_rate_max_abs_diff",
+      "value": 0.0,
+      "threshold": 1e-12,
+      "passed": true
+    },
+    {
+      "name": "phase2_train_y_pred_oracle_equal_rate_max_abs_diff",
+      "value": 0.0,
+      "threshold": 1e-12,
+      "passed": true
+    },
+    {
+      "name": "phase2_validation_y_pred_oracle_equal_rate_max_abs_diff",
+      "value": 0.0,
+      "threshold": 1e-12,
+      "passed": true
+    }
+  ],
+  "passed": true
+}

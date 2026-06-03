@@ -1,0 +1,17 @@
+degree,method,label,value,metric,source,epoch,source_train_size,bridge_train_size,validation_size
+1,pyepo_lr,PyEPO LR,0.0,validation_normalized_gap,lr_summary,,50,5,5
+1,pyepo_spoplus,PyEPO SPO+,0.00900922097441201,validation_normalized_gap,spoplus_final_epoch,3,50,5,5
+1,step1c_lr,my LR,0.0,validation_normalized_gap,lr_summary,,50,5,5
+1,step1c_spoplus,my SPO+,0.00900922097441201,validation_normalized_gap,spoplus_final_epoch,3,50,5,5
+2,pyepo_lr,PyEPO LR,4.490640582308905e-05,validation_normalized_gap,lr_summary,,50,5,5
+2,pyepo_spoplus,PyEPO SPO+,0.008686171249489037,validation_normalized_gap,spoplus_final_epoch,3,50,5,5
+2,step1c_lr,my LR,4.490640582308905e-05,validation_normalized_gap,lr_summary,,50,5,5
+2,step1c_spoplus,my SPO+,0.008686171249489037,validation_normalized_gap,spoplus_final_epoch,3,50,5,5
+4,pyepo_lr,PyEPO LR,0.011194717633861378,validation_normalized_gap,lr_summary,,50,5,5
+4,pyepo_spoplus,PyEPO SPO+,0.016343214255259364,validation_normalized_gap,spoplus_final_epoch,3,50,5,5
+4,step1c_lr,my LR,0.011194717633861378,validation_normalized_gap,lr_summary,,50,5,5
+4,step1c_spoplus,my SPO+,0.016343214255259364,validation_normalized_gap,spoplus_final_epoch,3,50,5,5
+8,pyepo_lr,PyEPO LR,0.0814550537201242,validation_normalized_gap,lr_summary,,50,5,5
+8,pyepo_spoplus,PyEPO SPO+,0.07573459782671581,validation_normalized_gap,spoplus_final_epoch,3,50,5,5
+8,step1c_lr,my LR,0.0814550537201242,validation_normalized_gap,lr_summary,,50,5,5
+8,step1c_spoplus,my SPO+,0.07573459782671581,validation_normalized_gap,spoplus_final_epoch,3,50,5,5

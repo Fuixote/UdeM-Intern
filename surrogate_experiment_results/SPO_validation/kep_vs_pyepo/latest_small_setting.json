@@ -1,0 +1,122 @@
+{
+  "phase": "phase1",
+  "purpose": "KEP small validation correctness",
+  "data_dir": "/home/weikang/projects/UdeM-Intern/Exps/dataset/processed/step1_noisy_linear_sigma010",
+  "graphs": [
+    "/home/weikang/projects/UdeM-Intern/Exps/dataset/processed/step1_noisy_linear_sigma010/G-0.json",
+    "/home/weikang/projects/UdeM-Intern/Exps/dataset/processed/step1_noisy_linear_sigma010/G-1.json",
+    "/home/weikang/projects/UdeM-Intern/Exps/dataset/processed/step1_noisy_linear_sigma010/G-2.json",
+    "/home/weikang/projects/UdeM-Intern/Exps/dataset/processed/step1_noisy_linear_sigma010/G-3.json",
+    "/home/weikang/projects/UdeM-Intern/Exps/dataset/processed/step1_noisy_linear_sigma010/G-4.json"
+  ],
+  "theta": [
+    1.6236203565420875,
+    3.3521429192297485
+  ],
+  "level2_3_4_record_checks": [
+    {
+      "graph": "G-0.json",
+      "level2_forward_loss_abs_diff": 1.6729039487017872e-07,
+      "level3_grad_pred_max_abs_diff": 0.0,
+      "level3_grad_theta_max_abs_diff": 0.0,
+      "level4_sgd_theta_update_max_abs_diff": 0.0
+    },
+    {
+      "graph": "G-1.json",
+      "level2_forward_loss_abs_diff": 5.948492827201335e-07,
+      "level3_grad_pred_max_abs_diff": 0.0,
+      "level3_grad_theta_max_abs_diff": 0.0,
+      "level4_sgd_theta_update_max_abs_diff": 0.0
+    },
+    {
+      "graph": "G-2.json",
+      "level2_forward_loss_abs_diff": 2.9998127928365648e-06,
+      "level3_grad_pred_max_abs_diff": 0.0,
+      "level3_grad_theta_max_abs_diff": 0.0,
+      "level4_sgd_theta_update_max_abs_diff": 0.0
+    },
+    {
+      "graph": "G-3.json",
+      "level2_forward_loss_abs_diff": 1.136586163852371e-06,
+      "level3_grad_pred_max_abs_diff": 0.0,
+      "level3_grad_theta_max_abs_diff": 0.0,
+      "level4_sgd_theta_update_max_abs_diff": 0.0
+    },
+    {
+      "graph": "G-4.json",
+      "level2_forward_loss_abs_diff": 6.024563816708906e-07,
+      "level3_grad_pred_max_abs_diff": 0.0,
+      "level3_grad_theta_max_abs_diff": 0.0,
+      "level4_sgd_theta_update_max_abs_diff": 0.0
+    }
+  ],
+  "results": [
+    {
+      "name": "level0_solution_max_abs_diff",
+      "value": 0.0,
+      "threshold": 0.0,
+      "passed": true
+    },
+    {
+      "name": "level0_objective_max_abs_diff",
+      "value": 0.0,
+      "threshold": 1e-07,
+      "passed": true
+    },
+    {
+      "name": "level1_ols_theta_max_abs_diff",
+      "value": 0.0,
+      "threshold": 1e-12,
+      "passed": true
+    },
+    {
+      "name": "level1_prediction_max_abs_diff",
+      "value": 0.0,
+      "threshold": 1e-12,
+      "passed": true
+    },
+    {
+      "name": "level1_mse_diff",
+      "value": 0.0,
+      "threshold": 1e-12,
+      "passed": true
+    },
+    {
+      "name": "level1_decision_gap_diff",
+      "value": 0.0,
+      "threshold": 1e-09,
+      "passed": true
+    },
+    {
+      "name": "level1_normalized_gap_diff",
+      "value": 0.0,
+      "threshold": 1e-12,
+      "passed": true
+    },
+    {
+      "name": "level2_forward_loss_max_abs_diff",
+      "value": 2.9998127928365648e-06,
+      "threshold": 1e-05,
+      "passed": true
+    },
+    {
+      "name": "level3_grad_pred_max_abs_diff",
+      "value": 0.0,
+      "threshold": 1e-06,
+      "passed": true
+    },
+    {
+      "name": "level3_grad_theta_max_abs_diff",
+      "value": 0.0,
+      "threshold": 1e-06,
+      "passed": true
+    },
+    {
+      "name": "level4_sgd_theta_update_max_abs_diff",
+      "value": 0.0,
+      "threshold": 1e-06,
+      "passed": true
+    }
+  ],
+  "passed": true
+}

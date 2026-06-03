@@ -1,0 +1,56 @@
+[
+  {
+    "name": "lr_theta_max_abs_diff",
+    "value": 0.0,
+    "threshold": 1e-12,
+    "passed": true
+  },
+  {
+    "name": "lr_train_prediction_max_abs_diff",
+    "value": 0.0,
+    "threshold": 1e-12,
+    "passed": true
+  },
+  {
+    "name": "lr_validation_prediction_max_abs_diff",
+    "value": 0.0,
+    "threshold": 1e-12,
+    "passed": true
+  },
+  {
+    "name": "lr_train_mse_diff",
+    "value": 0.0,
+    "threshold": 1e-12,
+    "passed": true
+  },
+  {
+    "name": "lr_validation_mse_diff",
+    "value": 0.0,
+    "threshold": 1e-12,
+    "passed": true
+  },
+  {
+    "name": "lr_train_decision_gap_diff",
+    "value": 0.0,
+    "threshold": 1e-09,
+    "passed": true
+  },
+  {
+    "name": "lr_validation_decision_gap_diff",
+    "value": 0.0,
+    "threshold": 1e-09,
+    "passed": true
+  },
+  {
+    "name": "lr_train_normalized_gap_diff",
+    "value": 0.0,
+    "threshold": 1e-12,
+    "passed": true
+  },
+  {
+    "name": "lr_validation_normalized_gap_diff",
+    "value": 0.0,
+    "threshold": 1e-12,
+    "passed": true
+  }
+]

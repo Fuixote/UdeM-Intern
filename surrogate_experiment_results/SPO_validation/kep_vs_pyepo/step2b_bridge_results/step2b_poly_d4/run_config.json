@@ -1,0 +1,360 @@
+{
+  "phase": "step2b_bridge_degree",
+  "degree": 4,
+  "regime": "step2b_poly_d4",
+  "source_run_dir": "/home/weikang/projects/UdeM-Intern/Exps/surrogate_experiment_results/Step2/Step2b_polynomial_degree_noiseless/remote_results/step2b_poly_d4/step1c_spoplus/formal_2stage500_spoplus500_s10/train_size=50",
+  "output_dir": "/home/weikang/projects/UdeM-Intern/Exps/surrogate_experiment_results/SPO_validation/kep_vs_pyepo/step2b_bridge_results/step2b_poly_d4",
+  "source_train_size": 50,
+  "train_size": 5,
+  "validation_size": 5,
+  "theta_seed": 42,
+  "theta_init": [
+    1.6236203565420875,
+    3.3521429192297485
+  ],
+  "gurobi_seed": 42,
+  "optimizer": "adam",
+  "lr": {
+    "phase": "step2b_lr_bridge",
+    "purpose": "Step2b degree PyEPO-style LR vs Step1c LR bridge",
+    "pyepo_theta": [
+      10.273526381151816,
+      5.995557910700934
+    ],
+    "step1c_theta": [
+      10.273526381151816,
+      5.995557910700934
+    ],
+    "pyepo_summary": {
+      "method": "pyepo_lr",
+      "theta_1": 10.273526381151816,
+      "theta_2": 5.995557910700934,
+      "theta_norm": 11.895043462080787,
+      "train_mse_loss": 1.811278194881897,
+      "validation_mse_loss": 1.7785173838182313,
+      "train_decision_gap": 0.9766201496124267,
+      "validation_decision_gap": 1.5508201360702514,
+      "train_normalized_gap": 0.006346036046557368,
+      "validation_normalized_gap": 0.011194717633861378
+    },
+    "step1c_summary": {
+      "method": "step1c_lr",
+      "theta_1": 10.273526381151816,
+      "theta_2": 5.995557910700934,
+      "theta_norm": 11.895043462080787,
+      "train_mse_loss": 1.811278194881897,
+      "validation_mse_loss": 1.7785173838182313,
+      "train_decision_gap": 0.9766201496124267,
+      "validation_decision_gap": 1.5508201360702514,
+      "train_normalized_gap": 0.006346036046557368,
+      "validation_normalized_gap": 0.011194717633861378
+    },
+    "results": [
+      {
+        "name": "lr_theta_max_abs_diff",
+        "value": 0.0,
+        "threshold": 1e-12,
+        "passed": true
+      },
+      {
+        "name": "lr_train_prediction_max_abs_diff",
+        "value": 0.0,
+        "threshold": 1e-12,
+        "passed": true
+      },
+      {
+        "name": "lr_validation_prediction_max_abs_diff",
+        "value": 0.0,
+        "threshold": 1e-12,
+        "passed": true
+      },
+      {
+        "name": "lr_train_mse_diff",
+        "value": 0.0,
+        "threshold": 1e-12,
+        "passed": true
+      },
+      {
+        "name": "lr_validation_mse_diff",
+        "value": 0.0,
+        "threshold": 1e-12,
+        "passed": true
+      },
+      {
+        "name": "lr_train_decision_gap_diff",
+        "value": 0.0,
+        "threshold": 1e-09,
+        "passed": true
+      },
+      {
+        "name": "lr_validation_decision_gap_diff",
+        "value": 0.0,
+        "threshold": 1e-09,
+        "passed": true
+      },
+      {
+        "name": "lr_train_normalized_gap_diff",
+        "value": 0.0,
+        "threshold": 1e-12,
+        "passed": true
+      },
+      {
+        "name": "lr_validation_normalized_gap_diff",
+        "value": 0.0,
+        "threshold": 1e-12,
+        "passed": true
+      }
+    ],
+    "passed": true
+  },
+  "n_epochs": 3,
+  "metric_stride": 1,
+  "epoch_indices": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "train_subset": [
+    {
+      "index": 1027,
+      "graph_id": 1027,
+      "path": "dataset/processed/step2b_poly_d4_main2000_seed20260523/G-1027.json"
+    },
+    {
+      "index": 520,
+      "graph_id": 520,
+      "path": "dataset/processed/step2b_poly_d4_main2000_seed20260523/G-520.json"
+    },
+    {
+      "index": 1592,
+      "graph_id": 1592,
+      "path": "dataset/processed/step2b_poly_d4_main2000_seed20260523/G-1592.json"
+    },
+    {
+      "index": 1164,
+      "graph_id": 1164,
+      "path": "dataset/processed/step2b_poly_d4_main2000_seed20260523/G-1164.json"
+    },
+    {
+      "index": 1862,
+      "graph_id": 1862,
+      "path": "dataset/processed/step2b_poly_d4_main2000_seed20260523/G-1862.json"
+    }
+  ],
+  "validation_set": [
+    {
+      "index": 0,
+      "graph_id": 0,
+      "path": "dataset/processed/step2b_poly_d4_val2000_seed20260523/G-0.json"
+    },
+    {
+      "index": 1,
+      "graph_id": 1,
+      "path": "dataset/processed/step2b_poly_d4_val2000_seed20260523/G-1.json"
+    },
+    {
+      "index": 2,
+      "graph_id": 2,
+      "path": "dataset/processed/step2b_poly_d4_val2000_seed20260523/G-2.json"
+    },
+    {
+      "index": 3,
+      "graph_id": 3,
+      "path": "dataset/processed/step2b_poly_d4_val2000_seed20260523/G-3.json"
+    },
+    {
+      "index": 4,
+      "graph_id": 4,
+      "path": "dataset/processed/step2b_poly_d4_val2000_seed20260523/G-4.json"
+    }
+  ],
+  "train_graphs": [
+    "dataset/processed/step2b_poly_d4_main2000_seed20260523/G-1027.json",
+    "dataset/processed/step2b_poly_d4_main2000_seed20260523/G-520.json",
+    "dataset/processed/step2b_poly_d4_main2000_seed20260523/G-1592.json",
+    "dataset/processed/step2b_poly_d4_main2000_seed20260523/G-1164.json",
+    "dataset/processed/step2b_poly_d4_main2000_seed20260523/G-1862.json"
+  ],
+  "validation_graphs": [
+    "dataset/processed/step2b_poly_d4_val2000_seed20260523/G-0.json",
+    "dataset/processed/step2b_poly_d4_val2000_seed20260523/G-1.json",
+    "dataset/processed/step2b_poly_d4_val2000_seed20260523/G-2.json",
+    "dataset/processed/step2b_poly_d4_val2000_seed20260523/G-3.json",
+    "dataset/processed/step2b_poly_d4_val2000_seed20260523/G-4.json"
+  ],
+  "artifacts": {
+    "pyepo_loss_curve_csv": "/home/weikang/projects/UdeM-Intern/Exps/surrogate_experiment_results/SPO_validation/kep_vs_pyepo/step2b_bridge_results/step2b_poly_d4/pyepo_spoplus_loss_curve.csv",
+    "step1c_loss_curve_csv": "/home/weikang/projects/UdeM-Intern/Exps/surrogate_experiment_results/SPO_validation/kep_vs_pyepo/step2b_bridge_results/step2b_poly_d4/step1c_spoplus_loss_curve.csv",
+    "diff_summary_csv": "/home/weikang/projects/UdeM-Intern/Exps/surrogate_experiment_results/SPO_validation/kep_vs_pyepo/step2b_bridge_results/step2b_poly_d4/trajectory_diff_summary.csv",
+    "diff_summary_json": "/home/weikang/projects/UdeM-Intern/Exps/surrogate_experiment_results/SPO_validation/kep_vs_pyepo/step2b_bridge_results/step2b_poly_d4/trajectory_diff_summary.json",
+    "run_config_json": "/home/weikang/projects/UdeM-Intern/Exps/surrogate_experiment_results/SPO_validation/kep_vs_pyepo/step2b_bridge_results/step2b_poly_d4/run_config.json",
+    "train_subset_json": "/home/weikang/projects/UdeM-Intern/Exps/surrogate_experiment_results/SPO_validation/kep_vs_pyepo/step2b_bridge_results/step2b_poly_d4/train_subset.json",
+    "validation_set_json": "/home/weikang/projects/UdeM-Intern/Exps/surrogate_experiment_results/SPO_validation/kep_vs_pyepo/step2b_bridge_results/step2b_poly_d4/validation_set.json",
+    "pyepo_trajectory_npy": "/home/weikang/projects/UdeM-Intern/Exps/surrogate_experiment_results/SPO_validation/kep_vs_pyepo/step2b_bridge_results/step2b_poly_d4/trajectory_pyepo_spoplus.npy",
+    "step1c_trajectory_npy": "/home/weikang/projects/UdeM-Intern/Exps/surrogate_experiment_results/SPO_validation/kep_vs_pyepo/step2b_bridge_results/step2b_poly_d4/trajectory_step1c_spoplus.npy",
+    "pyepo_lr_summary_csv": "/home/weikang/projects/UdeM-Intern/Exps/surrogate_experiment_results/SPO_validation/kep_vs_pyepo/step2b_bridge_results/step2b_poly_d4/pyepo_lr_summary.csv",
+    "step1c_lr_summary_csv": "/home/weikang/projects/UdeM-Intern/Exps/surrogate_experiment_results/SPO_validation/kep_vs_pyepo/step2b_bridge_results/step2b_poly_d4/step1c_lr_summary.csv",
+    "lr_diff_summary_csv": "/home/weikang/projects/UdeM-Intern/Exps/surrogate_experiment_results/SPO_validation/kep_vs_pyepo/step2b_bridge_results/step2b_poly_d4/lr_diff_summary.csv",
+    "lr_diff_summary_json": "/home/weikang/projects/UdeM-Intern/Exps/surrogate_experiment_results/SPO_validation/kep_vs_pyepo/step2b_bridge_results/step2b_poly_d4/lr_diff_summary.json",
+    "pyepo_lr_theta_npy": "/home/weikang/projects/UdeM-Intern/Exps/surrogate_experiment_results/SPO_validation/kep_vs_pyepo/step2b_bridge_results/step2b_poly_d4/theta_pyepo_lr.npy",
+    "step1c_lr_theta_npy": "/home/weikang/projects/UdeM-Intern/Exps/surrogate_experiment_results/SPO_validation/kep_vs_pyepo/step2b_bridge_results/step2b_poly_d4/theta_step1c_lr.npy"
+  },
+  "results": [
+    {
+      "name": "phase2_epoch_max_abs_diff",
+      "value": 0,
+      "threshold": 0.0,
+      "passed": true
+    },
+    {
+      "name": "phase2_theta_1_max_abs_diff",
+      "value": 0.0,
+      "threshold": 1e-06,
+      "passed": true
+    },
+    {
+      "name": "phase2_theta_2_max_abs_diff",
+      "value": 0.0,
+      "threshold": 1e-06,
+      "passed": true
+    },
+    {
+      "name": "phase2_theta_norm_max_abs_diff",
+      "value": 0.0,
+      "threshold": 1e-06,
+      "passed": true
+    },
+    {
+      "name": "phase2_train_spoplus_loss_max_abs_diff",
+      "value": 4.0700496839463085e-06,
+      "threshold": 1e-05,
+      "passed": true
+    },
+    {
+      "name": "phase2_validation_spoplus_loss_max_abs_diff",
+      "value": 4.316979961060952e-06,
+      "threshold": 1e-05,
+      "passed": true
+    },
+    {
+      "name": "phase2_train_normalized_spoplus_loss_max_abs_diff",
+      "value": 3.528644032524397e-08,
+      "threshold": 1e-05,
+      "passed": true
+    },
+    {
+      "name": "phase2_validation_normalized_spoplus_loss_max_abs_diff",
+      "value": 2.796314185760096e-08,
+      "threshold": 1e-05,
+      "passed": true
+    },
+    {
+      "name": "phase2_train_decision_gap_max_abs_diff",
+      "value": 0.0,
+      "threshold": 1e-09,
+      "passed": true
+    },
+    {
+      "name": "phase2_validation_decision_gap_max_abs_diff",
+      "value": 0.0,
+      "threshold": 1e-09,
+      "passed": true
+    },
+    {
+      "name": "phase2_train_normalized_decision_gap_max_abs_diff",
+      "value": 0.0,
+      "threshold": 1e-12,
+      "passed": true
+    },
+    {
+      "name": "phase2_validation_normalized_decision_gap_max_abs_diff",
+      "value": 0.0,
+      "threshold": 1e-12,
+      "passed": true
+    },
+    {
+      "name": "phase2_train_y_adv_oracle_equal_rate_max_abs_diff",
+      "value": 0.0,
+      "threshold": 1e-12,
+      "passed": true
+    },
+    {
+      "name": "phase2_validation_y_adv_oracle_equal_rate_max_abs_diff",
+      "value": 0.0,
+      "threshold": 1e-12,
+      "passed": true
+    },
+    {
+      "name": "phase2_train_y_pred_oracle_equal_rate_max_abs_diff",
+      "value": 0.0,
+      "threshold": 1e-12,
+      "passed": true
+    },
+    {
+      "name": "phase2_validation_y_pred_oracle_equal_rate_max_abs_diff",
+      "value": 0.0,
+      "threshold": 1e-12,
+      "passed": true
+    }
+  ],
+  "spoplus_passed": true,
+  "lr_results": [
+    {
+      "name": "lr_theta_max_abs_diff",
+      "value": 0.0,
+      "threshold": 1e-12,
+      "passed": true
+    },
+    {
+      "name": "lr_train_prediction_max_abs_diff",
+      "value": 0.0,
+      "threshold": 1e-12,
+      "passed": true
+    },
+    {
+      "name": "lr_validation_prediction_max_abs_diff",
+      "value": 0.0,
+      "threshold": 1e-12,
+      "passed": true
+    },
+    {
+      "name": "lr_train_mse_diff",
+      "value": 0.0,
+      "threshold": 1e-12,
+      "passed": true
+    },
+    {
+      "name": "lr_validation_mse_diff",
+      "value": 0.0,
+      "threshold": 1e-12,
+      "passed": true
+    },
+    {
+      "name": "lr_train_decision_gap_diff",
+      "value": 0.0,
+      "threshold": 1e-09,
+      "passed": true
+    },
+    {
+      "name": "lr_validation_decision_gap_diff",
+      "value": 0.0,
+      "threshold": 1e-09,
+      "passed": true
+    },
+    {
+      "name": "lr_train_normalized_gap_diff",
+      "value": 0.0,
+      "threshold": 1e-12,
+      "passed": true
+    },
+    {
+      "name": "lr_validation_normalized_gap_diff",
+      "value": 0.0,
+      "threshold": 1e-12,
+      "passed": true
+    }
+  ],
+  "lr_passed": true,
+  "passed": true
+}
