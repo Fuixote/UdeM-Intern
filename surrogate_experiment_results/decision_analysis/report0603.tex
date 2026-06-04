@@ -662,6 +662,58 @@ involvement of high-error edges in the symmetric difference.
 This case explains when SPO+ is useful: it helps most when prediction errors
 fall on the edges that change the selected KEP solution.
 
+\subsection{Best-vs-Second Check for the Selected Cases}
+The previous case studies compare the model-selected rank-1 solution against
+the oracle solution. To check whether these examples also support the
+near-optimal-alternative explanation, I computed the best and second-best
+distinct edge-selection solutions under each model's predicted weights.
+
+There are two different margins here and they should not be mixed:
+
+\begin{itemize}
+    \item the \textbf{oracle gap}
+    $w_{\mathrm{true}}^\top y^\star - w_{\mathrm{true}}^\top y$, which says
+    how far a rank-1 or rank-2 solution is from the true oracle;
+    \item the \textbf{predicted best-second margin}
+    $\hat w^\top y_{\mathrm{rank1}}-\hat w^\top y_{\mathrm{rank2}}$, which
+    says how much the model itself prefers rank 1 over rank 2.
+\end{itemize}
+
+The main quantity for the story is the oracle gap. The predicted margin is
+only an auxiliary diagnostic: a small predicted margin means the model itself
+sees the top two solutions as close.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{\DecisionAnalysisPlotRoot/case_best_second_gap_summary.png}
+\caption{Rank-1 and rank-2 normalized oracle gaps for the selected Case A/B/C graphs.}
+\label{fig:case-best-second-gap}
+\howtoread{Each panel shows one method. Rank 1 is the model's best predicted KEP solution and rank 2 is the best distinct edge-selection solution after excluding rank 1. The dashed line marks a 5\% normalized oracle gap.}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\small
+\caption{Case-level rank-1 versus rank-2 normalized oracle gaps.}
+\label{tab:case-best-second-gap}
+\resizebox{\textwidth}{!}{%
+\input{results/case_studies/case_best_second_gap_summary.tex}
+}
+\end{table}
+
+The selected cases now separate into the intended mechanisms. In Case A, rank
+1 is exactly oracle for both methods. Rank 2 is often still near-oracle, but
+not always; either way, the large edge prediction errors did not change the
+top decision. In Case B, rank 1 is not oracle but has near-zero gap, and all
+rank-2 solutions stay within 5\% oracle gap. This is the strongest case-level
+evidence for a flat near-optimal plateau. In Case C, 2stage rank 1 is bad in
+all three examples, but rank 2 distinguishes failure modes: \texttt{G-1560}
+has a near-oracle 2stage rank-2 solution, consistent with a local ranking flip,
+whereas \texttt{G-392} and \texttt{G-39} keep high 2stage rank-2 gaps,
+suggesting that the top predicted region is also poor. SPO+ moves rank 1 back
+toward the near-oracle region, but its rank 2 can be much worse, showing that
+top-1 ordering matters in some decision-critical cases.
+
 \subsection{Near-Tie and Margin Analysis}
 The case studies suggest that some different selected solutions may be
 near-optimal alternatives. To quantify this, I compared the observed candidate
@@ -748,6 +800,8 @@ This is still a first-pass analysis. The current limitations are:
     \item \texttt{Step2c} multiplicative-noise regimes are not yet analyzed;
     \item the near-tie analysis uses only observed candidates
     $y^\star$, $y_{\mathrm{2stage}}$, and $y_{\mathrm{SPO+}}$;
+    \item the best-vs-second analysis only inspects the top two predicted
+    distinct edge-selection solutions, not the full feasible solution set;
     \item adversarial SPO+ solutions $y_{\mathrm{adv}}$ are not yet included.
 \end{itemize}
 

@@ -593,6 +593,7 @@ surrogate_experiment_results/decision_analysis/scripts/plot_decision_analysis.py
 surrogate_experiment_results/decision_analysis/scripts/make_case_study_tables.py
 surrogate_experiment_results/decision_analysis/scripts/analyze_margin_near_ties.py
 surrogate_experiment_results/decision_analysis/scripts/summarize_decision_critical_mse.py
+surrogate_experiment_results/decision_analysis/scripts/summarize_case_best_second_gaps.py
 ```
 
 ### Commands
@@ -642,6 +643,12 @@ Case-study tables from existing CSV outputs:
 python3 surrogate_experiment_results/decision_analysis/scripts/make_case_study_tables.py
 ```
 
+Case-level best-vs-second gap summary:
+
+```bash
+python3 surrogate_experiment_results/decision_analysis/scripts/summarize_case_best_second_gaps.py
+```
+
 Observed-candidate margin / near-tie analysis:
 
 ```bash
@@ -677,6 +684,9 @@ results/edge_error_criticality.csv                      879,642 rows
 results/graph_level_edge_criticality_summary.csv         7,200 rows
 results/case_studies/case_study_index.csv                    9 rows
 results/case_studies/case_*.csv                              9 tables
+results/case_studies/case_best_second_gap_summary.csv        18 rows
+results/case_studies/case_best_second_gap_by_case_method.csv  6 rows
+results/case_studies/case_best_second_gap_summary.tex         LaTeX tabular
 results/margin_near_tie_analysis.csv                     3,600 rows
 results/observed_candidate_solution_ranking.csv         10,800 rows
 results/margin_near_tie_summary.csv                          1 row
@@ -685,6 +695,7 @@ results/decision_critical_mse_correlations.csv              12 rows
 plots/mse_vs_normalized_gap.png
 plots/solution_overlap_vs_gap.png
 plots/high_error_edge_selected_symdiff_rate.png
+plots/case_best_second_gap_summary.png
 ```
 
 ### Replay Validation
@@ -792,6 +803,70 @@ zero top-error symdiff involvement. Case B shows non-identical 2stage solutions
 with medium overlap but near-zero objective gap. Case C shows graphs where SPO+
 substantially reduces the decision gap and also reduces high-error symdiff
 involvement.
+
+### Case-Level Best-vs-Second Gap Summary
+
+`summarize_case_best_second_gaps.py` joins the selected Case A/B/C index with
+`second_best_gap_comparison.csv`. It does not rerun KEP solves. The output
+focuses on oracle gap, not predicted margin:
+
+```text
+rank1_gap_to_oracle
+rank2_gap_to_oracle
+rank2_minus_rank1_gap_to_oracle
+rank1_normalized_gap
+rank2_normalized_gap
+rank2_minus_rank1_normalized_gap
+rank1_same_oracle
+rank2_same_oracle
+rank1_jaccard_oracle
+rank2_jaccard_oracle
+rank2_predicted_margin_from_best
+```
+
+Outputs:
+
+```text
+results/case_studies/case_best_second_gap_summary.csv
+results/case_studies/case_best_second_gap_by_case_method.csv
+results/case_studies/case_best_second_gap_summary.tex
+plots/case_best_second_gap_summary.png
+```
+
+The case/method summary with near threshold 5% is:
+
+```text
+Case A 2stage: rank2 mean normalized gap 0.04569; rank2 within 5% in 2/3 graphs
+Case A SPO+:   rank2 mean normalized gap 0.03443; rank2 within 5% in 2/3 graphs
+
+Case B 2stage: rank2 mean normalized gap 0.01686; rank2 within 5% in 3/3 graphs
+Case B SPO+:   rank2 mean normalized gap 0.02595; rank2 within 5% in 3/3 graphs
+
+Case C 2stage: rank1 mean normalized gap 0.30746; rank2 mean normalized gap 0.21316
+Case C SPO+:   rank1 mean normalized gap 0.03081; rank2 mean normalized gap 0.13345
+```
+
+Interpretation by case:
+
+```text
+Case A:
+  Rank-1 is oracle for both methods. Rank-2 is often still near-oracle, but not
+  always. This supports the non-critical-error story: the large prediction
+  errors do not change the selected optimal solution.
+
+Case B:
+  Rank-1 is not oracle but has near-zero gap, and all rank-2 solutions stay
+  within 5% oracle gap. This is the strongest selected-case evidence for a
+  near-optimal plateau.
+
+Case C:
+  2stage rank-1 is bad in all three cases, but rank-2 distinguishes failure
+  modes. G-1560 has a near-oracle rank-2, consistent with a local ranking flip;
+  G-392 and G-39 keep high rank-2 gaps, suggesting the top predicted region is
+  also poor. SPO+ fixes rank-1 on G-392 and greatly improves the other two, but
+  its rank-2 can be much worse, showing that in some decision-critical cases
+  top-1 ordering matters.
+```
 
 ### Margin / Near-Optimal Alternative Analysis
 
