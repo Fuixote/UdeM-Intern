@@ -1,0 +1,10 @@
+case_type,subset_seed,regime,block,degree,mse_norm_gap,spoplus_norm_gap,norm_gap_reduction,raw_gap_reduction,spoplus_better_norm_gap,mse_selected_epoch,spoplus_selected_epoch,selection_reason
+large_improvement,1,step2b_poly_d8,step2b,8,0.06199805576977175,0.04876193789656167,0.01323611787321008,2.6944634914398193,True,500,500,highest paired normalized-gap reduction
+large_improvement,25,step2b_poly_d8,step2b,8,0.06205572240020361,0.04897362625454815,0.013082096145655454,2.6623210430145257,True,500,500,highest paired normalized-gap reduction
+large_improvement,22,step2b_poly_d8,step2b,8,0.06199805576977175,0.049017736460862986,0.012980319308908764,2.700709104537964,True,500,500,highest paired normalized-gap reduction
+weak_borderline_improvement,27,step2b_poly_d8,step2b,8,0.060415297465121226,0.0502743904486581,0.010140907016463127,2.1364441967010492,True,500,500,lowest paired normalized-gap reduction after excluding easy seeds
+weak_borderline_improvement,21,step2b_poly_d8,step2b,8,0.060415297465121226,0.049664027271212635,0.01075127019390859,2.1643748760223396,True,500,500,lowest paired normalized-gap reduction after excluding easy seeds
+weak_borderline_improvement,30,step2b_poly_d8,step2b,8,0.06060845612454817,0.049592150523104055,0.011016305601444114,2.2675030994415284,True,500,500,lowest paired normalized-gap reduction after excluding easy seeds
+easy_low_gap,41,step2b_poly_d8,step2b,8,0.05983274731039086,0.049473645672020526,0.010359101638370331,2.0724686527252203,True,500,500,lowest max normalized gap across 2stage and SPO+
+easy_low_gap,16,step2b_poly_d8,step2b,8,0.060137058535931195,0.049025738273049416,0.01111132026288178,2.256928997039795,True,500,500,lowest max normalized gap across 2stage and SPO+
+easy_low_gap,33,step2b_poly_d8,step2b,8,0.06036833893620168,0.04960175826446087,0.010766580671740807,2.1613574314117425,True,500,500,lowest max normalized gap across 2stage and SPO+

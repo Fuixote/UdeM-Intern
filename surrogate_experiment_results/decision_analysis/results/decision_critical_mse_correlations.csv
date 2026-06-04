@@ -1,0 +1,13 @@
+method_label,method,predictor,predictor_description,n_pairs,pearson_corr_with_normalized_gap,spearman_corr_with_normalized_gap,abs_pearson_corr,abs_spearman_corr,abs_pearson_rank_within_method
+2stage_val_mse,2stage,mse_all_edges,all-edge MSE,3600,0.09465394956443625,0.023040532735189797,0.09465394956443625,0.023040532735189797,5
+2stage_val_mse,2stage,mse_edges_in_opt,MSE on oracle-selected edges,3600,0.20822281430201395,0.17050425407850991,0.20822281430201395,0.17050425407850991,4
+2stage_val_mse,2stage,mse_edges_in_pred,MSE on method-selected edges,3600,-0.2596193771110559,-0.2369990852561945,0.2596193771110559,0.2369990852561945,3
+2stage_val_mse,2stage,mse_edges_in_symdiff,MSE on oracle-vs-method symmetric-difference edges,2959,0.3903897905711409,0.5280404317263704,0.3903897905711409,0.5280404317263704,2
+2stage_val_mse,2stage,mse_edges_not_selected,MSE on edges not selected by oracle or method,3600,-0.02355187865424599,-0.10808239892294431,0.02355187865424599,0.10808239892294431,6
+2stage_val_mse,2stage,top10_error_edges_in_symdiff_rate,rate of top-10 error edges in oracle-vs-method symmetric difference,3600,0.5696953572089254,0.6669846860852705,0.5696953572089254,0.6669846860852705,1
+spoplus_val_spoplus_loss,spoplus,mse_all_edges,all-edge MSE,3600,-0.02111810638466088,-0.0752376985409327,0.02111810638466088,0.0752376985409327,6
+spoplus_val_spoplus_loss,spoplus,mse_edges_in_opt,MSE on oracle-selected edges,3600,0.19917662743805262,0.16555617752888063,0.19917662743805262,0.16555617752888063,3
+spoplus_val_spoplus_loss,spoplus,mse_edges_in_pred,MSE on method-selected edges,3600,-0.11239633853118336,-0.06593493719537397,0.11239633853118336,0.06593493719537397,4
+spoplus_val_spoplus_loss,spoplus,mse_edges_in_symdiff,MSE on oracle-vs-method symmetric-difference edges,2751,0.27233299638940095,0.37180768010088194,0.27233299638940095,0.37180768010088194,2
+spoplus_val_spoplus_loss,spoplus,mse_edges_not_selected,MSE on edges not selected by oracle or method,3600,-0.09800337804246326,-0.15320775478040716,0.09800337804246326,0.15320775478040716,5
+spoplus_val_spoplus_loss,spoplus,top10_error_edges_in_symdiff_rate,rate of top-10 error edges in oracle-vs-method symmetric difference,3600,0.5567333098987736,0.6391251871327066,0.5567333098987736,0.6391251871327066,1

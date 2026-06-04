@@ -40,6 +40,14 @@ main.pdf
 *.fdb_latexmk
 *.synctex.gz
 
+# Decision-analysis artifacts are intentionally trackable so GitHub-hosted AI
+# tools can inspect the report, scripts, figures, logs, and curated result CSVs.
+!surrogate_experiment_results/decision_analysis/
+!surrogate_experiment_results/decision_analysis/**
+surrogate_experiment_results/decision_analysis/scripts/__pycache__/
+surrogate_experiment_results/decision_analysis/scripts/__pycache__/**
+surrogate_experiment_results/decision_analysis/results/edge_error_criticality.csv
+
 # Papers and image artifacts are intentionally trackable so GitHub-hosted AI
 # tools can inspect generated reports and figures.
 surrogate_experiment_results/plot_results_step1bc/combined_step1bc_per_graph.csv
