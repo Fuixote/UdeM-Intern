@@ -71,6 +71,7 @@ CASE_SUMMARY_FIELDS = [
     "case_label",
     "base_graph_id",
     "subset_seed",
+    "perturb_seed",
     "density_variant",
     "arc_delta_type",
     "original_num_arcs",
@@ -120,6 +121,7 @@ DELTA_FIELDS = [
     "case_label",
     "base_graph_id",
     "subset_seed",
+    "perturb_seed",
     "density_variant",
     "arc_delta_type",
     "original_num_arcs",
@@ -254,13 +256,18 @@ def signature_set(value: object) -> set[str]:
     return {token for token in text.split("|") if token}
 
 
-def solution_key(row: dict[str, Any]) -> tuple[str, str, str, int]:
+def solution_key(row: dict[str, Any]) -> tuple[str, str, str, str, int]:
     return (
         str(row.get("base_graph_id", "")),
+        perturb_seed(row),
         str(row.get("density_variant", "")),
         str(row.get("method_label", "")),
         int(float(row.get("solution_rank", 0))),
     )
+
+
+def perturb_seed(row: dict[str, Any]) -> str:
+    return str(row.get("perturb_seed", ""))
 
 
 def graph_variant_key(row: dict[str, Any]) -> tuple[str, str]:
@@ -277,14 +284,15 @@ def variant_sort(density_variant: str) -> int:
 
 def build_original_solution_sets(
     rows: list[dict[str, Any]],
-) -> dict[tuple[str, str, int], set[str]]:
-    output: dict[tuple[str, str, int], set[str]] = {}
+) -> dict[tuple[str, str, str, int], set[str]]:
+    output: dict[tuple[str, str, str, int], set[str]] = {}
     for row in rows:
         if str(row.get("density_variant", "")) != "original":
             continue
         output[
             (
                 str(row.get("base_graph_id", "")),
+                perturb_seed(row),
                 str(row.get("method_label", "")),
                 int(float(row.get("solution_rank", 0))),
             )
@@ -292,14 +300,15 @@ def build_original_solution_sets(
     return output
 
 
-def build_original_oracle(rows: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
-    output: dict[str, dict[str, Any]] = {}
+def build_original_oracle(rows: list[dict[str, Any]]) -> dict[tuple[str, str], dict[str, Any]]:
+    output: dict[tuple[str, str], dict[str, Any]] = {}
     for row in rows:
         if str(row.get("density_variant", "")) != "original":
             continue
         base_graph_id = str(row.get("base_graph_id", ""))
+        seed = perturb_seed(row)
         output.setdefault(
-            base_graph_id,
+            (base_graph_id, seed),
             {
                 "oracle_obj": parse_float(row.get("oracle_obj")),
                 "oracle_set": signature_set(row.get("oracle_arc_key_signature", "")),
@@ -310,10 +319,11 @@ def build_original_oracle(rows: list[dict[str, Any]]) -> dict[str, dict[str, Any
 
 def row_solution_metrics(
     row: dict[str, Any],
-    original_solution_sets: dict[tuple[str, str, int], set[str]],
-    original_oracle: dict[str, dict[str, Any]],
+    original_solution_sets: dict[tuple[str, str, str, int], set[str]],
+    original_oracle: dict[tuple[str, str], dict[str, Any]],
 ) -> dict[str, Any]:
     base_graph_id = str(row.get("base_graph_id", ""))
+    seed = perturb_seed(row)
     method_label = str(row.get("method_label", ""))
     rank = int(float(row.get("solution_rank", 0)))
     density_variant = str(row.get("density_variant", ""))
@@ -322,8 +332,8 @@ def row_solution_metrics(
     removed_set = signature_set(row.get("removed_arc_keys", ""))
     solution_set = signature_set(row.get("solution_arc_key_signature", ""))
     oracle_set = signature_set(row.get("oracle_arc_key_signature", ""))
-    original_solution_set = original_solution_sets.get((base_graph_id, method_label, rank), set())
-    original_oracle_set = original_oracle.get(base_graph_id, {}).get("oracle_set", set())
+    original_solution_set = original_solution_sets.get((base_graph_id, seed, method_label, rank), set())
+    original_oracle_set = original_oracle.get((base_graph_id, seed), {}).get("oracle_set", set())
 
     if density_variant == "original":
         solution_changed = False
@@ -353,11 +363,11 @@ def enriched_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return output
 
 
-def build_rank_pair_map(rows: list[dict[str, Any]]) -> dict[tuple[str, str, str], dict[int, dict[str, Any]]]:
-    grouped: dict[tuple[str, str, str], dict[int, dict[str, Any]]] = defaultdict(dict)
+def build_rank_pair_map(rows: list[dict[str, Any]]) -> dict[tuple[str, str, str, str], dict[int, dict[str, Any]]]:
+    grouped: dict[tuple[str, str, str, str], dict[int, dict[str, Any]]] = defaultdict(dict)
     for row in rows:
-        base_graph_id, density_variant, method_label, rank = solution_key(row)
-        grouped[(base_graph_id, density_variant, method_label)][rank] = row
+        base_graph_id, seed, density_variant, method_label, rank = solution_key(row)
+        grouped[(base_graph_id, seed, density_variant, method_label)][rank] = row
     return grouped
 
 
@@ -369,16 +379,16 @@ def build_case_summary(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
     for key in sorted(
         rank_pairs,
-        key=lambda item: (item[0], variant_sort(item[1]), method_sort(item[2])),
+        key=lambda item: (item[0], int(item[1] or 0), variant_sort(item[2]), method_sort(item[3])),
     ):
-        base_graph_id, density_variant, method_label = key
+        base_graph_id, seed, density_variant, method_label = key
         pair = rank_pairs[key]
         rank1 = pair.get(1)
         rank2 = pair.get(2)
         if rank1 is None or rank2 is None:
             continue
 
-        original_obj = original_oracle.get(base_graph_id, {}).get("oracle_obj", float("nan"))
+        original_obj = original_oracle.get((base_graph_id, seed), {}).get("oracle_obj", float("nan"))
         oracle_obj = parse_float(rank1.get("oracle_obj"))
         oracle_delta = oracle_obj - original_obj
         rank1_norm = parse_float(rank1.get("normalized_gap_to_oracle"))
@@ -392,6 +402,7 @@ def build_case_summary(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "case_label": rank1.get("case_label", rank1.get("case_type", "")),
                 "base_graph_id": base_graph_id,
                 "subset_seed": int(float(rank1.get("subset_seed", 0) or 0)),
+                "perturb_seed": int(float(seed or 0)),
                 "density_variant": density_variant,
                 "arc_delta_type": rank1.get("arc_delta_type", ""),
                 "original_num_arcs": int(float(rank1.get("original_num_arcs", 0) or 0)),
@@ -576,14 +587,26 @@ def build_second_best_summary(rows: list[dict[str, Any]]) -> list[dict[str, Any]
 
 def build_delta_vs_original(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     case_rows = build_case_summary(rows)
-    original_by_key: dict[tuple[str, str], dict[str, Any]] = {}
+    original_by_key: dict[tuple[str, int, str], dict[str, Any]] = {}
     for row in case_rows:
         if row["density_variant"] == "original":
-            original_by_key[(str(row["base_graph_id"]), str(row["method_label"]))] = row
+            original_by_key[
+                (
+                    str(row["base_graph_id"]),
+                    int(row["perturb_seed"]),
+                    str(row["method_label"]),
+                )
+            ] = row
 
     output: list[dict[str, Any]] = []
     for row in case_rows:
-        original = original_by_key.get((str(row["base_graph_id"]), str(row["method_label"])))
+        original = original_by_key.get(
+            (
+                str(row["base_graph_id"]),
+                int(row["perturb_seed"]),
+                str(row["method_label"]),
+            )
+        )
         if original is None:
             continue
 
@@ -593,6 +616,7 @@ def build_delta_vs_original(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "case_label": row["case_label"],
                 "base_graph_id": row["base_graph_id"],
                 "subset_seed": row["subset_seed"],
+                "perturb_seed": row["perturb_seed"],
                 "density_variant": row["density_variant"],
                 "arc_delta_type": row["arc_delta_type"],
                 "original_num_arcs": row["original_num_arcs"],
@@ -658,6 +682,7 @@ def build_delta_vs_original(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
         output,
         key=lambda row: (
             str(row["base_graph_id"]),
+            int(row["perturb_seed"]),
             variant_sort(str(row["density_variant"])),
             method_sort(str(row["method_label"])),
         ),

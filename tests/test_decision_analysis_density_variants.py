@@ -331,6 +331,65 @@ class DecisionAnalysisDensityVariantTests(unittest.TestCase):
             "surrogate_experiment_results/decision_analysis/results/density_sensitivity/graphs/G-test__original__seed42.json",
         )
 
+    def test_generate_all_variants_accepts_multiple_perturb_seeds(self):
+        module = self.load_module()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            dataset_dir = tmp / "dataset"
+            dataset_dir.mkdir()
+            self.write_toy_graph(dataset_dir)
+            case_index = tmp / "case_study_index.csv"
+            with case_index.open("w", newline="", encoding="utf-8") as handle:
+                writer = csv.DictWriter(
+                    handle,
+                    fieldnames=["case_id", "case_label", "subset_seed", "graph_id"],
+                )
+                writer.writeheader()
+                writer.writerow(
+                    {
+                        "case_id": "case_test",
+                        "case_label": "case_density",
+                        "subset_seed": "7",
+                        "graph_id": "G-test.json",
+                    }
+                )
+
+            args = module.parse_args(
+                [
+                    "--case-index",
+                    str(case_index),
+                    "--dataset-dir",
+                    str(dataset_dir),
+                    "--output-dir",
+                    str(tmp / "robustness"),
+                    "--graphs",
+                    "G-test.json",
+                    "--variants",
+                    "original",
+                    "add25arcs",
+                    "--perturb-seeds",
+                    "0",
+                    "1",
+                    "--fixed-add-count",
+                    "1",
+                ]
+            )
+
+            rows = module.generate_all_variants(args)
+
+            self.assertEqual(len(rows), 4)
+            self.assertEqual(sorted({int(row["perturb_seed"]) for row in rows}), [0, 1])
+            self.assertEqual(
+                sorted({row["variant_id"] for row in rows}),
+                [
+                    "G-test__add25arcs__seed0",
+                    "G-test__add25arcs__seed1",
+                    "G-test__original__seed0",
+                    "G-test__original__seed1",
+                ],
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

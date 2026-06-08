@@ -33,13 +33,14 @@ def solution_row(
     removed: str = "",
     variant_num_arcs: int = 4,
     arc_delta: int = 0,
+    perturb_seed: int = 42,
 ) -> dict[str, object]:
     return {
         "case_id": "case_test_001",
         "case_label": "case_test",
         "base_graph_id": "G-test.json",
-        "variant_id": f"G-test__{variant}__seed42",
-        "variant_graph_path": f"graphs/G-test__{variant}__seed42.json",
+        "variant_id": f"G-test__{variant}__seed{perturb_seed}",
+        "variant_graph_path": f"graphs/G-test__{variant}__seed{perturb_seed}.json",
         "density_variant": variant,
         "arc_delta_type": "none" if variant == "original" else "perturb",
         "original_num_arcs": 4,
@@ -49,13 +50,13 @@ def solution_row(
         "removed_arc_count": 0 if not removed else len(removed.split("|")),
         "added_arc_keys": added,
         "removed_arc_keys": removed,
-        "perturb_seed": 42,
+        "perturb_seed": perturb_seed,
         "regime": "step2b_poly_d8",
         "max_cycle": 3,
         "max_chain": 4,
         "case_type": "case_test",
         "subset_seed": 7,
-        "graph_id": f"G-test__{variant}__seed42.json",
+        "graph_id": f"G-test__{variant}__seed{perturb_seed}.json",
         "method_label": method_label,
         "solution_rank": rank,
         "true_obj": true_obj,
@@ -159,6 +160,20 @@ def fixture_rows() -> list[dict[str, object]]:
     return rows
 
 
+def fixture_rows_for_seed(perturb_seed: int) -> list[dict[str, object]]:
+    rows = []
+    for row in fixture_rows():
+        copied = dict(row)
+        copied["perturb_seed"] = perturb_seed
+        copied["variant_id"] = f"G-test__{copied['density_variant']}__seed{perturb_seed}"
+        copied["variant_graph_path"] = (
+            f"graphs/G-test__{copied['density_variant']}__seed{perturb_seed}.json"
+        )
+        copied["graph_id"] = f"G-test__{copied['density_variant']}__seed{perturb_seed}.json"
+        rows.append(copied)
+    return rows
+
+
 class ArcDensitySummaryTests(unittest.TestCase):
     def load_module(self):
         self.assertTrue(SCRIPT_PATH.exists(), f"Missing script: {SCRIPT_PATH}")
@@ -189,6 +204,21 @@ class ArcDensitySummaryTests(unittest.TestCase):
         self.assertEqual(removed["num_removed_arcs_from_original_rank1"], 1)
         self.assertEqual(removed["num_removed_arcs_from_original_rank2"], 0)
         self.assertEqual(removed["rank2_minus_rank1_normalized_gap"], 0.111111111111)
+
+    def test_case_summary_keeps_perturb_seed_replicates_separate(self):
+        module = self.load_module()
+
+        rows = fixture_rows_for_seed(0) + fixture_rows_for_seed(1)
+        case_rows = module.build_case_summary(rows)
+        add_rows = [
+            row
+            for row in case_rows
+            if row["density_variant"] == "add25arcs"
+            and row["method_label"] == "2stage_val_mse"
+        ]
+
+        self.assertEqual(len(add_rows), 2)
+        self.assertEqual(sorted(int(row["perturb_seed"]) for row in add_rows), [0, 1])
 
     def test_second_best_summary_groups_by_variant_method_and_rank(self):
         module = self.load_module()

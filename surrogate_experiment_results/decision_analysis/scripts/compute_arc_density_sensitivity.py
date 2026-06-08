@@ -199,29 +199,31 @@ def row_int(row: dict[str, Any], key: str) -> int:
 
 
 def finalize_cross_variant_signatures(rows: list[dict[str, Any]]) -> None:
-    original_oracle_by_graph: dict[str, str] = {}
-    rank1_by_variant_method: dict[tuple[str, str, str], str] = {}
+    original_oracle_by_graph_seed: dict[tuple[str, str], str] = {}
+    rank1_by_variant_method_seed: dict[tuple[str, str, str, str], str] = {}
 
     for row in rows:
         base_graph_id = str(row.get("base_graph_id", ""))
+        perturb_seed = str(row.get("perturb_seed", ""))
         density_variant = str(row.get("density_variant", ""))
         method = str(row.get("method_label", ""))
-        if density_variant == "original" and base_graph_id not in original_oracle_by_graph:
-            original_oracle_by_graph[base_graph_id] = str(row.get("oracle_arc_key_signature", ""))
+        if density_variant == "original" and (base_graph_id, perturb_seed) not in original_oracle_by_graph_seed:
+            original_oracle_by_graph_seed[(base_graph_id, perturb_seed)] = str(row.get("oracle_arc_key_signature", ""))
         if row_int(row, "solution_rank") == 1:
-            rank1_by_variant_method[(base_graph_id, density_variant, method)] = str(
+            rank1_by_variant_method_seed[(base_graph_id, perturb_seed, density_variant, method)] = str(
                 row.get("solution_arc_key_signature", "")
             )
 
     for row in rows:
         key = (
             str(row.get("base_graph_id", "")),
+            str(row.get("perturb_seed", "")),
             str(row.get("density_variant", "")),
             str(row.get("method_label", "")),
         )
-        row["rank1_arc_key_signature"] = rank1_by_variant_method.get(key, "")
-        row["original_oracle_arc_key_signature"] = original_oracle_by_graph.get(
-            str(row.get("base_graph_id", "")),
+        row["rank1_arc_key_signature"] = rank1_by_variant_method_seed.get(key, "")
+        row["original_oracle_arc_key_signature"] = original_oracle_by_graph_seed.get(
+            (str(row.get("base_graph_id", "")), str(row.get("perturb_seed", ""))),
             "",
         )
 

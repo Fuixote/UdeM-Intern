@@ -610,17 +610,18 @@ def generate_all_variants(args) -> list[dict[str, Any]]:
         graph_path = Path(args.dataset_dir) / graph
         if not graph_path.exists():
             raise FileNotFoundError(f"Missing graph: {graph_path}")
-        rows.extend(
-            generate_variants_for_graph(
-                graph_path=graph_path,
-                output_dir=graphs_dir,
-                case=case_map[graph],
-                variants=args.variants,
-                perturb_seed=args.perturb_seed,
-                fixed_add_count=args.fixed_add_count,
-                fixed_remove_count=args.fixed_remove_count,
+        for perturb_seed in args.perturb_seeds:
+            rows.extend(
+                generate_variants_for_graph(
+                    graph_path=graph_path,
+                    output_dir=graphs_dir,
+                    case=case_map[graph],
+                    variants=args.variants,
+                    perturb_seed=perturb_seed,
+                    fixed_add_count=args.fixed_add_count,
+                    fixed_remove_count=args.fixed_remove_count,
+                )
             )
-        )
     return rows
 
 
@@ -635,9 +636,21 @@ def parse_args(argv=None):
     parser.add_argument("--graphs", nargs="+", default=list(DEFAULT_GRAPHS))
     parser.add_argument("--variants", nargs="+", default=list(DEFAULT_VARIANTS))
     parser.add_argument("--perturb-seed", type=int, default=42)
+    parser.add_argument(
+        "--perturb-seeds",
+        nargs="+",
+        type=int,
+        help=(
+            "Optional list of perturbation seeds. If omitted, the single "
+            "--perturb-seed value is used for backward compatibility."
+        ),
+    )
     parser.add_argument("--fixed-add-count", type=int, default=25)
     parser.add_argument("--fixed-remove-count", type=int, default=25)
-    return parser.parse_args(argv)
+    args = parser.parse_args(argv)
+    if args.perturb_seeds is None:
+        args.perturb_seeds = [args.perturb_seed]
+    return args
 
 
 def main(argv=None) -> int:

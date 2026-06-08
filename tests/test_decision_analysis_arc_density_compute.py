@@ -160,6 +160,72 @@ class DecisionAnalysisArcDensityComputeTests(unittest.TestCase):
         self.assertEqual(rank2["rank1_arc_key_signature"], "0->1|1->2")
         self.assertEqual(rank2["original_oracle_arc_key_signature"], "0->1|2->0")
 
+    def test_finalize_rows_keeps_perturb_seed_replicates_separate(self):
+        module = self.load_module()
+        rows = [
+            {
+                "base_graph_id": "G-test.json",
+                "density_variant": "original",
+                "perturb_seed": "0",
+                "method_label": "2stage_val_mse",
+                "solution_rank": 1,
+                "solution_arc_key_signature": "0->1",
+                "oracle_arc_key_signature": "0->1",
+            },
+            {
+                "base_graph_id": "G-test.json",
+                "density_variant": "add25arcs",
+                "perturb_seed": "0",
+                "method_label": "2stage_val_mse",
+                "solution_rank": 1,
+                "solution_arc_key_signature": "0->1|1->2",
+                "oracle_arc_key_signature": "0->1|1->2",
+            },
+            {
+                "base_graph_id": "G-test.json",
+                "density_variant": "add25arcs",
+                "perturb_seed": "0",
+                "method_label": "2stage_val_mse",
+                "solution_rank": 2,
+                "solution_arc_key_signature": "1->2",
+                "oracle_arc_key_signature": "0->1|1->2",
+            },
+            {
+                "base_graph_id": "G-test.json",
+                "density_variant": "original",
+                "perturb_seed": "1",
+                "method_label": "2stage_val_mse",
+                "solution_rank": 1,
+                "solution_arc_key_signature": "2->3",
+                "oracle_arc_key_signature": "2->3",
+            },
+            {
+                "base_graph_id": "G-test.json",
+                "density_variant": "add25arcs",
+                "perturb_seed": "1",
+                "method_label": "2stage_val_mse",
+                "solution_rank": 1,
+                "solution_arc_key_signature": "2->3|3->4",
+                "oracle_arc_key_signature": "2->3|3->4",
+            },
+            {
+                "base_graph_id": "G-test.json",
+                "density_variant": "add25arcs",
+                "perturb_seed": "1",
+                "method_label": "2stage_val_mse",
+                "solution_rank": 2,
+                "solution_arc_key_signature": "3->4",
+                "oracle_arc_key_signature": "2->3|3->4",
+            },
+        ]
+
+        module.finalize_cross_variant_signatures(rows)
+
+        self.assertEqual(rows[2]["rank1_arc_key_signature"], "0->1|1->2")
+        self.assertEqual(rows[2]["original_oracle_arc_key_signature"], "0->1")
+        self.assertEqual(rows[5]["rank1_arc_key_signature"], "2->3|3->4")
+        self.assertEqual(rows[5]["original_oracle_arc_key_signature"], "2->3")
+
     def test_relative_variant_graph_path_resolves_from_project_root(self):
         module = self.load_module()
         relative_path = Path(

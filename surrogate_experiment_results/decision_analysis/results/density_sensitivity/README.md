@@ -619,4 +619,98 @@ arc density sensitivity
 ```
 
 然后就可以进入第 1 点：把所有结果整理成更短的 AAAI-style paper report。
-`
+
+---
+
+# Current run status: 2026-06-08
+
+## Seed-42 first pass
+
+The first-pass density solve used one perturbation seed:
+
+```text
+perturb_seed = 42
+graphs = G-696.json, G-392.json, G-1560.json
+variants = original, add25pct, add25arcs, remove25arcs, remove25pct
+methods = 2stage_val_mse, spoplus_val_spoplus_loss
+solution rows = 60
+status = EXIT_STATUS=0 on Garnet
+```
+
+Outputs:
+
+```text
+arc_density_second_best_gap.csv
+arc_density_second_best_summary.csv       rows = 20
+arc_density_case_summary.csv              rows = 30
+arc_density_delta_vs_original.csv         rows = 30
+arc_density_oracle_change_summary.csv     rows = 10
+```
+
+The smoke file `arc_density_second_best_gap_smoke_G696_original_2stage.csv`
+is only a runtime check and must not be included in formal comparisons.
+
+## Perturb-seed robustness
+
+The perturb-seed robustness run is isolated under:
+
+```text
+surrogate_experiment_results/decision_analysis/results/density_sensitivity/perturb_seed_robustness/
+```
+
+It uses:
+
+```text
+perturb_seed = 0, 1, 2, 3, 4
+graphs = G-696.json, G-392.json, G-1560.json
+variants = original, add25pct, add25arcs, remove25arcs, remove25pct
+methods = 2stage_val_mse, spoplus_val_spoplus_loss
+solution rows = 300
+status = EXIT_STATUS=0 on Garnet
+```
+
+Robustness outputs:
+
+```text
+perturb_seed_robustness/arc_density_graph_manifest.csv       rows = 75
+perturb_seed_robustness/arc_density_second_best_gap.csv      rows = 300
+perturb_seed_robustness/arc_density_second_best_summary.csv  rows = 20
+perturb_seed_robustness/arc_density_case_summary.csv         rows = 150
+perturb_seed_robustness/arc_density_delta_vs_original.csv    rows = 150
+perturb_seed_robustness/arc_density_oracle_change_summary.csv rows = 10
+```
+
+Seed-level rank-2 delta check:
+
+```text
+delta_rank2_normalized_gap = variant rank2 normalized gap - original rank2 normalized gap
+
+add25pct:
+  2stage seed-mean range = -0.0776 .. -0.0110, mean = -0.0555
+  SPO+   seed-mean range = -0.1012 .. -0.0181, mean = -0.0690
+
+add25arcs:
+  2stage seed-mean range = -0.1092 .. -0.0008, mean = -0.0462
+  SPO+   seed-mean range = -0.1013 .. -0.0191, mean = -0.0607
+
+remove25arcs:
+  2stage seed-mean range = -0.0741 ..  0.0086, mean = -0.0282
+  SPO+   seed-mean range = -0.0995 ..  0.0148, mean = -0.0349
+
+remove25pct:
+  2stage seed-mean range = -0.0878 .. -0.0217, mean = -0.0653
+  SPO+   seed-mean range = -0.0822 ..  0.0040, mean = -0.0362
+```
+
+Interpretation scope:
+
+```text
+This robustness check shows that the selected-case rank-2 gap pattern is not
+driven by perturb_seed=42 alone. The add-arc variants are consistently negative
+across seeds in this selected set. Removal variants are more seed-sensitive:
+their mean effect is still negative, but some perturb seeds are near zero or
+slightly positive, especially for remove25arcs and SPO+ remove25pct.
+
+These are selected-case robustness results, not full Step2b population
+statistics.
+```

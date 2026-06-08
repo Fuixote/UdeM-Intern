@@ -1,0 +1,83 @@
+[1/2] seed=1 variants=50
+  loaded 1/50 G-696__original__seed0.json
+  loaded 2/50 G-696__add25pct__seed0.json
+  loaded 3/50 G-696__add25arcs__seed0.json
+  loaded 4/50 G-696__remove25arcs__seed0.json
+  loaded 5/50 G-696__remove25pct__seed0.json
+  loaded 6/50 G-696__original__seed1.json
+  loaded 7/50 G-696__add25pct__seed1.json
+  loaded 8/50 G-696__add25arcs__seed1.json
+  loaded 9/50 G-696__remove25arcs__seed1.json
+  loaded 10/50 G-696__remove25pct__seed1.json
+  loaded 11/50 G-696__original__seed2.json
+  loaded 12/50 G-696__add25pct__seed2.json
+  loaded 13/50 G-696__add25arcs__seed2.json
+  loaded 14/50 G-696__remove25arcs__seed2.json
+  loaded 15/50 G-696__remove25pct__seed2.json
+  loaded 16/50 G-696__original__seed3.json
+  loaded 17/50 G-696__add25pct__seed3.json
+  loaded 18/50 G-696__add25arcs__seed3.json
+  loaded 19/50 G-696__remove25arcs__seed3.json
+  loaded 20/50 G-696__remove25pct__seed3.json
+  loaded 21/50 G-696__original__seed4.json
+  loaded 22/50 G-696__add25pct__seed4.json
+  loaded 23/50 G-696__add25arcs__seed4.json
+  loaded 24/50 G-696__remove25arcs__seed4.json
+  loaded 25/50 G-696__remove25pct__seed4.json
+  loaded 26/50 G-392__original__seed0.json
+  loaded 27/50 G-392__add25pct__seed0.json
+  loaded 28/50 G-392__add25arcs__seed0.json
+  loaded 29/50 G-392__remove25arcs__seed0.json
+  loaded 30/50 G-392__remove25pct__seed0.json
+  loaded 31/50 G-392__original__seed1.json
+  loaded 32/50 G-392__add25pct__seed1.json
+  loaded 33/50 G-392__add25arcs__seed1.json
+  loaded 34/50 G-392__remove25arcs__seed1.json
+  loaded 35/50 G-392__remove25pct__seed1.json
+  loaded 36/50 G-392__original__seed2.json
+  loaded 37/50 G-392__add25pct__seed2.json
+  loaded 38/50 G-392__add25arcs__seed2.json
+  loaded 39/50 G-392__remove25arcs__seed2.json
+  loaded 40/50 G-392__remove25pct__seed2.json
+  loaded 41/50 G-392__original__seed3.json
+  loaded 42/50 G-392__add25pct__seed3.json
+  loaded 43/50 G-392__add25arcs__seed3.json
+  loaded 44/50 G-392__remove25arcs__seed3.json
+  loaded 45/50 G-392__remove25pct__seed3.json
+  loaded 46/50 G-392__original__seed4.json
+  loaded 47/50 G-392__add25pct__seed4.json
+  loaded 48/50 G-392__add25arcs__seed4.json
+  loaded 49/50 G-392__remove25arcs__seed4.json
+  loaded 50/50 G-392__remove25pct__seed4.json
+  method=2stage_val_mse
+  method=spoplus_val_spoplus_loss
+[2/2] seed=30 variants=25
+  loaded 1/25 G-1560__original__seed0.json
+  loaded 2/25 G-1560__add25pct__seed0.json
+  loaded 3/25 G-1560__add25arcs__seed0.json
+  loaded 4/25 G-1560__remove25arcs__seed0.json
+  loaded 5/25 G-1560__remove25pct__seed0.json
+  loaded 6/25 G-1560__original__seed1.json
+  loaded 7/25 G-1560__add25pct__seed1.json
+  loaded 8/25 G-1560__add25arcs__seed1.json
+  loaded 9/25 G-1560__remove25arcs__seed1.json
+  loaded 10/25 G-1560__remove25pct__seed1.json
+  loaded 11/25 G-1560__original__seed2.json
+  loaded 12/25 G-1560__add25pct__seed2.json
+  loaded 13/25 G-1560__add25arcs__seed2.json
+  loaded 14/25 G-1560__remove25arcs__seed2.json
+  loaded 15/25 G-1560__remove25pct__seed2.json
+  loaded 16/25 G-1560__original__seed3.json
+  loaded 17/25 G-1560__add25pct__seed3.json
+  loaded 18/25 G-1560__add25arcs__seed3.json
+  loaded 19/25 G-1560__remove25arcs__seed3.json
+  loaded 20/25 G-1560__remove25pct__seed3.json
+  loaded 21/25 G-1560__original__seed4.json
+  loaded 22/25 G-1560__add25pct__seed4.json
+  loaded 23/25 G-1560__add25arcs__seed4.json
+  loaded 24/25 G-1560__remove25arcs__seed4.json
+  loaded 25/25 G-1560__remove25pct__seed4.json
+  method=2stage_val_mse
+  method=spoplus_val_spoplus_loss
+Saved 300 density sensitivity rows to surrogate_experiment_results/decision_analysis/results/density_sensitivity/perturb_seed_robustness/arc_density_second_best_gap.csv
+EXIT_STATUS=0
