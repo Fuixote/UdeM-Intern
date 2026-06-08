@@ -76,6 +76,8 @@ DEFAULT_METHOD_LABELS = ("2stage_val_mse", "spoplus_val_spoplus_loss")
 
 CSV_FIELDS = [
     "regime",
+    "max_cycle",
+    "max_chain",
     "case_type",
     "subset_seed",
     "graph_id",
@@ -99,6 +101,8 @@ CSV_FIELDS = [
     "true_obj_diff_from_rank1",
     "num_edges",
     "edge_count",
+    "num_cycle_candidates",
+    "num_chain_candidates",
     "same_solution_as_oracle",
     "edge_jaccard_with_oracle",
     "edge_hamming_with_oracle",
@@ -113,6 +117,8 @@ CSV_FIELDS = [
 
 SUMMARY_FIELDS = [
     "regime",
+    "max_cycle",
+    "max_chain",
     "method_label",
     "solution_rank",
     "row_count",
@@ -447,6 +453,8 @@ def rows_for_model_record(
         rows.append(
             {
                 "regime": args.regime,
+                "max_cycle": int(args.max_cycle),
+                "max_chain": int(args.max_chain),
                 "case_type": case.get("case_type", ""),
                 "subset_seed": int(case["subset_seed"]),
                 "graph_id": record["filename"],
@@ -470,6 +478,8 @@ def rows_for_model_record(
                 "true_obj_diff_from_rank1": float(true_obj_rank1 - true_obj),
                 "num_edges": int(len(y)),
                 "edge_count": int(np.sum(y > 0.5)),
+                "num_cycle_candidates": int(len(solver.cycle_candidates)),
+                "num_chain_candidates": int(len(solver.valid_chain_keys)),
                 "same_solution_as_oracle": bool(oracle_overlap["same_solution"]),
                 "edge_jaccard_with_oracle": float(oracle_overlap["edge_jaccard"]),
                 "edge_hamming_with_oracle": float(oracle_overlap["edge_hamming"]),
@@ -532,7 +542,12 @@ def compute_second_best_rows(args) -> list[dict[str, Any]]:
 
             records = []
             try:
-                records = common.load_graph_records(graph_paths, env)
+                records = common.load_graph_records(
+                    graph_paths,
+                    env,
+                    max_cycle=args.max_cycle,
+                    max_chain=args.max_chain,
+                )
 
                 for model in models:
                     label = method_label(model)
@@ -568,11 +583,13 @@ def compute_second_best_rows(args) -> list[dict[str, Any]]:
 
 
 def summarize_second_best_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    grouped: dict[tuple[str, str, int], list[dict[str, Any]]] = defaultdict(list)
+    grouped: dict[tuple[str, int, int, str, int], list[dict[str, Any]]] = defaultdict(list)
 
     for row in rows:
         key = (
             str(row["regime"]),
+            int(row["max_cycle"]),
+            int(row["max_chain"]),
             str(row["method_label"]),
             int(row["solution_rank"]),
         )
@@ -580,7 +597,7 @@ def summarize_second_best_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any
 
     summary_rows: list[dict[str, Any]] = []
     for key in sorted(grouped):
-        regime, method, rank = key
+        regime, max_cycle, max_chain, method, rank = key
         group = grouped[key]
 
         gaps = [float(row["gap_to_oracle"]) for row in group]
@@ -591,6 +608,8 @@ def summarize_second_best_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any
         summary_rows.append(
             {
                 "regime": regime,
+                "max_cycle": max_cycle,
+                "max_chain": max_chain,
                 "method_label": method,
                 "solution_rank": rank,
                 "row_count": len(group),
@@ -631,6 +650,18 @@ def parse_args(argv=None):
     parser.add_argument("--validation-size", type=int, default=400)
     parser.add_argument("--test-size", type=int, default=400)
     parser.add_argument("--gurobi-seed", type=int, default=42)
+    parser.add_argument(
+        "--max-cycle",
+        type=int,
+        default=3,
+        help="Maximum cycle length used when enumerating graph candidates.",
+    )
+    parser.add_argument(
+        "--max-chain",
+        type=int,
+        default=4,
+        help="Maximum chain length used when building the hybrid KEP model.",
+    )
 
     parser.add_argument(
         "--method-labels",
@@ -671,6 +702,10 @@ def parse_args(argv=None):
         raise ValueError("--max-solutions must be >= 1")
     if args.max_cut_attempts < args.max_solutions:
         raise ValueError("--max-cut-attempts should be >= --max-solutions")
+    if args.max_cycle < 2:
+        raise ValueError("--max-cycle must be >= 2")
+    if args.max_chain < 1:
+        raise ValueError("--max-chain must be >= 1")
 
     return args
 

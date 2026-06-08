@@ -35,12 +35,16 @@ def load_step1a_module():
     return module
 
 
-def load_graph_records(paths, env):
+def load_graph_records(paths, env, max_cycle=3, max_chain=4):
     step1a = load_step1a_module()
     records = []
     for idx, path in enumerate(paths, start=1):
-        graph = step1a.load_graph(path)
-        graph["cached_solver"] = step1a.CachedHybridKepModel(graph, env)
+        graph = step1a.load_graph(path, max_cycle=max_cycle, max_chain=max_chain)
+        graph["cached_solver"] = step1a.CachedHybridKepModel(
+            graph,
+            env,
+            max_chain=max_chain,
+        )
         y_optimal = step1a.solve_once(graph["w_true"], graph, env)
         records.append(
             {
