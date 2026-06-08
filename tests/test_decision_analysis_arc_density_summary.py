@@ -34,13 +34,16 @@ def solution_row(
     variant_num_arcs: int = 4,
     arc_delta: int = 0,
     perturb_seed: int = 42,
+    base_graph_id: str = "G-test.json",
+    case_label: str = "case_test",
 ) -> dict[str, object]:
+    graph_stem = base_graph_id.removesuffix(".json")
     return {
         "case_id": "case_test_001",
-        "case_label": "case_test",
-        "base_graph_id": "G-test.json",
-        "variant_id": f"G-test__{variant}__seed{perturb_seed}",
-        "variant_graph_path": f"graphs/G-test__{variant}__seed{perturb_seed}.json",
+        "case_label": case_label,
+        "base_graph_id": base_graph_id,
+        "variant_id": f"{graph_stem}__{variant}__seed{perturb_seed}",
+        "variant_graph_path": f"graphs/{graph_stem}__{variant}__seed{perturb_seed}.json",
         "density_variant": variant,
         "arc_delta_type": "none" if variant == "original" else "perturb",
         "original_num_arcs": 4,
@@ -56,7 +59,7 @@ def solution_row(
         "max_chain": 4,
         "case_type": "case_test",
         "subset_seed": 7,
-        "graph_id": f"G-test__{variant}__seed{perturb_seed}.json",
+        "graph_id": f"{graph_stem}__{variant}__seed{perturb_seed}.json",
         "method_label": method_label,
         "solution_rank": rank,
         "true_obj": true_obj,
@@ -160,16 +163,24 @@ def fixture_rows() -> list[dict[str, object]]:
     return rows
 
 
-def fixture_rows_for_seed(perturb_seed: int) -> list[dict[str, object]]:
+def fixture_rows_for_seed(
+    perturb_seed: int,
+    *,
+    base_graph_id: str = "G-test.json",
+    case_label: str = "case_test",
+) -> list[dict[str, object]]:
     rows = []
     for row in fixture_rows():
         copied = dict(row)
+        graph_stem = base_graph_id.removesuffix(".json")
+        copied["base_graph_id"] = base_graph_id
+        copied["case_label"] = case_label
         copied["perturb_seed"] = perturb_seed
-        copied["variant_id"] = f"G-test__{copied['density_variant']}__seed{perturb_seed}"
+        copied["variant_id"] = f"{graph_stem}__{copied['density_variant']}__seed{perturb_seed}"
         copied["variant_graph_path"] = (
-            f"graphs/G-test__{copied['density_variant']}__seed{perturb_seed}.json"
+            f"graphs/{graph_stem}__{copied['density_variant']}__seed{perturb_seed}.json"
         )
-        copied["graph_id"] = f"G-test__{copied['density_variant']}__seed{perturb_seed}.json"
+        copied["graph_id"] = f"{graph_stem}__{copied['density_variant']}__seed{perturb_seed}.json"
         rows.append(copied)
     return rows
 
@@ -251,7 +262,53 @@ class ArcDensitySummaryTests(unittest.TestCase):
         self.assertEqual(oracle_by_variant["add25arcs"]["fraction_oracle_solution_changed"], 1.0)
         self.assertEqual(oracle_by_variant["add25arcs"]["fraction_rank2_solution_changed"], 1.0)
 
-    def test_main_writes_four_expected_outputs_from_formal_input_only(self):
+    def test_per_graph_mechanism_summary_aggregates_by_graph_variant_and_seed(self):
+        module = self.load_module()
+
+        rows = fixture_rows_for_seed(
+            0,
+            base_graph_id="G-696.json",
+            case_label="Case B: close alternatives",
+        ) + fixture_rows_for_seed(
+            1,
+            base_graph_id="G-696.json",
+            case_label="Case B: close alternatives",
+        )
+        for row in rows:
+            if (
+                row["perturb_seed"] == 1
+                and row["density_variant"] == "add25arcs"
+                and row["solution_rank"] == 2
+            ):
+                row["normalized_gap_to_oracle"] = 0.08
+            if row["perturb_seed"] == 1 and row["density_variant"] == "add25arcs":
+                row["oracle_obj"] = 120.0
+
+        summary_rows = module.build_per_graph_mechanism_summary(rows)
+        by_key = {
+            (row["base_graph_id"], row["density_variant"], row["method_label"]): row
+            for row in summary_rows
+        }
+        added = by_key[("G-696.json", "add25arcs", "2stage_val_mse")]
+
+        self.assertEqual(added["mechanism"], "close alternatives")
+        self.assertAlmostEqual(
+            added["mean_rank2_normalized_gap"],
+            (0.0181818181818 + 0.08) / 2,
+        )
+        self.assertAlmostEqual(
+            added["mean_delta_rank2_vs_original"],
+            ((0.0181818181818 - 0.05) + (0.08 - 0.05)) / 2,
+        )
+        self.assertAlmostEqual(added["seed_min_delta_rank2"], -0.0318181818182)
+        self.assertAlmostEqual(added["seed_max_delta_rank2"], 0.03)
+        self.assertEqual(added["mean_oracle_obj_delta"], 15.0)
+        self.assertEqual(added["rank2_changed_rate"], 1.0)
+        self.assertEqual(added["oracle_changed_rate"], 1.0)
+        self.assertEqual(added["mechanism_preserved"], "yes")
+        self.assertIn("close alternatives", added["interpretation_note"])
+
+    def test_main_writes_five_expected_outputs_from_formal_input_only(self):
         module = self.load_module()
         fieldnames = list(fixture_rows()[0])
 
@@ -291,6 +348,8 @@ class ArcDensitySummaryTests(unittest.TestCase):
                     str(tmp / "arc_density_delta_vs_original.csv"),
                     "--oracle-change-summary-output",
                     str(tmp / "arc_density_oracle_change_summary.csv"),
+                    "--per-graph-mechanism-output",
+                    str(tmp / "arc_density_per_graph_mechanism_summary.csv"),
                 ]
             )
 
@@ -299,6 +358,7 @@ class ArcDensitySummaryTests(unittest.TestCase):
                 "arc_density_case_summary.csv",
                 "arc_density_delta_vs_original.csv",
                 "arc_density_oracle_change_summary.csv",
+                "arc_density_per_graph_mechanism_summary.csv",
             ]:
                 self.assertTrue((tmp / name).exists(), name)
 

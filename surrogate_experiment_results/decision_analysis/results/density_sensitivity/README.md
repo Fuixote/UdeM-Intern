@@ -645,6 +645,7 @@ arc_density_second_best_summary.csv       rows = 20
 arc_density_case_summary.csv              rows = 30
 arc_density_delta_vs_original.csv         rows = 30
 arc_density_oracle_change_summary.csv     rows = 10
+arc_density_per_graph_mechanism_summary.csv rows = 30
 ```
 
 The smoke file `arc_density_second_best_gap_smoke_G696_original_2stage.csv`
@@ -678,6 +679,7 @@ perturb_seed_robustness/arc_density_second_best_summary.csv  rows = 20
 perturb_seed_robustness/arc_density_case_summary.csv         rows = 150
 perturb_seed_robustness/arc_density_delta_vs_original.csv    rows = 150
 perturb_seed_robustness/arc_density_oracle_change_summary.csv rows = 10
+perturb_seed_robustness/arc_density_per_graph_mechanism_summary.csv rows = 30
 ```
 
 Seed-level rank-2 delta check:
@@ -714,3 +716,55 @@ slightly positive, especially for remove25arcs and SPO+ remove25pct.
 These are selected-case robustness results, not full Step2b population
 statistics.
 ```
+
+## Per-graph mechanism interpretation
+
+The average is a robustness summary, not the main mechanism explanation.
+
+The per-graph mechanism table is:
+
+```text
+arc_density_per_graph_mechanism_summary.csv
+perturb_seed_robustness/arc_density_per_graph_mechanism_summary.csv
+```
+
+The multi-seed robustness table should be used for the advisor-facing
+mechanism interpretation because it averages over perturb_seed = 0,1,2,3,4.
+
+### G-696: close alternatives
+
+G-696 remains a close-alternatives case under most arc-density perturbations.
+Across add25pct, add25arcs, and remove25arcs, both methods keep mean rank-2
+normalized gaps below 5%; remove25pct is still close for 2stage (3.58%) but
+mixed for SPO+ (5.83%).
+
+This means add/remove perturbations usually do not destroy the availability of
+a near-oracle second-best solution in this graph. The mechanism is therefore
+mostly preserved, with the main caveat that larger removals can be method- and
+seed-sensitive.
+
+### G-392: SPO+ region correction
+
+G-392 mostly preserves the SPO+ region-correction mechanism. In the original
+graph, SPO+ rank1 is at the oracle while 2stage rank1 is far from oracle
+(0.00% vs 31.38% mean normalized gap); under add25pct, add25arcs, and
+remove25arcs, SPO+ remains closer to oracle than 2stage.
+
+The exception is remove25pct, where SPO+ and 2stage tie on rank1 mean normalized
+gap (2.43% vs 2.43%), so the correction mechanism is marked mixed rather than
+strictly preserved. This suggests SPO+ advantage is robust to moderate add and
+fixed-count removal perturbations, but can become less distinguishable under
+larger percentage removal.
+
+### G-1560: 2stage rank2 to SPO+ rank1 promotion
+
+G-1560 preserves the original promotion mechanism in the unperturbed graph:
+2stage rank2 equals SPO+ rank1 in 100% of perturb seeds. After density
+perturbation, this exact promotion relation becomes mixed: 20% for add25pct,
+20% for add25arcs, 60% for remove25arcs, and 40% for remove25pct.
+
+The weaker exact-signature preservation does not mean the graph loses all
+second-best structure. The rank-2 gaps remain informative, especially for SPO+
+under add variants and for 2stage under remove25pct, but the specific
+"2stage rank2 becomes SPO+ rank1" mechanism is seed-sensitive after arc
+perturbation.

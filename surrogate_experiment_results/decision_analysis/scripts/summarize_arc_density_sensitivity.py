@@ -26,6 +26,9 @@ DEFAULT_DELTA_OUTPUT = DEFAULT_RESULTS_DIR / "arc_density_delta_vs_original.csv"
 DEFAULT_ORACLE_CHANGE_SUMMARY_OUTPUT = (
     DEFAULT_RESULTS_DIR / "arc_density_oracle_change_summary.csv"
 )
+DEFAULT_PER_GRAPH_MECHANISM_OUTPUT = (
+    DEFAULT_RESULTS_DIR / "arc_density_per_graph_mechanism_summary.csv"
+)
 
 METHOD_LABELS = ("2stage_val_mse", "spoplus_val_spoplus_loss")
 VARIANT_ORDER = (
@@ -181,6 +184,30 @@ ORACLE_CHANGE_SUMMARY_FIELDS = [
     "mean_num_removed_arcs_from_original_rank2",
 ]
 
+PER_GRAPH_MECHANISM_FIELDS = [
+    "base_graph_id",
+    "case_label",
+    "mechanism",
+    "density_variant",
+    "method_label",
+    "mean_rank1_normalized_gap",
+    "mean_rank2_normalized_gap",
+    "mean_delta_rank2_vs_original",
+    "seed_min_delta_rank2",
+    "seed_max_delta_rank2",
+    "mean_oracle_obj_delta",
+    "rank2_changed_rate",
+    "oracle_changed_rate",
+    "mechanism_preserved",
+    "interpretation_note",
+]
+
+MECHANISM_BY_GRAPH = {
+    "G-696": "close alternatives",
+    "G-392": "SPO+ region correction",
+    "G-1560": "rank-2 promotion",
+}
+
 
 def read_csv_rows(path: str | Path) -> list[dict[str, str]]:
     with Path(path).open(newline="", encoding="utf-8") as handle:
@@ -249,6 +276,26 @@ def finite_quantile(values: list[float], probability: float) -> float:
     return float(clean[lower] * (1.0 - weight) + clean[upper] * weight)
 
 
+def finite_min(values: list[float]) -> float:
+    clean = finite_values(values)
+    if not clean:
+        return float("nan")
+    return float(min(clean))
+
+
+def finite_max(values: list[float]) -> float:
+    clean = finite_values(values)
+    if not clean:
+        return float("nan")
+    return float(max(clean))
+
+
+def format_pct(value: float) -> str:
+    if not math.isfinite(value):
+        return "nan"
+    return f"{100.0 * value:.2f}%"
+
+
 def signature_set(value: object) -> set[str]:
     text = str(value or "").strip()
     if not text:
@@ -280,6 +327,14 @@ def method_sort(method_label: str) -> int:
 
 def variant_sort(density_variant: str) -> int:
     return VARIANT_ORDER.index(density_variant) if density_variant in VARIANT_ORDER else 99
+
+
+def base_graph_stem(base_graph_id: object) -> str:
+    return Path(str(base_graph_id)).stem
+
+
+def graph_mechanism(base_graph_id: object) -> str:
+    return MECHANISM_BY_GRAPH.get(base_graph_stem(base_graph_id), "unknown")
 
 
 def build_original_solution_sets(
@@ -791,6 +846,257 @@ def build_oracle_change_summary(rows: list[dict[str, Any]]) -> list[dict[str, An
     return output
 
 
+def build_promotion_rates(case_rows: list[dict[str, Any]]) -> dict[tuple[str, str], float]:
+    by_seed_variant: dict[tuple[str, int, str], dict[str, dict[str, Any]]] = defaultdict(dict)
+    for row in case_rows:
+        by_seed_variant[
+            (
+                str(row["base_graph_id"]),
+                int(row["perturb_seed"]),
+                str(row["density_variant"]),
+            )
+        ][str(row["method_label"])] = row
+
+    rates: dict[tuple[str, str], list[float]] = defaultdict(list)
+    for (base_graph_id, _seed, density_variant), by_method in by_seed_variant.items():
+        two_stage = by_method.get("2stage_val_mse")
+        spoplus = by_method.get("spoplus_val_spoplus_loss")
+        if two_stage is None or spoplus is None:
+            continue
+        two_stage_rank2 = str(two_stage.get("rank2_arc_key_signature", ""))
+        spoplus_rank1 = str(spoplus.get("rank1_arc_key_signature", ""))
+        rates[(base_graph_id, density_variant)].append(
+            1.0 if two_stage_rank2 and two_stage_rank2 == spoplus_rank1 else 0.0
+        )
+
+    return {key: finite_mean(values) for key, values in rates.items()}
+
+
+def mechanism_status(
+    *,
+    mechanism: str,
+    base_graph_id: str,
+    density_variant: str,
+    mean_rank2_gap: float,
+    rank1_mean_by_method: dict[tuple[str, str, str], float],
+    promotion_rate_by_variant: dict[tuple[str, str], float],
+) -> str:
+    if mechanism == "close alternatives":
+        if not math.isfinite(mean_rank2_gap):
+            return "unknown"
+        if mean_rank2_gap <= 0.05 + 1e-12:
+            return "yes"
+        if mean_rank2_gap <= 0.10 + 1e-12:
+            return "mixed"
+        return "no"
+
+    if mechanism == "SPO+ region correction":
+        two_stage = rank1_mean_by_method.get(
+            (base_graph_id, density_variant, "2stage_val_mse"),
+            float("nan"),
+        )
+        spoplus = rank1_mean_by_method.get(
+            (base_graph_id, density_variant, "spoplus_val_spoplus_loss"),
+            float("nan"),
+        )
+        if not math.isfinite(two_stage) or not math.isfinite(spoplus):
+            return "unknown"
+        if spoplus < two_stage - 1e-12:
+            return "yes"
+        if spoplus <= two_stage + 1e-12:
+            return "mixed"
+        return "no"
+
+    if mechanism == "rank-2 promotion":
+        promotion_rate = promotion_rate_by_variant.get(
+            (base_graph_id, density_variant),
+            float("nan"),
+        )
+        if not math.isfinite(promotion_rate):
+            return "unknown"
+        if promotion_rate >= 0.8:
+            return "yes"
+        if promotion_rate > 0.0:
+            return "mixed"
+        return "no"
+
+    return "unknown"
+
+
+def mechanism_note(
+    *,
+    base_graph_id: str,
+    mechanism: str,
+    density_variant: str,
+    method_label: str,
+    mean_rank1_gap: float,
+    mean_rank2_gap: float,
+    mean_rank2_delta: float,
+    seed_min_delta: float,
+    seed_max_delta: float,
+    rank1_mean_by_method: dict[tuple[str, str, str], float],
+    promotion_rate_by_variant: dict[tuple[str, str], float],
+    status: str,
+) -> str:
+    if mechanism == "close alternatives":
+        return (
+            f"{base_graph_id} close alternatives: {method_label} rank2 mean gap "
+            f"{format_pct(mean_rank2_gap)} with delta range "
+            f"{format_pct(seed_min_delta)} to {format_pct(seed_max_delta)}; "
+            f"preserved={status}."
+        )
+
+    if mechanism == "SPO+ region correction":
+        two_stage = rank1_mean_by_method.get(
+            (base_graph_id, density_variant, "2stage_val_mse"),
+            float("nan"),
+        )
+        spoplus = rank1_mean_by_method.get(
+            (base_graph_id, density_variant, "spoplus_val_spoplus_loss"),
+            float("nan"),
+        )
+        return (
+            f"{base_graph_id} SPO+ region correction: SPO+ rank1 mean gap "
+            f"{format_pct(spoplus)} vs 2stage {format_pct(two_stage)}; "
+            f"{method_label} rank2 mean gap {format_pct(mean_rank2_gap)}; "
+            f"preserved={status}."
+        )
+
+    if mechanism == "rank-2 promotion":
+        promotion_rate = promotion_rate_by_variant.get(
+            (base_graph_id, density_variant),
+            float("nan"),
+        )
+        return (
+            f"{base_graph_id} rank-2 promotion: 2stage rank2 equals SPO+ rank1 "
+            f"in {format_pct(promotion_rate)} of perturb seeds; {method_label} "
+            f"rank1/rank2 gaps are {format_pct(mean_rank1_gap)} / "
+            f"{format_pct(mean_rank2_gap)}; preserved={status}."
+        )
+
+    return (
+        f"{base_graph_id} {density_variant} {method_label}: rank2 mean gap "
+        f"{format_pct(mean_rank2_gap)}, mean delta vs original "
+        f"{format_pct(mean_rank2_delta)}."
+    )
+
+
+def build_per_graph_mechanism_summary(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    case_rows = build_case_summary(rows)
+    delta_rows = build_delta_vs_original(rows)
+
+    case_grouped: dict[tuple[str, str, str, str], list[dict[str, Any]]] = defaultdict(list)
+    for row in case_rows:
+        case_grouped[
+            (
+                str(row["base_graph_id"]),
+                str(row["case_label"]),
+                str(row["density_variant"]),
+                str(row["method_label"]),
+            )
+        ].append(row)
+
+    delta_grouped: dict[tuple[str, str, str, str], list[dict[str, Any]]] = defaultdict(list)
+    for row in delta_rows:
+        delta_grouped[
+            (
+                str(row["base_graph_id"]),
+                str(row["case_label"]),
+                str(row["density_variant"]),
+                str(row["method_label"]),
+            )
+        ].append(row)
+
+    rank1_mean_by_method: dict[tuple[str, str, str], float] = {}
+    for (base_graph_id, _case_label, density_variant, method_label), group in case_grouped.items():
+        rank1_mean_by_method[(base_graph_id, density_variant, method_label)] = finite_mean(
+            [parse_float(row["rank1_normalized_gap_to_oracle"]) for row in group]
+        )
+
+    promotion_rate_by_variant = build_promotion_rates(case_rows)
+
+    output: list[dict[str, Any]] = []
+    for key in sorted(
+        case_grouped,
+        key=lambda item: (
+            item[0],
+            variant_sort(item[2]),
+            method_sort(item[3]),
+        ),
+    ):
+        base_graph_id, case_label, density_variant, method_label = key
+        group = case_grouped[key]
+        delta_group = delta_grouped.get(key, [])
+        rank1_gaps = [parse_float(row["rank1_normalized_gap_to_oracle"]) for row in group]
+        rank2_gaps = [parse_float(row["rank2_normalized_gap_to_oracle"]) for row in group]
+        rank2_deltas = [
+            parse_float(row["delta_rank2_normalized_gap"]) for row in delta_group
+        ]
+        oracle_deltas = [parse_float(row["delta_oracle_obj"]) for row in delta_group]
+        seed_delta_means: dict[int, list[float]] = defaultdict(list)
+        for row in delta_group:
+            seed_delta_means[int(row["perturb_seed"])].append(
+                parse_float(row["delta_rank2_normalized_gap"])
+            )
+        seed_deltas = [finite_mean(values) for values in seed_delta_means.values()]
+        rank2_changed = [
+            1.0 if parse_bool(row["rank2_solution_changed_vs_original"]) else 0.0
+            for row in delta_group
+        ]
+        oracle_changed = [
+            1.0 if parse_bool(row["oracle_solution_changed_vs_original"]) else 0.0
+            for row in delta_group
+        ]
+        mean_rank1_gap = finite_mean(rank1_gaps)
+        mean_rank2_gap = finite_mean(rank2_gaps)
+        mean_rank2_delta = finite_mean(rank2_deltas)
+        min_seed_delta = finite_min(seed_deltas)
+        max_seed_delta = finite_max(seed_deltas)
+        mechanism = graph_mechanism(base_graph_id)
+        status = mechanism_status(
+            mechanism=mechanism,
+            base_graph_id=base_graph_id,
+            density_variant=density_variant,
+            mean_rank2_gap=mean_rank2_gap,
+            rank1_mean_by_method=rank1_mean_by_method,
+            promotion_rate_by_variant=promotion_rate_by_variant,
+        )
+        output.append(
+            {
+                "base_graph_id": base_graph_id,
+                "case_label": case_label,
+                "mechanism": mechanism,
+                "density_variant": density_variant,
+                "method_label": method_label,
+                "mean_rank1_normalized_gap": mean_rank1_gap,
+                "mean_rank2_normalized_gap": mean_rank2_gap,
+                "mean_delta_rank2_vs_original": mean_rank2_delta,
+                "seed_min_delta_rank2": min_seed_delta,
+                "seed_max_delta_rank2": max_seed_delta,
+                "mean_oracle_obj_delta": finite_mean(oracle_deltas),
+                "rank2_changed_rate": finite_mean(rank2_changed),
+                "oracle_changed_rate": finite_mean(oracle_changed),
+                "mechanism_preserved": status,
+                "interpretation_note": mechanism_note(
+                    base_graph_id=base_graph_id,
+                    mechanism=mechanism,
+                    density_variant=density_variant,
+                    method_label=method_label,
+                    mean_rank1_gap=mean_rank1_gap,
+                    mean_rank2_gap=mean_rank2_gap,
+                    mean_rank2_delta=mean_rank2_delta,
+                    seed_min_delta=min_seed_delta,
+                    seed_max_delta=max_seed_delta,
+                    rank1_mean_by_method=rank1_mean_by_method,
+                    promotion_rate_by_variant=promotion_rate_by_variant,
+                    status=status,
+                ),
+            }
+        )
+
+    return output
+
+
 def parse_args(argv=None):
     parser = argparse.ArgumentParser(
         description="Summarize arc-density sensitivity second-best solution rows."
@@ -808,6 +1114,11 @@ def parse_args(argv=None):
         type=Path,
         default=DEFAULT_ORACLE_CHANGE_SUMMARY_OUTPUT,
     )
+    parser.add_argument(
+        "--per-graph-mechanism-output",
+        type=Path,
+        default=DEFAULT_PER_GRAPH_MECHANISM_OUTPUT,
+    )
     return parser.parse_args(argv)
 
 
@@ -819,6 +1130,7 @@ def main(argv=None) -> int:
     case_rows = build_case_summary(rows)
     delta_rows = build_delta_vs_original(rows)
     oracle_change_rows = build_oracle_change_summary(rows)
+    per_graph_mechanism_rows = build_per_graph_mechanism_summary(rows)
 
     write_csv(args.summary_output, second_best_rows, SECOND_BEST_SUMMARY_FIELDS)
     write_csv(args.case_summary_output, case_rows, CASE_SUMMARY_FIELDS)
@@ -828,12 +1140,21 @@ def main(argv=None) -> int:
         oracle_change_rows,
         ORACLE_CHANGE_SUMMARY_FIELDS,
     )
+    write_csv(
+        args.per_graph_mechanism_output,
+        per_graph_mechanism_rows,
+        PER_GRAPH_MECHANISM_FIELDS,
+    )
 
     print(f"Loaded {len(rows)} formal density rows from {args.input}")
     print(f"Saved {len(second_best_rows)} rows to {args.summary_output}")
     print(f"Saved {len(case_rows)} rows to {args.case_summary_output}")
     print(f"Saved {len(delta_rows)} rows to {args.delta_output}")
     print(f"Saved {len(oracle_change_rows)} rows to {args.oracle_change_summary_output}")
+    print(
+        f"Saved {len(per_graph_mechanism_rows)} rows to "
+        f"{args.per_graph_mechanism_output}"
+    )
     return 0
 
 
