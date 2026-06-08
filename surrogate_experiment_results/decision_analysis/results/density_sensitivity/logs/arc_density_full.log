@@ -1,0 +1,23 @@
+[1/2] seed=1 variants=10
+  loaded 1/10 G-696__original__seed42.json
+  loaded 2/10 G-696__add25pct__seed42.json
+  loaded 3/10 G-696__add25arcs__seed42.json
+  loaded 4/10 G-696__remove25arcs__seed42.json
+  loaded 5/10 G-696__remove25pct__seed42.json
+  loaded 6/10 G-392__original__seed42.json
+  loaded 7/10 G-392__add25pct__seed42.json
+  loaded 8/10 G-392__add25arcs__seed42.json
+  loaded 9/10 G-392__remove25arcs__seed42.json
+  loaded 10/10 G-392__remove25pct__seed42.json
+  method=2stage_val_mse
+  method=spoplus_val_spoplus_loss
+[2/2] seed=30 variants=5
+  loaded 1/5 G-1560__original__seed42.json
+  loaded 2/5 G-1560__add25pct__seed42.json
+  loaded 3/5 G-1560__add25arcs__seed42.json
+  loaded 4/5 G-1560__remove25arcs__seed42.json
+  loaded 5/5 G-1560__remove25pct__seed42.json
+  method=2stage_val_mse
+  method=spoplus_val_spoplus_loss
+Saved 60 density sensitivity rows to surrogate_experiment_results/decision_analysis/results/density_sensitivity/arc_density_second_best_gap.csv
+EXIT_STATUS=0

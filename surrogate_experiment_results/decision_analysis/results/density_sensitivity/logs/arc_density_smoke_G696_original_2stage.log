@@ -1,0 +1,4 @@
+[1/1] seed=1 variants=1
+  loaded 1/1 G-696__original__seed42.json
+  method=2stage_val_mse
+Saved 2 density sensitivity rows to surrogate_experiment_results/decision_analysis/results/density_sensitivity/arc_density_second_best_gap_smoke_G696_original_2stage.csv
