@@ -105,112 +105,7 @@ existing_arc_label_min/max
 
 ---
 
-## 3. 必须补 stable arc identity，不能跨 variant 比较 edge index
-
-现有 `second_best` 输出里的 `solution_edge_signature` 是 edge index 串，例如：
-
-```text
-1|22|70|76|...
-```
-
-这个字段只能在**同一个 graph record 内部**解释，不能跨 density variants 比较。原因是 `add25pct` / `add25arcs` / `remove25arcs` 会改变 edge ordering，同一个 index 在不同 variant 里可能对应不同 arc。
-
-所以 density sensitivity 必须定义一个稳定 arc key：
-
-```text
-arc_key = "{src_vertex_id}->{dst_vertex_id}"
-```
-
-例如：
-
-```text
-23->45
-```
-
-这里的 `src_vertex_id` 是 processed graph `data` 里的 source node id，`dst_vertex_id` 是 match 的 `recipient`。这是 KEP solver 真正看到的 vertex-level arc。`winning_donor_id` 可以作为 diagnostic 字段记录，但不要放进 primary `arc_key`，因为 solver 的 edge selection 是 vertex-to-vertex arc，不区分同一 pair vertex 内部的 donor record。
-
-实现要求：
-
-```text
-1. variant generator 在 manifest 里记录 added_arc_keys / removed_arc_keys。
-2. compute script 对每个 row 追加 solution_arc_key_signature。
-3. compute script 对每个 variant 追加 oracle_arc_key_signature。
-4. summary 里所有 "solution changed" 和 added/removed overlap 都基于 arc_key set。
-5. 不允许用 solution_edge_signature 判断跨 variant 的 solution change。
-```
-
-建议 signature 格式：
-
-```text
-solution_arc_key_signature = "|".join(sorted(selected_arc_keys))
-oracle_arc_key_signature = "|".join(sorted(oracle_arc_keys))
-added_arc_keys = "|".join(sorted(added_arc_keys))
-removed_arc_keys = "|".join(sorted(removed_arc_keys))
-```
-
-这样以下字段才有可信含义：
-
-```text
-rank1_solution_changed_vs_original
-rank2_solution_changed_vs_original
-oracle_solution_changed_vs_original
-num_added_arcs_in_rank1
-num_added_arcs_in_rank2
-num_removed_arcs_from_original_rank1
-num_removed_arcs_from_original_rank2
-```
-
----
-
-## 4. 字段命名要区分 graph arc count 和 solution edge count
-
-现有 `compute_second_best_solutions.py` 里已经有：
-
-```text
-num_edges   # graph edge vector length
-edge_count  # selected edges in this solution
-```
-
-其中 `edge_count` 不是 density，它表示当前 solution 选中了多少条 edge。density sensitivity 里如果再写 `edge_count`，很容易误读。
-
-所以新增字段命名必须遵守：
-
-```text
-original_num_arcs
-variant_num_arcs
-arc_delta
-added_arc_count
-removed_arc_count
-solution_selected_edge_count
-```
-
-规则：
-
-```text
-1. graph-level density 用 *_num_arcs。
-2. selected-solution size 用 solution_selected_edge_count。
-3. 保留原 second-best 字段 edge_count，但 summary 输出里优先改名为 solution_selected_edge_count。
-4. 不新增叫 edge_count 的 density 字段。
-```
-
-推荐在 density summary 里使用：
-
-```text
-base_graph_id
-case_label
-density_variant
-original_num_arcs
-variant_num_arcs
-arc_delta
-method_label
-solution_rank
-solution_selected_edge_count
-normalized_gap_to_oracle
-```
-
----
-
-## 5. add25pct 只用一个 perturb seed 可能有随机性，建议加一个 optional robustness
+## 3. add25pct 只用一个 perturb seed 可能有随机性，建议加一个 optional robustness
 
 你现在计划每个 variant 用固定 seed，这是 first pass 可以接受的。但因为只有 3 张 graph，如果新增/删除的 arc 恰好很特殊，结果可能受 random perturbation pattern 影响。
 
@@ -244,7 +139,7 @@ perturb_seed
 
 ---
 
-## 6. 删除 arc 时要记录是否删到了 oracle / rank1 / rank2 的边
+## 4. 删除 arc 时要记录是否删到了 oracle / rank1 / rank2 的边
 
 这是 density sensitivity 最有解释力的地方。
 
@@ -258,14 +153,14 @@ perturb_seed
 所以建议在 summary 里加这些字段：
 
 ```text
-removed_arcs_overlap_original_oracle
-removed_arcs_overlap_original_2stage_rank1
-removed_arcs_overlap_original_2stage_rank2
-removed_arcs_overlap_original_spoplus_rank1
-removed_arcs_overlap_original_spoplus_rank2
+removed_edges_overlap_original_oracle
+removed_edges_overlap_original_2stage_rank1
+removed_edges_overlap_original_2stage_rank2
+removed_edges_overlap_original_spoplus_rank1
+removed_edges_overlap_original_spoplus_rank2
 ```
 
-如果只是 manifest 层面不好做，也可以在 summarize 脚本里做。这些 overlap 必须用稳定 `arc_key` set 计算，不能用 edge index。
+如果只是 manifest 层面不好做，也可以在 summarize 脚本里做。
 
 这会让你能解释：
 
@@ -283,7 +178,7 @@ remove25arcs changes density but does not touch critical edges
 
 ---
 
-## 7. add25pct / add25arcs 时也要记录新增 arc 是否进入 oracle / rank1 / rank2
+## 5. add25pct 时也要记录新增 arc 是否进入 oracle / rank1 / rank2
 
 同理，增加 arc 以后要看：
 
@@ -296,16 +191,16 @@ new arcs used by SPO+ rank1/rank2?
 建议加字段：
 
 ```text
-num_added_arcs_in_oracle
-num_added_arcs_in_2stage_rank1
-num_added_arcs_in_2stage_rank2
-num_added_arcs_in_spoplus_rank1
-num_added_arcs_in_spoplus_rank2
+num_added_edges_in_oracle
+num_added_edges_in_2stage_rank1
+num_added_edges_in_2stage_rank2
+num_added_edges_in_spoplus_rank1
+num_added_edges_in_spoplus_rank2
 ```
 
 这样你可以区分两种情况：
 
-### 情况 A：add25pct / add25arcs 让 oracle 变好，但 methods 没用新增 arcs
+### 情况 A：add25pct 让 oracle 变好，但 methods 没用新增 arcs
 
 说明 predictor 没有把新增 arcs 排进 solution，可能 SPO+ / 2stage 对新 arcs generalization 弱。
 
@@ -315,7 +210,7 @@ num_added_arcs_in_spoplus_rank2
 
 ### 情况 C：新增 arcs 进入 rank2 but not rank1
 
-这可能非常有趣，因为它和你之前 best-second story 直接连接。这些字段同样必须基于稳定 `arc_key` set。
+这可能非常有趣，因为它和你之前 best-second story 直接连接。
 
 ---
 
@@ -359,9 +254,7 @@ rank promotion
 base_graph_id
 case_label
 density_variant
-original_num_arcs
-variant_num_arcs
-arc_delta
+edge_count
 oracle_obj
 oracle_obj_delta_vs_original
 method_label
@@ -373,10 +266,10 @@ rank2_near_5pct
 rank1_solution_changed_vs_original
 rank2_solution_changed_vs_original
 oracle_solution_changed_vs_original
-num_added_arcs_in_rank1
-num_added_arcs_in_rank2
-num_removed_arcs_from_original_rank1
-num_removed_arcs_from_original_rank2
+num_added_edges_in_rank1
+num_added_edges_in_rank2
+num_removed_edges_from_original_rank1
+num_removed_edges_from_original_rank2
 ```
 
 最关键汇报指标仍然是导师喜欢的直观说法：
@@ -404,7 +297,6 @@ primary:
   remove25arcs
 
 robustness:
-  add25arcs
   remove25pct
 ```
 
@@ -421,7 +313,6 @@ decrease by 25 the number of arcs
 The main advisor-facing comparison follows the original request:
   +25% arcs and -25 arcs.
 
-The +25 arcs variant is included as a symmetric fixed-count increase check.
 The -25% arcs variant is included only as a robustness check because “decrease by 25 arcs” and “decrease by 25% arcs” are easy to confuse.
 ```
 
@@ -439,7 +330,7 @@ The -25% arcs variant is included only as a robustness check because “decrease
 python make_arc_density_variants.py \
   --case-index surrogate_experiment_results/decision_analysis/results/case_studies/case_study_index.csv \
   --graphs G-696.json G-392.json G-1560.json \
-  --variants original add25pct add25arcs remove25arcs remove25pct \
+  --variants original add25pct remove25arcs remove25pct \
   --perturb-seed 42
 ```
 
@@ -454,13 +345,11 @@ variant_id
 variant_graph_path
 density_variant
 arc_delta_type
-original_num_arcs
-variant_num_arcs
+original_edge_count
+variant_edge_count
 arc_delta
 added_arc_count
 removed_arc_count
-added_arc_keys
-removed_arc_keys
 perturb_seed
 generation_policy
 label_policy
@@ -486,23 +375,6 @@ for row in rows:
 ```
 
 这样最干净。
-
-但 density wrapper 还必须追加稳定 arc identity 字段：
-
-```text
-solution_arc_key_signature
-oracle_arc_key_signature
-rank1_arc_key_signature
-original_oracle_arc_key_signature
-```
-
-这些字段从 `record["graph"]["edge_index"]` 和 `record["graph"]["id_map_rev"]` 反解：
-
-```text
-edge_idx -> src_idx,dst_idx -> src_vertex_id,dst_vertex_id -> "{src}->{dst}"
-```
-
-后续 summary 的 solution-change 和 added/removed overlap 只能使用这些 `*_arc_key_signature` 字段。原始 `solution_edge_signature` 可以保留作为调试字段，但不能作为跨 variant 比较依据。
 
 ## summarize_arc_density_sensitivity.py
 
@@ -540,30 +412,7 @@ parse_json_to_dfl_data(variant_graph)
 
 确保新增 arc 不会导致 parser 崩。
 
-## 2. Stable arc identity test
-
-构造一个 toy graph，生成 `original`、`add25pct` 和 `add25arcs` 后检查：
-
-```text
-1. shared original arcs 的 arc_key 在两个 variants 中相同。
-2. edge index 可以变化，但 arc_key set comparison 仍然正确。
-3. solution_changed_vs_original 使用 arc_key signature，不读取 solution_edge_signature。
-4. added_arc_keys / removed_arc_keys 不为空时都能和 solution_arc_key_signature 做 set overlap。
-```
-
-## 3. Field naming test
-
-summary 输出必须检查：
-
-```text
-original_num_arcs
-variant_num_arcs
-solution_selected_edge_count
-```
-
-并且不允许新增 density 含义的 `edge_count` 字段。如果保留来自 second-best 的原始 `edge_count`，summary 层必须把它重命名或复制为 `solution_selected_edge_count`。
-
-## 4. Original variant exact replay test
+## 2. Original variant exact replay test
 
 你已经写了 integration check：
 
@@ -577,16 +426,16 @@ normalized_gap_abs_diff < 1e-6 or 1e-5
 
 如果有 Gurobi tie-breaking drift，就至少 objective gap 要一致，不一定 edge signature 一致。
 
-## 5. Remove arcs count safety test
+## 3. Remove arcs count safety test
 
-如果 graph arc count 小于 25，脚本应该报错或自动 min。但你的三张图应该都大于 25。仍然建议写：
+如果 graph edge count 小于 25，脚本应该报错或自动 min。但你的三张图应该都大于 25。仍然建议写：
 
 ```python
-if remove_count >= original_num_arcs:
+if remove_count >= edge_count:
     raise ValueError
 ```
 
-## 6. Feasibility sanity test
+## 4. Feasibility sanity test
 
 删除 arc 后可能出现 fewer feasible cycles/chains，但 solver 应该仍然能返回 empty solution 或 best solution。测试至少确保：
 
@@ -624,11 +473,11 @@ rank1/rank2 rows generated or clean warning if no second-best exists
 4. Validate with parser locally
 5. Sync to Garnet
 6. Smoke:
-     G-696 original + add25pct + add25arcs
+     G-696 original + add25pct
 7. Original replay check:
      original variants for all 3 graphs match existing max_cycle=3 results
 8. Full run:
-     3 graphs × 5 variants × 2 methods × 2 ranks
+     3 graphs × 4 variants × 2 methods × 2 ranks
 9. Summarize
 10. Generate plots
 11. Update README
@@ -707,7 +556,6 @@ Scope:
 Density variants:
   original
   add25pct: add round(0.25 * E0) arcs
-  add25arcs: add 25 arcs, robustness/symmetric fixed-count increase
   remove25arcs: remove 25 arcs, primary decrease condition
   remove25pct: remove round(0.25 * E0) arcs, robustness only
 
@@ -717,16 +565,6 @@ Label policy:
   Added arcs receive synthetic Step2b-d8 labels calibrated to the original graph scale.
   This isolates arc-density changes and avoids drifting the original baseline.
   This is a controlled structural perturbation, not a regenerated medically realistic compatibility graph.
-
-Stable arc identity:
-  Define arc_key as "{src_vertex_id}->{dst_vertex_id}".
-  Use arc_key signatures for all cross-variant solution-changed and added/removed overlap checks.
-  Keep solution_edge_signature only as a within-record debug field, because edge indices are not stable after adding/removing arcs.
-
-Field naming:
-  Use original_num_arcs and variant_num_arcs for graph density.
-  Use solution_selected_edge_count for the number of edges selected by a rank solution.
-  Do not introduce a density field named edge_count.
 
 Evaluation:
   For each variant, use the corresponding case seed to load trained 2stage/SPO+ weights.
@@ -741,7 +579,6 @@ Primary metrics:
   rank1/rank2 solution changed vs original
   oracle solution changed vs original
   overlap of added/removed arcs with oracle/rank1/rank2 solutions
-  all solution-change and overlap metrics are computed from arc_key sets
 
 Outputs:
   arc_density_graph_manifest.csv
@@ -756,90 +593,6 @@ Plots:
   oracle_obj_by_arc_density.png
   case_arc_density_rank1_rank2_gap.png
 ```
-
----
-
-# Current run status: 2026-06-08
-
-本轮已在 Garnet `/local1/fuweik/UdeM-Intern` 完成 first-pass density solve。
-
-Implementation notes:
-
-```text
-1. make_arc_density_variants.py now writes repo-relative variant_graph_path values
-   for repo-local graph variants, so the manifest is portable between WSL and Garnet.
-
-2. compute_arc_density_sensitivity.py resolves relative variant_graph_path values
-   from the repo root before calling load_graph_records.
-```
-
-Smoke run:
-
-```text
-graph = G-696.json
-variant = original
-method = 2stage_val_mse
-output = arc_density_second_best_gap_smoke_G696_original_2stage.csv
-rows = 2
-status = EXIT_STATUS=0
-```
-
-Formal run:
-
-```text
-output = arc_density_second_best_gap.csv
-log = logs/arc_density_full.log
-
-graphs = G-696.json, G-392.json, G-1560.json
-variants = original, add25pct, add25arcs, remove25arcs, remove25pct
-methods = 2stage_val_mse, spoplus_val_spoplus_loss
-ranks = 1, 2
-
-expected rows = 3 graphs * 5 variants * 2 methods * 2 ranks = 60
-observed rows = 60
-unique graph/variant/method/rank combinations = 60
-arc-key signatures present = yes
-status = EXIT_STATUS=0
-```
-
-The smoke CSV is only a runtime check and should not be included in formal
-comparisons. Use `arc_density_second_best_gap.csv` for the next summary step.
-
-Summary run:
-
-```text
-script = surrogate_experiment_results/decision_analysis/scripts/summarize_arc_density_sensitivity.py
-input = arc_density_second_best_gap.csv
-
-arc_density_second_best_summary.csv       rows = 20
-arc_density_case_summary.csv              rows = 30
-arc_density_delta_vs_original.csv         rows = 30
-arc_density_oracle_change_summary.csv     rows = 10
-```
-
-The summary script reads the formal CSV by filename and does not glob over the
-directory, so `arc_density_second_best_gap_smoke_G696_original_2stage.csv` is
-not included.
-
-First-pass aggregate checks:
-
-```text
-rank2 mean normalized gap:
-  original     2stage=0.1138, SPO+=0.1176
-  add25pct     2stage=0.1387, SPO+=0.1284
-  add25arcs    2stage=0.0735, SPO+=0.0779
-  remove25arcs 2stage=0.0998, SPO+=0.0530
-  remove25pct  2stage=0.1558, SPO+=0.1180
-
-mean oracle objective delta vs original:
-  add25pct     +274.63
-  add25arcs    +101.60
-  remove25arcs  -21.96
-  remove25pct   -71.26
-```
-
-These are selected-case sensitivity summaries, not full Step2b population
-statistics.
 
 ---
 
@@ -866,3 +619,4 @@ arc density sensitivity
 ```
 
 然后就可以进入第 1 点：把所有结果整理成更短的 AAAI-style paper report。
+`
