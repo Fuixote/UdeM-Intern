@@ -114,6 +114,43 @@ CASE_SUMMARY_FIELDS = [
     "rank2_near_5pct_rate",
 ]
 
+PAIRED_DELTA_FIELDS = [
+    "regime",
+    "method_label",
+    "case_type",
+    "subset_seed",
+    "graph_id",
+    "baseline_max_cycle",
+    "comparison_max_cycle",
+    "baseline_rank2_gap_to_oracle",
+    "comparison_rank2_gap_to_oracle",
+    "delta_rank2_gap_to_oracle",
+    "baseline_rank2_normalized_gap",
+    "comparison_rank2_normalized_gap",
+    "delta_rank2_normalized_gap",
+    "baseline_rank2_same_oracle",
+    "comparison_rank2_same_oracle",
+    "baseline_num_cycle_candidates",
+    "comparison_num_cycle_candidates",
+]
+
+PAIRED_DELTA_SUMMARY_FIELDS = [
+    "comparison_max_cycle",
+    "method_label",
+    "paired_count",
+    "fraction_delta_lt_0",
+    "fraction_delta_eq_0",
+    "fraction_delta_gt_0",
+    "mean_delta_rank2_normalized_gap",
+    "median_delta_rank2_normalized_gap",
+    "q25_delta_rank2_normalized_gap",
+    "q75_delta_rank2_normalized_gap",
+    "mean_baseline_rank2_normalized_gap",
+    "mean_comparison_rank2_normalized_gap",
+    "median_baseline_rank2_normalized_gap",
+    "median_comparison_rank2_normalized_gap",
+]
+
 
 def read_csv_rows(path: str | Path) -> list[dict[str, str]]:
     with Path(path).open(newline="", encoding="utf-8") as handle:
@@ -158,6 +195,23 @@ def finite_median(values: list[float]) -> float:
     if len(clean) % 2:
         return float(clean[mid])
     return float(0.5 * (clean[mid - 1] + clean[mid]))
+
+
+def finite_quantile(values: list[float], probability: float) -> float:
+    clean = sorted(finite_values(values))
+    if not clean:
+        return float("nan")
+    if probability <= 0:
+        return float(clean[0])
+    if probability >= 1:
+        return float(clean[-1])
+    position = (len(clean) - 1) * probability
+    lower = int(math.floor(position))
+    upper = int(math.ceil(position))
+    if lower == upper:
+        return float(clean[lower])
+    weight = position - lower
+    return float(clean[lower] * (1.0 - weight) + clean[upper] * weight)
 
 
 def row_key(row: dict[str, str]) -> tuple[int, int, str, str, int]:
@@ -376,6 +430,122 @@ def build_case_summary(
     return summary_rows
 
 
+def paired_delta_key(row: dict[str, Any]) -> tuple[int, str, str]:
+    return (int(row["subset_seed"]), str(row["graph_id"]), str(row["method_label"]))
+
+
+def build_rank2_paired_delta_rows(
+    rank_rows: list[dict[str, Any]],
+    baseline_cycle: int = 3,
+) -> list[dict[str, Any]]:
+    rows_by_key: dict[tuple[int, str, str], dict[int, dict[str, Any]]] = defaultdict(dict)
+    for row in rank_rows:
+        rows_by_key[paired_delta_key(row)][int(row["max_cycle"])] = row
+
+    delta_rows: list[dict[str, Any]] = []
+    for key, cycle_rows in rows_by_key.items():
+        baseline = cycle_rows.get(baseline_cycle)
+        if baseline is None:
+            continue
+        for comparison_cycle in sorted(cycle for cycle in cycle_rows if cycle != baseline_cycle):
+            comparison = cycle_rows[comparison_cycle]
+            baseline_gap = parse_float(baseline.get("rank2_gap_to_oracle"))
+            comparison_gap = parse_float(comparison.get("rank2_gap_to_oracle"))
+            baseline_norm = parse_float(baseline.get("rank2_normalized_gap"))
+            comparison_norm = parse_float(comparison.get("rank2_normalized_gap"))
+
+            delta_rows.append(
+                {
+                    "regime": baseline.get("regime", ""),
+                    "method_label": key[2],
+                    "case_type": baseline.get("case_type", ""),
+                    "subset_seed": key[0],
+                    "graph_id": key[1],
+                    "baseline_max_cycle": baseline_cycle,
+                    "comparison_max_cycle": comparison_cycle,
+                    "baseline_rank2_gap_to_oracle": baseline_gap,
+                    "comparison_rank2_gap_to_oracle": comparison_gap,
+                    "delta_rank2_gap_to_oracle": comparison_gap - baseline_gap,
+                    "baseline_rank2_normalized_gap": baseline_norm,
+                    "comparison_rank2_normalized_gap": comparison_norm,
+                    "delta_rank2_normalized_gap": comparison_norm - baseline_norm,
+                    "baseline_rank2_same_oracle": baseline.get("rank2_same_oracle", ""),
+                    "comparison_rank2_same_oracle": comparison.get("rank2_same_oracle", ""),
+                    "baseline_num_cycle_candidates": parse_float(
+                        baseline.get("num_cycle_candidates")
+                    ),
+                    "comparison_num_cycle_candidates": parse_float(
+                        comparison.get("num_cycle_candidates")
+                    ),
+                }
+            )
+
+    return sorted(
+        delta_rows,
+        key=lambda row: (
+            int(row["comparison_max_cycle"]),
+            method_sort(row["method_label"]),
+            int(row["subset_seed"]),
+            str(row["graph_id"]),
+        ),
+    )
+
+
+def build_rank2_paired_delta_summary(
+    delta_rows: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    grouped: dict[tuple[int, str], list[dict[str, Any]]] = defaultdict(list)
+    for row in delta_rows:
+        grouped[(int(row["comparison_max_cycle"]), str(row["method_label"]))].append(row)
+
+    summary_rows: list[dict[str, Any]] = []
+    for key in sorted(grouped, key=lambda item: (item[0], method_sort(item[1]))):
+        comparison_cycle, method_label = key
+        group = grouped[key]
+        deltas = [parse_float(row["delta_rank2_normalized_gap"]) for row in group]
+        baseline_values = [parse_float(row["baseline_rank2_normalized_gap"]) for row in group]
+        comparison_values = [
+            parse_float(row["comparison_rank2_normalized_gap"]) for row in group
+        ]
+        finite_deltas = finite_values(deltas)
+        count = len(finite_deltas)
+
+        summary_rows.append(
+            {
+                "comparison_max_cycle": comparison_cycle,
+                "method_label": method_label,
+                "paired_count": count,
+                "fraction_delta_lt_0": (
+                    sum(1 for value in finite_deltas if value < 0.0) / count
+                    if count
+                    else float("nan")
+                ),
+                "fraction_delta_eq_0": (
+                    sum(1 for value in finite_deltas if value == 0.0) / count
+                    if count
+                    else float("nan")
+                ),
+                "fraction_delta_gt_0": (
+                    sum(1 for value in finite_deltas if value > 0.0) / count
+                    if count
+                    else float("nan")
+                ),
+                "mean_delta_rank2_normalized_gap": finite_mean(finite_deltas),
+                "median_delta_rank2_normalized_gap": finite_median(finite_deltas),
+                "q25_delta_rank2_normalized_gap": finite_quantile(finite_deltas, 0.25),
+                "q75_delta_rank2_normalized_gap": finite_quantile(finite_deltas, 0.75),
+                "mean_baseline_rank2_normalized_gap": finite_mean(baseline_values),
+                "mean_comparison_rank2_normalized_gap": finite_mean(comparison_values),
+                "median_baseline_rank2_normalized_gap": finite_median(baseline_values),
+                "median_comparison_rank2_normalized_gap": finite_median(
+                    comparison_values
+                ),
+            }
+        )
+
+    return summary_rows
+
+
 def compact_case_id(case_id: str) -> str:
     if case_id.startswith("case_a_"):
         prefix = "A"
@@ -559,6 +729,16 @@ def parse_args(argv=None):
         type=Path,
         default=DEFAULT_RESULTS_DIR / "cycle_length_rank2_gap_by_case.csv",
     )
+    parser.add_argument(
+        "--paired-delta-output",
+        type=Path,
+        default=DEFAULT_RESULTS_DIR / "cycle_length_rank2_paired_delta_by_case.csv",
+    )
+    parser.add_argument(
+        "--paired-delta-summary-output",
+        type=Path,
+        default=DEFAULT_RESULTS_DIR / "cycle_length_rank2_paired_delta_summary.csv",
+    )
     parser.add_argument("--no-plot", action="store_true")
     return parser.parse_args(argv)
 
@@ -580,10 +760,18 @@ def main(argv=None) -> int:
     case_rows = read_csv_rows(args.case_index) if args.case_index.exists() else []
     case_detail_rows = build_case_detail_rows(case_rows, rank2_rows)
     case_summary_rows = build_case_summary(case_rows, rank2_rows)
+    paired_delta_rows = build_rank2_paired_delta_rows(rank2_rows, baseline_cycle=3)
+    paired_delta_summary_rows = build_rank2_paired_delta_summary(paired_delta_rows)
 
     write_csv(args.summary_output, summary_rows, SECOND_BEST_SUMMARY_FIELDS)
     write_csv(args.rank2_case_output, rank2_rows, RANK2_CASE_FIELDS)
     write_csv(args.case_summary_output, case_summary_rows, CASE_SUMMARY_FIELDS)
+    write_csv(args.paired_delta_output, paired_delta_rows, PAIRED_DELTA_FIELDS)
+    write_csv(
+        args.paired_delta_summary_output,
+        paired_delta_summary_rows,
+        PAIRED_DELTA_SUMMARY_FIELDS,
+    )
 
     if not args.no_plot:
         plot_rank2_gap(summary_rows, args.plots_dir / "rank2_gap_by_cycle_length.png")
@@ -597,6 +785,13 @@ def main(argv=None) -> int:
     print(f"Saved {len(summary_rows)} summary rows to {args.summary_output}")
     print(f"Saved {len(rank2_rows)} rank2 case rows to {args.rank2_case_output}")
     print(f"Saved {len(case_summary_rows)} selected case summary rows to {args.case_summary_output}")
+    print(f"Saved {len(paired_delta_rows)} paired delta rows to {args.paired_delta_output}")
+    print(
+        "Saved {} paired delta summary rows to {}".format(
+            len(paired_delta_summary_rows),
+            args.paired_delta_summary_output,
+        )
+    )
     if not args.no_plot:
         print(f"Saved plots to {args.plots_dir}")
     return 0

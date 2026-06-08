@@ -653,6 +653,8 @@ Generated comparison outputs:
 cycle_length_second_best_summary.csv
 cycle_length_case_summary.csv
 cycle_length_rank2_gap_by_case.csv
+cycle_length_rank2_paired_delta_by_case.csv
+cycle_length_rank2_paired_delta_summary.csv
 ```
 
 Generated plots:
@@ -721,6 +723,51 @@ So the main conclusion is:
 > The max-cycle-3 observation is robust under longer cycle lengths. Even when cycles of length 4 and 5 are allowed, many second-best solutions remain close to the oracle optimal value. In this selected Step2b d8 setting, longer cycles do not reduce second-best closeness to oracle; if anything, the rank-2 gap becomes slightly smaller, especially for SPO+.
 
 This weakens the specific expectation that longer cycles would make the oracle solution more distinctive and reduce the number of close alternatives. Instead, the evidence suggests that KEP still has substantial high-quality alternative-solution structure under max_cycle 4 and 5.
+
+## Paired graph-level rank-2 delta
+
+The aggregate means above should be checked at the paired graph level. For each fixed:
+
+```text
+subset_seed, graph_id, method_label
+```
+
+the paired delta is:
+
+```text
+delta_rank2_gap_K4 = rank2_normalized_gap_K4 - rank2_normalized_gap_K3
+delta_rank2_gap_K5 = rank2_normalized_gap_K5 - rank2_normalized_gap_K3
+```
+
+Negative values mean the rank-2 solution became closer to oracle when the cycle length was increased.
+
+The paired summary is:
+
+| comparison | method | paired cases | delta < 0 | delta = 0 | delta > 0 | mean delta | median delta | q25 delta | q75 delta |
+| ---------- | ------ | -----------: | --------: | --------: | --------: | ---------: | -----------: | --------: | --------: |
+| K4 - K3 | 2stage | 3600 | 42.31% | 19.22% | 38.47% | -0.113 pp | 0.000 pp | -2.886 pp | 2.278 pp |
+| K4 - K3 | SPO+ | 3600 | 42.31% | 19.94% | 37.75% | -0.117 pp | 0.000 pp | -2.033 pp | 1.859 pp |
+| K5 - K3 | 2stage | 3600 | 46.06% | 11.58% | 42.36% | -0.165 pp | 0.000 pp | -3.134 pp | 2.799 pp |
+| K5 - K3 | SPO+ | 3600 | 48.50% | 13.86% | 37.64% | -0.713 pp | 0.000 pp | -2.834 pp | 1.811 pp |
+
+Paired interpretation:
+
+> The average rank-2 gap decreases slightly, but this is not because a clear majority of graph-level pairs improve. Including unchanged pairs, fewer than half of the graph-seed-method pairs have lower rank-2 gap under K=4 or K=5. The median paired delta is exactly zero in all four method/comparison groups.
+
+Among only the non-tied pairs, decreases do slightly outnumber increases:
+
+```text
+K4 - K3, 2stage: 52.4% of non-tied pairs decrease
+K4 - K3, SPO+:   52.8% of non-tied pairs decrease
+K5 - K3, 2stage: 52.1% of non-tied pairs decrease
+K5 - K3, SPO+:   56.3% of non-tied pairs decrease
+```
+
+So the more careful conclusion is:
+
+> Longer cycles do not systematically worsen rank-2 closeness to oracle. They produce a mixed paired distribution with many unchanged pairs, many improvements, and many degradations. The aggregate mean improvement is mild, and for SPO+ at K=5 it is driven by a somewhat stronger negative tail rather than by a broad majority shift.
+
+This is the right answer to the consistency question: the trend is not a clean majority-of-graphs effect, but it is also not just a single extreme graph. The ten graph IDs with the largest negative mean deltas account for about 18-21% of the total negative-delta magnitude, depending on method and K, while similarly large positive outliers also exist.
 
 ## Case A/B/C notes
 

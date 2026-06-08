@@ -146,6 +146,106 @@ class DecisionAnalysisCycleSensitivityTests(unittest.TestCase):
         self.assertAlmostEqual(case_b["rank2_near_5pct_rate"], 1.0)
         self.assertAlmostEqual(case_b["mean_rank2_minus_rank1_normalized_gap"], 0.03)
 
+    def test_build_rank2_paired_delta_rows_compares_k4_and_k5_against_k3(self):
+        module = self.load_module()
+        rank_rows = [
+            {
+                "regime": "step2b_poly_d8",
+                "max_cycle": 3,
+                "case_type": "synthetic_case_type",
+                "subset_seed": 7,
+                "graph_id": "G-1.json",
+                "method_label": "2stage_val_mse",
+                "rank2_gap_to_oracle": 4.0,
+                "rank2_normalized_gap": 0.04,
+                "rank2_same_oracle": False,
+                "num_cycle_candidates": 30.0,
+            },
+            {
+                "regime": "step2b_poly_d8",
+                "max_cycle": 4,
+                "case_type": "synthetic_case_type",
+                "subset_seed": 7,
+                "graph_id": "G-1.json",
+                "method_label": "2stage_val_mse",
+                "rank2_gap_to_oracle": 3.0,
+                "rank2_normalized_gap": 0.03,
+                "rank2_same_oracle": False,
+                "num_cycle_candidates": 40.0,
+            },
+            {
+                "regime": "step2b_poly_d8",
+                "max_cycle": 5,
+                "case_type": "synthetic_case_type",
+                "subset_seed": 7,
+                "graph_id": "G-1.json",
+                "method_label": "2stage_val_mse",
+                "rank2_gap_to_oracle": 6.0,
+                "rank2_normalized_gap": 0.06,
+                "rank2_same_oracle": False,
+                "num_cycle_candidates": 50.0,
+            },
+        ]
+
+        deltas = module.build_rank2_paired_delta_rows(rank_rows, baseline_cycle=3)
+
+        self.assertEqual(len(deltas), 2)
+        first = deltas[0]
+        self.assertEqual(first["baseline_max_cycle"], 3)
+        self.assertEqual(first["comparison_max_cycle"], 4)
+        self.assertEqual(first["subset_seed"], 7)
+        self.assertEqual(first["graph_id"], "G-1.json")
+        self.assertAlmostEqual(first["baseline_rank2_normalized_gap"], 0.04)
+        self.assertAlmostEqual(first["comparison_rank2_normalized_gap"], 0.03)
+        self.assertAlmostEqual(first["delta_rank2_normalized_gap"], -0.01)
+        self.assertAlmostEqual(first["delta_rank2_gap_to_oracle"], -1.0)
+
+    def test_build_rank2_paired_delta_summary_reports_sign_fractions_and_quartiles(self):
+        module = self.load_module()
+        delta_rows = [
+            {
+                "comparison_max_cycle": 4,
+                "method_label": "2stage_val_mse",
+                "baseline_rank2_normalized_gap": 0.10,
+                "comparison_rank2_normalized_gap": 0.08,
+                "delta_rank2_normalized_gap": -0.02,
+            },
+            {
+                "comparison_max_cycle": 4,
+                "method_label": "2stage_val_mse",
+                "baseline_rank2_normalized_gap": 0.10,
+                "comparison_rank2_normalized_gap": 0.10,
+                "delta_rank2_normalized_gap": 0.00,
+            },
+            {
+                "comparison_max_cycle": 4,
+                "method_label": "2stage_val_mse",
+                "baseline_rank2_normalized_gap": 0.10,
+                "comparison_rank2_normalized_gap": 0.13,
+                "delta_rank2_normalized_gap": 0.03,
+            },
+            {
+                "comparison_max_cycle": 4,
+                "method_label": "2stage_val_mse",
+                "baseline_rank2_normalized_gap": 0.10,
+                "comparison_rank2_normalized_gap": 0.14,
+                "delta_rank2_normalized_gap": 0.04,
+            },
+        ]
+
+        summary = module.build_rank2_paired_delta_summary(delta_rows)
+
+        self.assertEqual(len(summary), 1)
+        row = summary[0]
+        self.assertEqual(row["paired_count"], 4)
+        self.assertAlmostEqual(row["fraction_delta_lt_0"], 0.25)
+        self.assertAlmostEqual(row["fraction_delta_eq_0"], 0.25)
+        self.assertAlmostEqual(row["fraction_delta_gt_0"], 0.50)
+        self.assertAlmostEqual(row["mean_delta_rank2_normalized_gap"], 0.0125)
+        self.assertAlmostEqual(row["median_delta_rank2_normalized_gap"], 0.015)
+        self.assertAlmostEqual(row["q25_delta_rank2_normalized_gap"], -0.005)
+        self.assertAlmostEqual(row["q75_delta_rank2_normalized_gap"], 0.0325)
+
 
 if __name__ == "__main__":
     unittest.main()
