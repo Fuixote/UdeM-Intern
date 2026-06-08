@@ -655,6 +655,7 @@ cycle_length_case_summary.csv
 cycle_length_rank2_gap_by_case.csv
 cycle_length_rank2_paired_delta_by_case.csv
 cycle_length_rank2_paired_delta_summary.csv
+cycle_length_oracle_change_summary.csv
 ```
 
 Generated plots:
@@ -723,6 +724,21 @@ So the main conclusion is:
 > The max-cycle-3 observation is robust under longer cycle lengths. Even when cycles of length 4 and 5 are allowed, many second-best solutions remain close to the oracle optimal value. In this selected Step2b d8 setting, longer cycles do not reduce second-best closeness to oracle; if anything, the rank-2 gap becomes slightly smaller, especially for SPO+.
 
 This weakens the specific expectation that longer cycles would make the oracle solution more distinctive and reduce the number of close alternatives. Instead, the evidence suggests that KEP still has substantial high-quality alternative-solution structure under max_cycle 4 and 5.
+
+## Oracle objective change
+
+Because increasing max_cycle expands the feasible set, the K=3 oracle solution remains feasible under K=4 and K=5. Therefore the oracle objective should not decrease. If the oracle objective increases, this is direct evidence that longer cycles create a better oracle solution.
+
+The existing `second_best_gap_maxcycle*.csv` files store `oracle_obj`, but they do not store the oracle edge-set signature. Therefore `fraction_oracle_solution_changed_by_objective` below means: the fraction of graph-seed cases where the oracle objective increased. This is an observable lower bound on oracle solution changes; if the objective is unchanged, there could still be an unobserved tied oracle solution change.
+
+| comparison | oracle cases | oracle objective increased | oracle objective unchanged | mean oracle increase | median oracle increase | mean relative increase | 2stage rank2 changed | SPO+ rank2 changed |
+| ---------- | -----------: | -------------------------: | --------------------------: | -------------------: | ---------------------: | ---------------------: | -------------------: | -----------------: |
+| K4 - K3 | 3600 | 67.75% | 32.25% | 12.134 | 6.971 | 6.29% | 79.58% | 79.61% |
+| K5 - K3 | 3600 | 78.50% | 21.50% | 20.657 | 14.973 | 10.53% | 87.50% | 86.50% |
+
+This strengthens the interpretation:
+
+> Longer cycles are not merely leaving the optimization problem unchanged. For most graph-seed cases, K=4 or K=5 increases the oracle objective, and the rank-2 edge set also changes in roughly 80-88% of cases. Despite this larger feasible set and better oracle value, rank-2 normalized gaps remain close to the K=3 baseline. This suggests that longer cycles create better oracle solutions and also preserve or create strong second-best alternatives.
 
 ## Paired graph-level rank-2 delta
 
@@ -800,5 +816,7 @@ I completed the cycle-length sensitivity for max_cycle = 3, 4, and 5 using the s
 
 The result does not show that longer cycles make the second-best solution much worse. For 2stage, the rank-2 mean normalized oracle gap stays around 7.0% and the within-5% rate slightly increases from 45.2% to 48.9%. For SPO+, the rank-2 mean gap decreases from 6.3% to 5.6%, and the within-5% rate increases from 48.0% to 54.8%.
 
-So the max-cycle-3 observation appears robust: even with max cycle length 4 or 5, many second-best KEP solutions remain close to the oracle optimal value. This suggests that the alternative-solution structure in these KEP instances persists under longer cycle lengths.
+The oracle objective itself changes for most graph-seed cases: it increases in 67.8% of cases for K=4 and 78.5% for K=5, with mean relative increases of 6.3% and 10.5%. So longer cycles are creating better oracle solutions, not just leaving the feasible set effectively unchanged.
+
+So the max-cycle-3 observation appears robust: even with max cycle length 4 or 5, many second-best KEP solutions remain close to the oracle optimal value. This suggests that longer cycles create better oracle solutions while also preserving or creating strong second-best alternatives.
 ```

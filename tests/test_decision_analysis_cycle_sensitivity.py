@@ -24,6 +24,8 @@ def solution_row(
     solution_rank: int,
     normalized_gap: float,
     same_oracle: bool = False,
+    oracle_obj: float = 100.0,
+    solution_edge_signature: str | None = None,
 ) -> dict[str, str]:
     return {
         "regime": "step2b_poly_d8",
@@ -33,6 +35,7 @@ def solution_row(
         "graph_id": graph_id,
         "method_label": method_label,
         "solution_rank": str(solution_rank),
+        "oracle_obj": str(oracle_obj),
         "gap_to_oracle": str(100.0 * normalized_gap),
         "normalized_gap_to_oracle": str(normalized_gap),
         "same_solution_as_oracle": str(same_oracle),
@@ -42,6 +45,11 @@ def solution_row(
         "true_obj_diff_from_rank1": str(100.0 * normalized_gap),
         "num_cycle_candidates": str(10 * max_cycle),
         "num_chain_candidates": "40",
+        "solution_edge_signature": (
+            solution_edge_signature
+            if solution_edge_signature is not None
+            else f"{method_label}|{solution_rank}|{max_cycle}|{subset_seed}|{graph_id}"
+        ),
     }
 
 
@@ -245,6 +253,66 @@ class DecisionAnalysisCycleSensitivityTests(unittest.TestCase):
         self.assertAlmostEqual(row["median_delta_rank2_normalized_gap"], 0.015)
         self.assertAlmostEqual(row["q25_delta_rank2_normalized_gap"], -0.005)
         self.assertAlmostEqual(row["q75_delta_rank2_normalized_gap"], 0.0325)
+
+    def test_build_oracle_change_summary_uses_objective_and_rank2_signatures(self):
+        module = self.load_module()
+        rows = [
+            solution_row(
+                3,
+                7,
+                "G-1.json",
+                "2stage_val_mse",
+                2,
+                0.04,
+                oracle_obj=100.0,
+                solution_edge_signature="a",
+            ),
+            solution_row(
+                4,
+                7,
+                "G-1.json",
+                "2stage_val_mse",
+                2,
+                0.03,
+                oracle_obj=110.0,
+                solution_edge_signature="b",
+            ),
+            solution_row(
+                3,
+                7,
+                "G-2.json",
+                "2stage_val_mse",
+                2,
+                0.04,
+                oracle_obj=50.0,
+                solution_edge_signature="c",
+            ),
+            solution_row(
+                4,
+                7,
+                "G-2.json",
+                "2stage_val_mse",
+                2,
+                0.05,
+                oracle_obj=50.0,
+                solution_edge_signature="c",
+            ),
+        ]
+
+        summary = module.build_oracle_change_summary(rows, baseline_cycle=3)
+
+        self.assertEqual(len(summary), 1)
+        row = summary[0]
+        self.assertEqual(row["comparison_max_cycle"], 4)
+        self.assertEqual(row["method_label"], "2stage_val_mse")
+        self.assertEqual(row["oracle_pair_count"], 2)
+        self.assertEqual(row["rank2_pair_count"], 2)
+        self.assertAlmostEqual(row["fraction_oracle_obj_increased"], 0.5)
+        self.assertAlmostEqual(row["fraction_oracle_obj_unchanged"], 0.5)
+        self.assertAlmostEqual(row["fraction_oracle_solution_changed_by_objective"], 0.5)
+        self.assertAlmostEqual(row["mean_oracle_obj_increase"], 5.0)
+        self.assertAlmostEqual(row["median_oracle_obj_increase"], 5.0)
+        self.assertAlmostEqual(row["fraction_rank2_solution_changed"], 0.5)
 
 
 if __name__ == "__main__":

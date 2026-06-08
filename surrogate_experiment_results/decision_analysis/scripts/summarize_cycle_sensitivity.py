@@ -94,6 +94,7 @@ RANK2_CASE_FIELDS = [
     "rank2_jaccard_rank1",
     "rank2_predicted_margin_from_best",
     "rank2_true_obj_diff_from_rank1",
+    "rank2_solution_edge_signature",
     "num_cycle_candidates",
     "num_chain_candidates",
 ]
@@ -151,6 +152,25 @@ PAIRED_DELTA_SUMMARY_FIELDS = [
     "median_comparison_rank2_normalized_gap",
 ]
 
+ORACLE_CHANGE_SUMMARY_FIELDS = [
+    "comparison_max_cycle",
+    "method_label",
+    "oracle_pair_count",
+    "rank2_pair_count",
+    "fraction_oracle_obj_increased",
+    "fraction_oracle_obj_unchanged",
+    "fraction_oracle_obj_decreased",
+    "fraction_oracle_solution_changed_by_objective",
+    "mean_oracle_obj_increase",
+    "median_oracle_obj_increase",
+    "q25_oracle_obj_increase",
+    "q75_oracle_obj_increase",
+    "mean_relative_oracle_obj_increase",
+    "median_relative_oracle_obj_increase",
+    "fraction_rank2_solution_changed",
+    "fraction_rank2_solution_unchanged",
+]
+
 
 def read_csv_rows(path: str | Path) -> list[dict[str, str]]:
     with Path(path).open(newline="", encoding="utf-8") as handle:
@@ -161,7 +181,7 @@ def write_csv(path: str | Path, rows: list[dict[str, Any]], fieldnames: list[str
     output = Path(path)
     output.parent.mkdir(parents=True, exist_ok=True)
     with output.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
 
@@ -279,6 +299,7 @@ def build_rank2_gap_by_case(rows: list[dict[str, str]]) -> list[dict[str, Any]]:
                 "rank2_true_obj_diff_from_rank1": parse_float(
                     rank2.get("true_obj_diff_from_rank1")
                 ),
+                "rank2_solution_edge_signature": rank2.get("solution_edge_signature", ""),
                 "num_cycle_candidates": parse_float(rank2.get("num_cycle_candidates")),
                 "num_chain_candidates": parse_float(rank2.get("num_chain_candidates")),
             }
@@ -546,6 +567,132 @@ def build_rank2_paired_delta_summary(
     return summary_rows
 
 
+def oracle_key(row: dict[str, str]) -> tuple[int, int, str]:
+    return (int(row["max_cycle"]), int(row["subset_seed"]), row["graph_id"])
+
+
+def rank2_signature_key(row: dict[str, str]) -> tuple[int, int, str, str]:
+    return (
+        int(row["max_cycle"]),
+        int(row["subset_seed"]),
+        row["graph_id"],
+        row["method_label"],
+    )
+
+
+def build_oracle_change_summary(
+    rows: list[dict[str, str]],
+    baseline_cycle: int = 3,
+    tolerance: float = 1e-9,
+) -> list[dict[str, Any]]:
+    oracle_by_key: dict[tuple[int, int, str], float] = {}
+    methods: set[str] = set()
+    rank2_signature_by_key: dict[tuple[int, int, str, str], str] = {}
+
+    for row in rows:
+        methods.add(row["method_label"])
+        key = oracle_key(row)
+        oracle_by_key.setdefault(key, parse_float(row.get("oracle_obj")))
+        if int(row["solution_rank"]) == 2:
+            rank2_signature_by_key[rank2_signature_key(row)] = row.get(
+                "solution_edge_signature",
+                "",
+            )
+
+    baseline_oracle = {
+        (seed, graph_id): oracle_obj
+        for (cycle, seed, graph_id), oracle_obj in oracle_by_key.items()
+        if cycle == baseline_cycle
+    }
+    comparison_cycles = sorted(
+        {
+            cycle
+            for cycle, _seed, _graph_id in oracle_by_key
+            if cycle != baseline_cycle
+        }
+    )
+
+    summary_rows: list[dict[str, Any]] = []
+    for comparison_cycle in comparison_cycles:
+        oracle_deltas: list[float] = []
+        relative_deltas: list[float] = []
+        for seed, graph_id in sorted(baseline_oracle):
+            comparison_obj = oracle_by_key.get((comparison_cycle, seed, graph_id))
+            if comparison_obj is None:
+                continue
+            baseline_obj = baseline_oracle[(seed, graph_id)]
+            delta = comparison_obj - baseline_obj
+            oracle_deltas.append(delta)
+            relative_deltas.append(delta / abs(baseline_obj) if baseline_obj else float("nan"))
+
+        finite_deltas = finite_values(oracle_deltas)
+        oracle_count = len(finite_deltas)
+
+        for method_label in sorted(methods, key=method_sort):
+            rank2_changed = 0
+            rank2_unchanged = 0
+            for seed, graph_id in sorted(baseline_oracle):
+                baseline_sig = rank2_signature_by_key.get(
+                    (baseline_cycle, seed, graph_id, method_label)
+                )
+                comparison_sig = rank2_signature_by_key.get(
+                    (comparison_cycle, seed, graph_id, method_label)
+                )
+                if baseline_sig is None or comparison_sig is None:
+                    continue
+                if baseline_sig != comparison_sig:
+                    rank2_changed += 1
+                else:
+                    rank2_unchanged += 1
+
+            rank2_count = rank2_changed + rank2_unchanged
+            summary_rows.append(
+                {
+                    "comparison_max_cycle": comparison_cycle,
+                    "method_label": method_label,
+                    "oracle_pair_count": oracle_count,
+                    "rank2_pair_count": rank2_count,
+                    "fraction_oracle_obj_increased": (
+                        sum(1 for value in finite_deltas if value > tolerance) / oracle_count
+                        if oracle_count
+                        else float("nan")
+                    ),
+                    "fraction_oracle_obj_unchanged": (
+                        sum(1 for value in finite_deltas if abs(value) <= tolerance)
+                        / oracle_count
+                        if oracle_count
+                        else float("nan")
+                    ),
+                    "fraction_oracle_obj_decreased": (
+                        sum(1 for value in finite_deltas if value < -tolerance)
+                        / oracle_count
+                        if oracle_count
+                        else float("nan")
+                    ),
+                    "fraction_oracle_solution_changed_by_objective": (
+                        sum(1 for value in finite_deltas if abs(value) > tolerance)
+                        / oracle_count
+                        if oracle_count
+                        else float("nan")
+                    ),
+                    "mean_oracle_obj_increase": finite_mean(finite_deltas),
+                    "median_oracle_obj_increase": finite_median(finite_deltas),
+                    "q25_oracle_obj_increase": finite_quantile(finite_deltas, 0.25),
+                    "q75_oracle_obj_increase": finite_quantile(finite_deltas, 0.75),
+                    "mean_relative_oracle_obj_increase": finite_mean(relative_deltas),
+                    "median_relative_oracle_obj_increase": finite_median(relative_deltas),
+                    "fraction_rank2_solution_changed": (
+                        rank2_changed / rank2_count if rank2_count else float("nan")
+                    ),
+                    "fraction_rank2_solution_unchanged": (
+                        rank2_unchanged / rank2_count if rank2_count else float("nan")
+                    ),
+                }
+            )
+
+    return summary_rows
+
+
 def compact_case_id(case_id: str) -> str:
     if case_id.startswith("case_a_"):
         prefix = "A"
@@ -739,6 +886,11 @@ def parse_args(argv=None):
         type=Path,
         default=DEFAULT_RESULTS_DIR / "cycle_length_rank2_paired_delta_summary.csv",
     )
+    parser.add_argument(
+        "--oracle-change-summary-output",
+        type=Path,
+        default=DEFAULT_RESULTS_DIR / "cycle_length_oracle_change_summary.csv",
+    )
     parser.add_argument("--no-plot", action="store_true")
     return parser.parse_args(argv)
 
@@ -762,6 +914,7 @@ def main(argv=None) -> int:
     case_summary_rows = build_case_summary(case_rows, rank2_rows)
     paired_delta_rows = build_rank2_paired_delta_rows(rank2_rows, baseline_cycle=3)
     paired_delta_summary_rows = build_rank2_paired_delta_summary(paired_delta_rows)
+    oracle_change_summary_rows = build_oracle_change_summary(rows, baseline_cycle=3)
 
     write_csv(args.summary_output, summary_rows, SECOND_BEST_SUMMARY_FIELDS)
     write_csv(args.rank2_case_output, rank2_rows, RANK2_CASE_FIELDS)
@@ -771,6 +924,11 @@ def main(argv=None) -> int:
         args.paired_delta_summary_output,
         paired_delta_summary_rows,
         PAIRED_DELTA_SUMMARY_FIELDS,
+    )
+    write_csv(
+        args.oracle_change_summary_output,
+        oracle_change_summary_rows,
+        ORACLE_CHANGE_SUMMARY_FIELDS,
     )
 
     if not args.no_plot:
@@ -790,6 +948,12 @@ def main(argv=None) -> int:
         "Saved {} paired delta summary rows to {}".format(
             len(paired_delta_summary_rows),
             args.paired_delta_summary_output,
+        )
+    )
+    print(
+        "Saved {} oracle change summary rows to {}".format(
+            len(oracle_change_summary_rows),
+            args.oracle_change_summary_output,
         )
     )
     if not args.no_plot:
