@@ -1,0 +1,3 @@
+example,problem_family,objective_sense,solution,true_cost,predicted_cost_2stage,predicted_cost_dfl,rank_by_true_cost,rank_by_2stage_prediction,rank_by_dfl_prediction,normalized_gap_to_oracle
+toy_shortest_path,shortest path,minimize,Path A: s-a1-a2-t,5.0,5.0,5.0,1,2,1,0.0
+toy_shortest_path,shortest path,minimize,Path B: s-b1-b2-t,8.0,4.8,8.0,2,1,2,0.6

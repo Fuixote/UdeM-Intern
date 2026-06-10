@@ -1,0 +1,7 @@
+example,problem_family,objective_sense,solution,true_value,predicted_value_2stage,predicted_value_dfl,rank_by_true_value,rank_by_2stage_prediction,rank_by_dfl_prediction,normalized_gap_to_oracle
+toy_stable_set,stable set,maximize,A,10.0,10.0,10.0,4,6,4,0.5
+toy_stable_set,stable set,maximize,B,10.0,10.0,10.0,3,5,3,0.5
+toy_stable_set,stable set,maximize,C,9.9,10.1,9.9,6,4,6,0.505
+toy_stable_set,stable set,maximize,D,9.9,10.1,9.9,5,3,5,0.505
+toy_stable_set,stable set,maximize,A + B,20.0,20.0,20.0,1,2,1,0.0
+toy_stable_set,stable set,maximize,C + D,19.8,20.2,19.8,2,1,2,0.009999999999999964

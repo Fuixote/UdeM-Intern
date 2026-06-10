@@ -1,0 +1,7 @@
+example,problem_family,objective_sense,solution,true_value,predicted_value_2stage,predicted_value_dfl,rank_by_true_value,rank_by_2stage_prediction,rank_by_dfl_prediction,normalized_gap_to_oracle
+toy_kep_packing,KEP / set packing,maximize,C12,10.0,10.0,10.0,4,6,4,0.5
+toy_kep_packing,KEP / set packing,maximize,C34,10.0,10.0,10.0,3,5,3,0.5
+toy_kep_packing,KEP / set packing,maximize,C13,9.9,10.1,9.9,6,4,6,0.505
+toy_kep_packing,KEP / set packing,maximize,C24,9.9,10.1,9.9,5,3,5,0.505
+toy_kep_packing,KEP / set packing,maximize,C12 + C34,20.0,20.0,20.0,1,2,1,0.0
+toy_kep_packing,KEP / set packing,maximize,C13 + C24,19.8,20.2,19.8,2,1,2,0.009999999999999964
