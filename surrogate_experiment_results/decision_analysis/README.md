@@ -42,6 +42,60 @@ solution identity changes, and path-like negative controls (`shortest path` and
 creates large regret. Use these as mechanism illustrations, not as a theorem
 that every packing instance has small decision-focused-learning gains.
 
+## Randomized Property X Toy Family
+
+The randomized toy-family generator is:
+
+```text
+surrogate_experiment_results/decision_analysis/scripts/run_randomized_property_x_toy_experiments.py
+```
+
+Run it from the repo root with the KEPs Python environment:
+
+```bash
+MPLCONFIGDIR=/tmp/matplotlib-cache \
+  /home/weikang/miniconda3/envs/KEPs/bin/python \
+  surrogate_experiment_results/decision_analysis/scripts/run_randomized_property_x_toy_experiments.py
+```
+
+It writes:
+
+```text
+surrogate_experiment_results/decision_analysis/results/toy_randomized/
+  randomized_packing_summary.csv
+  randomized_shortest_path_summary.csv
+  randomized_property_x_comparison.csv
+
+surrogate_experiment_results/decision_analysis/plots/toy_randomized/
+  identity_mismatch_vs_regret.png
+  rank2_gap_distribution.png
+  property_x_phase_diagram.png
+```
+
+Default protocol: `tau in {0.02, 0.05, 0.10, 0.20, 0.30}`,
+`sigma in {0.0, 0.02, 0.05, 0.10, 0.20, 0.30}`, 500 instances per
+grid cell. The decomposable packing family uses 12 independent blocks with 4
+candidate components per block. The path family uses 4 parallel coupled paths,
+each with 12 edges. This first randomized version intentionally covers only the
+abstract decomposable packing and shortest-path controls; the KEP-like random
+set-packing graph generator remains a natural next extension.
+
+Latest default run:
+
+| family | tau | sigma | identity mismatch | mean regret | median regret | mean regret if mismatch | mean oracle-second gap | within 5% |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| decomposable packing | 0.02 | 0.10 | 100.0% | 1.07% | 1.04% | 1.07% | 0.0067% | 100.0% |
+| parallel shortest path | 0.02 | 0.10 | 66.8% | 0.47% | 0.31% | 0.71% | 0.4163% | 100.0% |
+| decomposable packing | 0.10 | 0.10 | 100.0% | 2.76% | 2.65% | 2.76% | 0.0322% | 95.4% |
+| parallel shortest path | 0.10 | 0.10 | 43.0% | 0.83% | 0.00% | 1.93% | 1.9317% | 97.8% |
+| decomposable packing | 0.30 | 0.30 | 100.0% | 7.71% | 7.54% | 7.71% | 0.0800% | 21.2% |
+| parallel shortest path | 0.30 | 0.30 | 39.8% | 2.30% | 0.00% | 5.78% | 5.7989% | 81.8% |
+
+Interpretation: this is still a toy mechanism study, not a theorem. The useful
+claim is conditional: when close substitutes exist, solution identity can flip
+without much regret; when the true best-second gap is larger, a ranking flip has
+more room to create decision regret and therefore more room for DFL to improve.
+
 ---
 
 ## 总体路线
