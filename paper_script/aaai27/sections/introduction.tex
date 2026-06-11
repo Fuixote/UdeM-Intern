@@ -1,0 +1,30 @@
+\section{Introduction}
+
+Predict-then-optimize pipelines are often evaluated by prediction error even
+though the final objective is decision quality. Decision-focused learning (DFL)
+addresses this mismatch by training predictors through an optimization-aware
+surrogate such as SPO+ \citep{elmachtoub2022smart}. In shortest-path benchmarks,
+this idea can produce large gains over a two-stage mean-squared-error baseline.
+In our kidney-exchange experiments, however, the gains are more modest.
+
+This paper asks a targeted question: when is DFL useful for graph combinatorial
+optimization? Our starting point is that selected-solution identity is not
+enough. A model can select a different feasible solution from the oracle and
+still achieve nearly the same objective value. This can happen in decomposable
+packing-style problems, where many feasible solutions are assembled from mostly
+independent components and close substitutes are common.
+
+We therefore analyze prediction errors at the decision level. Rather than asking
+only which edge weights are predicted poorly, we ask whether the badly predicted
+edges participate in the symmetric difference between selected and oracle
+solutions, and whether the alternative solution is truly worse.
+
+\paragraph{Contributions.}
+We make three contributions. First, we validate the relevant SPO+ training path
+against independent reference implementations so that later interpretation is
+not confounded by implementation bugs. Second, we provide decision-level
+diagnostics for kidney exchange that distinguish decision-critical prediction
+errors from irrelevant prediction errors. Third, we build a toy family showing
+that close-substitute behavior is not specific to one hand-picked instance: it
+appears across several packing-style structures and contrasts with path-like
+negative controls.

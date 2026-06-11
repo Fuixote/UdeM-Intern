@@ -1,0 +1,18 @@
+\section{Experiments and Diagnostics}
+
+The empirical analysis focuses on kidney-exchange prediction tasks and
+shortest-path controls. For kidney exchange, we compare a two-stage predictor
+selected by validation MSE with SPO+ models selected by validation decision
+metrics. We evaluate on held-out graph instances and summarize normalized
+decision gap, solution overlap, and edge-level prediction-error diagnostics.
+
+The current decision-analysis evidence supports the close-substitute story in
+two ways. First, many different selected solutions are near ties under the true
+objective. Second, raw all-edge MSE is much less aligned with decision gap than
+error concentrated on decision-changing edges. This suggests that prediction
+errors matter most when they alter the selected feasible components in a way
+that harms the true objective.
+
+The final paper should report the main decision-analysis tables and plots here:
+case-study summaries, observed-candidate near-tie statistics, and
+decision-critical MSE correlations.

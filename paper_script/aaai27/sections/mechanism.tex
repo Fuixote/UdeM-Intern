@@ -1,0 +1,20 @@
+\section{Mechanism: Close Substitutes}
+
+Our central hypothesis is that DFL is most useful when prediction errors change
+the objective value of the selected solution, not merely its identity. In
+packing-style graph problems, feasible solutions can be composed of several
+components. If each component has close substitutes, a prediction error may swap
+one feasible solution for another while changing the true objective only
+slightly.
+
+This mechanism predicts two empirical patterns. First, solution identity can
+change even when normalized regret remains small. Second, all-edge prediction
+error should be a weak explanation of decision gap compared with error on
+decision-changing edges, such as edges in the symmetric difference between the
+oracle and selected solutions.
+
+This framing avoids a stronger claim that DFL is unnecessary for all packing
+problems. The claim is conditional: when the feasible landscape contains many
+near-optimal alternatives, DFL has less room to improve over a strong two-stage
+model; when prediction errors redirect a coupled decision to a much worse
+solution, DFL can matter substantially.

@@ -1,0 +1,44 @@
+\section{Toy Examples}
+
+Figure~\ref{fig:toy-regret} summarizes the expanded toy family. In the
+packing-style examples, two-stage prediction changes the selected solution but
+the normalized gap remains below the 5\% reference line. In the path-like
+controls, a ranking error redirects the whole connected path and creates much
+larger regret.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\linewidth]{figures/toy_regret_comparison.png}
+    \caption{Toy family showing that solution identity changes can correspond
+    to either small or large regret. Packing-style positive examples have close
+    substitutes; path-like negative controls do not.}
+    \label{fig:toy-regret}
+\end{figure}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\linewidth]{figures/toy_parametric_epsilon_curve.png}
+    \caption{Parametric close-substitute construction. The selected solution
+    changes for every $\epsilon$, but the normalized regret is exactly
+    $\epsilon$ and can be made arbitrarily small.}
+    \label{fig:toy-epsilon}
+\end{figure}
+
+Table~\ref{tab:toy-summary} lists the oracle and two-stage selected solutions
+for each toy problem family.
+
+\begin{table*}[t]
+    \centering
+    \caption{Toy examples for the close-substitute mechanism and path-like
+    negative controls.}
+    \label{tab:toy-summary}
+    \small
+    \setlength{\tabcolsep}{3pt}
+    \input{tables/toy_summary_for_paper}
+\end{table*}
+
+The parametric construction is the most direct generality argument. It contains
+two complete feasible solutions, $S_\star$ and $S_\epsilon$, with true values
+$1$ and $1-\epsilon$. If the two-stage predictor slightly overestimates
+$S_\epsilon$, it selects the wrong solution identity. Nevertheless, normalized
+regret is only $\epsilon$.

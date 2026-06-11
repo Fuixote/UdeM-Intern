@@ -1,0 +1,49 @@
+\documentclass[letterpaper]{article}
+\usepackage[submission]{aaai2027}
+\usepackage[hyphens]{url}
+\usepackage{graphicx}
+\urlstyle{rm}
+\def\UrlFont{\rm}
+\usepackage{natbib}
+\usepackage{caption}
+\frenchspacing
+\usepackage{booktabs}
+
+\pdfinfo{
+/TemplateVersion (2027.1)
+}
+
+\setcounter{secnumdepth}{0}
+
+\title{When Is Decision-Focused Learning Useful for Graph Combinatorial Optimization?}
+\author{Anonymous Submission}
+\affiliations{}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Decision-focused learning can substantially improve predict-then-optimize
+pipelines when prediction errors change the value of the downstream decision.
+However, in some graph combinatorial optimization problems, different feasible
+solutions may be close substitutes under the true objective. We study this
+phenomenon in kidney exchange and contrast it with shortest-path benchmarks.
+Our working hypothesis is that the benefit of decision-focused learning depends
+not only on whether prediction errors change the selected solution, but on
+whether the alternative solution is materially worse. We combine direct
+code-path validation, decision-level error analysis, and controlled toy
+examples to separate harmful prediction errors from errors that are mostly
+decision-irrelevant.
+\end{abstract}
+
+\input{sections/introduction}
+\input{sections/problem_setup}
+\input{sections/mechanism}
+\input{sections/experiments}
+\input{sections/toy_examples}
+\input{sections/discussion}
+
+\bibliography{references}
+
+\end{document}

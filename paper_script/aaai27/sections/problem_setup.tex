@@ -1,0 +1,22 @@
+\section{Problem Setup}
+
+We study graph optimization problems with uncertain objective coefficients. Each
+instance has features $x$, true coefficients $c$, and a feasible set
+$\mathcal{Y}(x)$. A predictor outputs $\hat{c}$, and the downstream decision is
+obtained by solving
+\[
+    \hat{y} \in \arg\max_{y \in \mathcal{Y}(x)} \hat{c}^{\top}y
+\]
+for reward-maximization problems, with the analogous minimization form for
+shortest path.
+
+The two-stage baseline trains $\hat{c}$ to minimize prediction error. DFL
+methods instead use a surrogate for downstream regret or decision loss. For
+SPO+, the reward-maximization form used in our implementation compares the
+oracle solution $y^\star$ with an adversarial solution under shifted costs
+$2\hat{c}-c$.
+
+We report normalized decision gap relative to the oracle objective. We also use
+solution-overlap diagnostics, including whether the selected solution matches
+the oracle and the edge Jaccard similarity between selected and oracle
+solutions.
