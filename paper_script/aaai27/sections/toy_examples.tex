@@ -18,7 +18,20 @@ an independent set can choose at most one vertex from each clique. With positive
 weights, the oracle and predicted solutions choose one non-conflicting vertex
 per clique. The third is a path-like control with 4 parallel $s$--$t$ paths,
 each containing 12 edges; selecting a different path changes the entire coupled
-route.
+route. Figure~\ref{fig:randomized-toy-setup} visualizes these feasibility
+structures; the random true coefficients and prediction noise are generated on
+top of these structures.
+
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=0.98\textwidth]{figures/randomized_toy_setup_schematic.png}
+    \caption{Experimental setup for the three randomized toy families. The
+    packing and stable-set families are decomposable: a solution is assembled by
+    choosing one local component from each block or conflict clique. In the
+    parallel shortest-path control, choosing a different path changes the whole
+    coupled route.}
+    \label{fig:randomized-toy-setup}
+\end{figure*}
 
 All families are controlled by two parameters. The parameter $\tau$ controls
 the separation between alternatives, and $\sigma$ controls independent
