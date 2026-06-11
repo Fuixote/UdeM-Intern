@@ -63,6 +63,7 @@ It writes:
 ```text
 surrogate_experiment_results/decision_analysis/results/toy_randomized/
   randomized_packing_summary.csv
+  randomized_kep_set_packing_summary.csv
   randomized_stable_set_summary.csv
   randomized_shortest_path_summary.csv
   randomized_property_x_comparison.csv
@@ -75,18 +76,18 @@ surrogate_experiment_results/decision_analysis/plots/toy_randomized/
 
 Default protocol: `tau in {0.02, 0.05, 0.10, 0.20, 0.30}`,
 `sigma in {0.0, 0.02, 0.05, 0.10, 0.20, 0.30}`, 500 instances per
-grid cell. The decomposable packing family uses 12 independent blocks with 4
-candidate components per block. The stable-set family uses 12 disjoint conflict
-cliques with 4 candidate vertices per clique, so an independent set selects one
-non-conflicting vertex from each clique when weights are positive. The path
-family uses 4 parallel coupled paths, each with 12 edges. This randomized
-version covers abstract decomposable packing, stable/independent-set, and
-shortest-path controls; the KEP-like random set-packing graph generator remains
-a natural next extension.
+grid cell. The abstract decomposable packing control uses 12 independent blocks
+with 4 candidate components per block. The KEP-like set-packing family uses 12
+patient-donor pair vertices, random directed compatibility arcs with probability
+0.35, candidate 2/3-cycles, and a vertex-disjoint cycle-packing feasible set.
+The stable-set family uses 12 disjoint conflict cliques with 4 candidate
+vertices per clique, so an independent set selects one non-conflicting vertex
+from each clique when weights are positive. The path family uses 4 parallel
+coupled paths, each with 12 edges.
 
-After adding the stable-set family, rerun the script above before interpreting
-`Latest default run`, because the committed CSV/plot outputs must be regenerated
-from the updated generator.
+After changing the randomized toy generator, rerun the script above before
+interpreting `Latest default run`, because the committed CSV/plot outputs must
+be regenerated from the updated generator.
 
 Interpretation: this is still a toy mechanism study, not a theorem. The useful
 claim is conditional: when close substitutes exist, solution identity can flip

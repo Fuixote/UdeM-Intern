@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import importlib.util
 import inspect
+import math
 import sys
 from pathlib import Path
 
@@ -57,6 +58,9 @@ def load_generator_defaults() -> dict[str, int]:
     return {
         "packing_blocks": signature.parameters["packing_blocks"].default,
         "packing_choices": signature.parameters["packing_choices"].default,
+        "kep_vertices": signature.parameters["kep_vertices"].default,
+        "kep_arc_probability": signature.parameters["kep_arc_probability"].default,
+        "kep_max_cycle": signature.parameters["kep_max_cycle"].default,
         "stable_cliques": signature.parameters["stable_cliques"].default,
         "stable_vertices_per_clique": signature.parameters[
             "stable_vertices_per_clique"
@@ -122,6 +126,93 @@ def draw_decomposable_packing(ax, blocks: int, choices: int) -> None:
         )
         ax.text(xs[col], ys[row] - 0.12, f"B{block_idx + 1}", ha="center", fontsize=7, color=PANEL_GRAY)
     ax.text(0.50, 0.065, "feasible solution = one selected component per block", ha="center", fontsize=8.4, color=TEXT)
+
+
+def draw_cycle_arrows(
+    ax,
+    positions: dict[int, tuple[float, float]],
+    cycle: tuple[int, ...],
+    *,
+    color: str,
+    linewidth: float,
+    linestyle: str = "solid",
+    alpha: float = 1.0,
+) -> None:
+    for idx, start in enumerate(cycle):
+        end = cycle[(idx + 1) % len(cycle)]
+        patch = FancyArrowPatch(
+            positions[start],
+            positions[end],
+            arrowstyle="-|>",
+            mutation_scale=8,
+            linewidth=linewidth,
+            linestyle=linestyle,
+            color=color,
+            alpha=alpha,
+            connectionstyle="arc3,rad=0.10",
+            shrinkA=8,
+            shrinkB=8,
+            zorder=2,
+        )
+        ax.add_patch(patch)
+
+
+def draw_kep_set_packing(
+    ax,
+    vertices: int,
+    arc_probability: float,
+    max_cycle: int,
+) -> None:
+    setup_axis(
+        ax,
+        "KEP-like set packing",
+        f"{vertices} pair vertices, random arcs p={arc_probability:g}, 2/{max_cycle}-cycles",
+    )
+    center = (0.50, 0.52)
+    radius = 0.32
+    positions: dict[int, tuple[float, float]] = {}
+    for vertex in range(1, vertices + 1):
+        angle = math.pi / 2 - 2.0 * math.pi * (vertex - 1) / vertices
+        positions[vertex] = (
+            center[0] + radius * math.cos(angle),
+            center[1] + radius * math.sin(angle),
+        )
+
+    candidate_cycles = ((1, 2), (5, 7, 9), (2, 3, 4), (8, 10))
+    draw_cycle_arrows(ax, positions, candidate_cycles[2], color=EDGE_GRAY, linewidth=1.0, linestyle="--", alpha=0.9)
+    draw_cycle_arrows(ax, positions, candidate_cycles[0], color=PANEL_BLUE, linewidth=1.9)
+    draw_cycle_arrows(ax, positions, candidate_cycles[1], color=PANEL_GREEN, linewidth=1.9)
+    draw_cycle_arrows(ax, positions, candidate_cycles[3], color=PANEL_ORANGE, linewidth=1.7)
+
+    selected_vertices = set(candidate_cycles[0]) | set(candidate_cycles[1]) | set(candidate_cycles[3])
+    conflicted_vertices = set(candidate_cycles[2]) - selected_vertices
+    for vertex, (x_pos, y_pos) in positions.items():
+        if vertex in selected_vertices:
+            face = "white"
+            edge = PANEL_BLUE if vertex in candidate_cycles[0] else PANEL_GREEN
+            linewidth = 1.35
+        elif vertex in conflicted_vertices:
+            face = "#F3F4F6"
+            edge = PANEL_GRAY
+            linewidth = 0.9
+        else:
+            face = "white"
+            edge = PANEL_GRAY
+            linewidth = 0.75
+        ax.add_patch(
+            Circle(
+                (x_pos, y_pos),
+                0.018,
+                facecolor=face,
+                edgecolor=edge,
+                linewidth=linewidth,
+                zorder=3,
+            )
+        )
+        ax.text(x_pos, y_pos - 0.004, str(vertex), ha="center", va="center", fontsize=6.4, color=TEXT, zorder=4)
+
+    ax.text(0.50, 0.115, "candidate components = directed 2/3-cycles", ha="center", fontsize=8.2, color=TEXT)
+    ax.text(0.50, 0.065, "feasible solution = vertex-disjoint selected cycles", ha="center", fontsize=8.4, color=TEXT)
 
 
 def draw_clique(ax, center_x: float, center_y: float, radius: float, chosen: int) -> None:
@@ -231,10 +322,11 @@ def draw_parallel_path(ax, path_count: int, path_length: int) -> None:
 def main() -> int:
     defaults = load_generator_defaults()
     fig, axes = plt.subplots(1, 3, figsize=(12.8, 4.1), constrained_layout=True)
-    draw_decomposable_packing(
+    draw_kep_set_packing(
         axes[0],
-        blocks=defaults["packing_blocks"],
-        choices=defaults["packing_choices"],
+        vertices=defaults["kep_vertices"],
+        arc_probability=defaults["kep_arc_probability"],
+        max_cycle=defaults["kep_max_cycle"],
     )
     draw_stable_set(
         axes[1],

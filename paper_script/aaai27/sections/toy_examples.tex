@@ -9,27 +9,30 @@ selected solution identity, and how much true-objective regret that identity
 change creates.
 
 \paragraph{Randomized families.}
-We compare three stochastic problem families. The first is a decomposable
-packing family with 12 independent blocks and 4 candidate components per block;
-a feasible solution chooses one component from each block. The second is a
-stable-set realization of the same close-substitute mechanism: the conflict
-graph is a disjoint union of 12 cliques with 4 candidate vertices per clique, so
-an independent set can choose at most one vertex from each clique. With positive
-weights, the oracle and predicted solutions choose one non-conflicting vertex
-per clique. The third is a path-like control with 4 parallel $s$--$t$ paths,
-each containing 12 edges; selecting a different path changes the entire coupled
-route. Figure~\ref{fig:randomized-toy-setup} visualizes these feasibility
+The generated sweep includes the original abstract decomposable packing family
+as a clean control, but the paper-facing comparison focuses on three stochastic
+families. The first is a random KEP-like set-packing family: we generate 12
+patient-donor pair vertices, random directed compatibility arcs with probability
+0.35, enumerate candidate 2- and 3-cycles, and choose a maximum-weight set of
+vertex-disjoint cycles. The second is a stable-set realization of the same
+close-substitute mechanism: the conflict graph is a disjoint union of 12
+cliques with 4 candidate vertices per clique, so an independent set can choose
+at most one vertex from each clique. With positive weights, the oracle and
+predicted solutions choose one non-conflicting vertex per clique. The third is
+a path-like control with 4 parallel $s$--$t$ paths, each containing 12 edges;
+selecting a different path changes the entire coupled route.
+Figure~\ref{fig:randomized-toy-setup} visualizes these three feasibility
 structures; the random true coefficients and prediction noise are generated on
 top of these structures.
 
 \begin{figure*}[t]
     \centering
     \includegraphics[width=0.98\textwidth]{figures/randomized_toy_setup_schematic.png}
-    \caption{Experimental setup for the three randomized toy families. The
-    packing and stable-set families are decomposable: a solution is assembled by
-    choosing one local component from each block or conflict clique. In the
-    parallel shortest-path control, choosing a different path changes the whole
-    coupled route.}
+    \caption{Experimental setup for the three paper-facing randomized toy
+    families. The KEP-like family chooses vertex-disjoint directed cycles, the
+    stable-set family chooses non-conflicting vertices from disjoint cliques, and
+    the parallel shortest-path control changes the whole coupled route when a
+    different path is selected.}
     \label{fig:randomized-toy-setup}
 \end{figure*}
 
@@ -46,39 +49,42 @@ can improve over two-stage by more than the remaining gap to oracle.
 \begin{figure*}[t]
     \centering
     \includegraphics[width=0.98\textwidth]{figures/randomized_identity_mismatch_vs_regret.png}
-    \caption{Randomized toy-family comparison. Solution identity can change
-    frequently even when normalized regret remains small. The relevant quantity
-    for decision-focused learning is therefore not identity mismatch alone, but
-    the regret left after the two-stage selected solution is evaluated under the
-    true objective.}
+    \caption{Randomized toy-family comparison, including the abstract
+    decomposable packing control retained in the generated sweep. Solution
+    identity can change frequently even when normalized regret remains small.
+    The relevant quantity for decision-focused learning is therefore not
+    identity mismatch alone, but the regret left after the two-stage selected
+    solution is evaluated under the true objective.}
     \label{fig:randomized-identity-regret}
 \end{figure*}
 
 \paragraph{Close substitutes: frequent identity changes, small regret.}
 Table~\ref{tab:randomized-toy-summary} reports representative settings from the
 randomized sweep. In the close-substitute regime ($\tau=0.02$,
-$\sigma=0.10$), both decomposable packing and clustered stable set have
-$100\%$ identity mismatch, but their mean normalized regrets are only $1.07\%$
-and $1.05\%$, respectively, and all instances are within $5\%$ of oracle. Thus,
-in these decomposable families, noisy two-stage predictions often change the
-selected solution, but the selected solution is still a close substitute under
-the true objective.
+$\sigma=0.10$), the KEP-like set-packing family has $53.8\%$ identity mismatch
+but only $0.21\%$ mean normalized regret, with $99.8\%$ of instances within
+$5\%$ of oracle. The clustered stable-set family shows an even stronger identity
+effect: identity mismatch is $100\%$, but mean regret is only $1.05\%$ and all
+instances are within $5\%$ of oracle. Thus, in these close-substitute families,
+noisy two-stage predictions often change the selected solution, but the selected
+solution is still a close substitute under the true objective.
 
 The shortest-path control shows why the problem label alone is not the full
 explanation. In the close-substitute path regime, the path family also has
 small mean regret ($0.47\%$), because the alternative paths are themselves
 close. This supports the conditional version of our hypothesis: close
-substitutes, not packing terminology by itself, limit the room for
+substitutes, not the problem label by itself, limit the room for
 decision-focused learning.
 
 \paragraph{Separated alternatives: regret can reappear.}
 When alternatives are more separated and prediction noise is larger
-($\tau=0.30$, $\sigma=0.30$), the decomposable families no longer have uniformly
-small regret. Mean regret rises to $7.71\%$ for packing and $7.57\%$ for stable
-set, and the within-$5\%$ rates fall to $21.2\%$ and $24.8\%$. This does not
-contradict Property X; it clarifies it. Decomposability makes local replacements
-possible, but if prediction noise changes many local components at once, the
-losses can accumulate and leave more room for decision-focused learning.
+($\tau=0.30$, $\sigma=0.30$), the close-substitute story becomes conditional.
+Mean regret rises to $3.27\%$ for the KEP-like set-packing family and $7.57\%$
+for stable set, and the within-$5\%$ rates fall to $73.0\%$ and $24.8\%$,
+respectively. This does not contradict Property X; it clarifies it. Vertex- or
+block-level substitutes can limit regret, but if prediction noise moves the
+solution away from enough good local components, the losses can accumulate and
+leave more room for decision-focused learning.
 
 For the path family in the same separated regime, the unconditional mean regret
 is $2.30\%$ because identity mismatch occurs in only $39.8\%$ of instances.
@@ -95,11 +101,11 @@ the regret is controlled by the path-level best-second gap.
 \toprule
 Regime & Family & Mismatch & Mean regret & Regret if mismatch & Oracle--2nd gap & Within 5\% \\
 \midrule
-$\tau=.02,\sigma=.10$ & Packing & 100.0\% & 1.07\% & 1.07\% & 0.0067\% & 100.0\% \\
+$\tau=.02,\sigma=.10$ & KEP-like set packing & 53.8\% & 0.21\% & 0.38\% & 2.5069\% & 99.8\% \\
 $\tau=.02,\sigma=.10$ & Stable set & 100.0\% & 1.05\% & 1.05\% & 0.0072\% & 100.0\% \\
 $\tau=.02,\sigma=.10$ & Shortest path & 66.8\% & 0.47\% & 0.71\% & 0.4163\% & 100.0\% \\
 \midrule
-$\tau=.30,\sigma=.30$ & Packing & 100.0\% & 7.71\% & 7.71\% & 0.0800\% & 21.2\% \\
+$\tau=.30,\sigma=.30$ & KEP-like set packing & 61.4\% & 3.27\% & 5.32\% & 2.9818\% & 73.0\% \\
 $\tau=.30,\sigma=.30$ & Stable set & 100.0\% & 7.57\% & 7.57\% & 0.0880\% & 24.8\% \\
 $\tau=.30,\sigma=.30$ & Shortest path & 39.8\% & 2.30\% & 5.78\% & 5.80\% & 81.8\% \\
 \bottomrule
@@ -126,9 +132,9 @@ potential room for DFL increases.}
 The randomized toy experiments support the conditional Property X hypothesis.
 For combinatorial problems with close substitute solutions, two-stage
 prediction can select a different solution identity while leaving little
-decision regret for DFL to remove. This pattern appears not only in an abstract
-decomposable packing model but also in a stable-set formulation with conflict
-constraints. Conversely, when the selected alternative is materially worse, as
-can happen when many local components are changed or when a path is redirected
-to a worse route, the regret and the potential value of decision-focused
-learning both increase.
+decision regret for DFL to remove. This pattern appears in a random KEP-like
+cycle-packing model and in a stable-set formulation with conflict constraints.
+Conversely, when the selected alternative is materially worse, as can happen
+when many local components are changed or when a path is redirected to a worse
+route, the regret and the potential value of decision-focused learning both
+increase.

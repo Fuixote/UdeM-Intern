@@ -163,42 +163,48 @@ perturbation is random, we repeat the generation with perturbation seeds
 0--4. This gives 15 graph-perturbation cases per variant and method.
 
 \paragraph{Results.}
-Table~\ref{tab:density-summary} summarizes the rank-2 results across the three
-selected graphs and five perturbation seeds. These values should not be compared
-directly to the full-run 3600-case averages in Table~\ref{tab:second-best-summary},
-because the density study uses three deliberately selected mechanism graphs. The
-original selected cases have rank-2 mean normalized gaps of $11.38\%$ for 2stage
-and $11.76\%$ for SPO+.
-The add-arc variants reduce the average rank-2 gap: add-$25\%$ arcs gives
-$5.83\%$ for 2stage and $4.86\%$ for SPO+, while add-25-arcs gives $6.76\%$
-and $5.69\%$. Removal variants are more seed-sensitive, but do not show a
-systematic worsening in this selected set.
+Table~\ref{tab:density-summary} reports the density sensitivity graph by graph.
+This is important because the three graphs were selected to represent different
+mechanisms, so pooling them into one mean would hide the case-level behavior. For
+the add-arc and remove-arc rows, each cell reports the range of mean rank-2 gaps
+across the fixed-count and percentage variants, averaged over perturbation seeds
+0--4 within each variant.
 
-\begin{table}[t]
+\begin{table*}[t]
 \centering
 \small
-\setlength{\tabcolsep}{4pt}
-\begin{tabular}{@{}llrr@{}}
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}llllll@{}}
 \toprule
-Variant & Method & Mean gap & Within 5\% \\
+Graph & Mechanism & Variant summary & 2stage rank-2 gap & SPO+ rank-2 gap & Preserved? \\
 \midrule
-Original & 2stage & 11.38\% & 66.67\% \\
-Original & SPO+ & 11.76\% & 66.67\% \\
-Add 25\% arcs & 2stage & 5.83\% & 53.33\% \\
-Add 25\% arcs & SPO+ & 4.86\% & 60.00\% \\
-Add 25 arcs & 2stage & 6.76\% & 46.67\% \\
-Add 25 arcs & SPO+ & 5.69\% & 53.33\% \\
-Remove 25 arcs & 2stage & 8.57\% & 60.00\% \\
-Remove 25 arcs & SPO+ & 8.28\% & 66.67\% \\
-Remove 25\% arcs & 2stage & 4.86\% & 53.33\% \\
-Remove 25\% arcs & SPO+ & 8.14\% & 46.67\% \\
+G-696 & Close alternatives & Original & 1.02\% & 3.75\% & Yes \\
+G-696 & Close alternatives & Add arcs & 2.40--4.69\% & 3.49--4.31\% & Yes \\
+G-696 & Close alternatives & Remove arcs & 2.25--3.58\% & 1.75--5.83\% & Mixed \\
+\midrule
+G-392 & SPO+ correction & Original & 31.94\% & 2.53\% & Yes \\
+G-392 & SPO+ correction & Add arcs & 5.45--10.01\% & 5.37--8.74\% & Yes \\
+G-392 & SPO+ correction & Remove arcs & 6.87--12.96\% & 7.20--12.60\% & Mixed \\
+\midrule
+G-1560 & Rank-2 promotion & Original & 1.20\% & 29.00\% & Yes \\
+G-1560 & Rank-2 promotion & Add arcs & 7.35--7.87\% & 4.83--4.90\% & Mixed \\
+G-1560 & Rank-2 promotion & Remove arcs & 4.12--10.48\% & 5.99--15.88\% & Mixed \\
 \bottomrule
 \end{tabular}
-\caption{Arc-density sensitivity on three selected mechanism graphs, averaged
-over perturbation seeds 0--4. These are selected-case robustness results, not
-population-level statistics.}
+\caption{Per-graph arc-density sensitivity on three selected mechanism graphs.
+Rank-2 gaps are normalized oracle gaps. Add/remove rows summarize the two
+corresponding arc-density variants as ranges over their seed-averaged gaps. These
+are selected-case mechanism results, not population-level statistics.}
 \label{tab:density-summary}
-\end{table}
+\end{table*}
+
+The per-graph view clarifies what the pooled average obscures. G-696 remains a
+close-alternative case under most perturbations. G-392 starts as a strong
+two-stage failure corrected by SPO+, but density changes soften the original
+failure mode and reduce the separation between methods. G-1560 preserves the
+original rank-2 promotion relation only in the unperturbed graph; after arc
+changes, the exact promotion mechanism becomes mixed even though rank-2 gaps
+remain informative.
 
 The oracle changes in the expected direction: add-arc variants increase the
 oracle objective in all selected graph-perturbation cases, and remove-arc
