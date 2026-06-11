@@ -20,11 +20,17 @@ edges participate in the symmetric difference between selected and oracle
 solutions, and whether the alternative solution is truly worse.
 
 \paragraph{Contributions.}
-We make three contributions. First, we validate the relevant SPO+ training path
-against independent reference implementations so that later interpretation is
-not confounded by implementation bugs. Second, we provide decision-level
-diagnostics for kidney exchange that distinguish decision-critical prediction
-errors from irrelevant prediction errors. Third, we build a toy family showing
-that close-substitute behavior is not specific to one hand-picked instance: it
-appears across several packing-style structures and contrasts with path-like
-negative controls.
+We make four contributions.
+\begin{itemize}
+    \item We identify close substitute solutions as a mechanism explaining why
+    DFL can have limited gains in KEP-like packing problems, even when it
+    changes the selected solution.
+    \item We introduce a best/second-best diagnostic based on no-good cuts,
+    measuring whether alternative predicted solutions remain close to the oracle
+    under the true objective.
+    \item We validate the mechanism empirically through KEP rank-2 analysis,
+    cycle-length sensitivity, density sensitivity, and graph-level case studies.
+    \item We provide controlled toy examples showing the same pattern in
+    stable set, matching, knapsack, and matroid problems, with shortest-path and
+    serial-path controls showing much larger regret.
+\end{itemize}

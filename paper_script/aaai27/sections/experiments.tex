@@ -47,9 +47,10 @@ solutions are within $5\%$ of the oracle.
 \begin{table}[t]
 \centering
 \small
-\begin{tabular}{llrrrr}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}llrrrr@{}}
 \toprule
-Method & Rank & Mean gap & Median gap & Exact & Within 5\% \\
+Method & Rank & Mean & Median & Exact & Within 5\% \\
 \midrule
 2stage & 1 & 6.09\% & 4.38\% & 17.72\% & 53.14\% \\
 2stage & 2 & 7.04\% & 5.75\% & 8.14\% & 45.19\% \\
@@ -94,9 +95,10 @@ methods.
 \begin{table}[t]
 \centering
 \small
-\begin{tabular}{llrrr}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}llrrr@{}}
 \toprule
-Max cycle & Method & Rank-2 mean gap & Rank-2 median gap & Within 5\% \\
+$K$ & Method & Mean gap & Median gap & Within 5\% \\
 \midrule
 3 & 2stage & 7.04\% & 5.75\% & 45.19\% \\
 4 & 2stage & 6.93\% & 5.53\% & 47.50\% \\
@@ -149,9 +151,10 @@ systematic worsening in this selected set.
 \begin{table}[t]
 \centering
 \small
-\begin{tabular}{llrr}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}llrr@{}}
 \toprule
-Variant & Method & Rank-2 mean gap & Within 5\% \\
+Variant & Method & Mean gap & Within 5\% \\
 \midrule
 Original & 2stage & 11.38\% & 66.67\% \\
 Original & SPO+ & 11.76\% & 66.67\% \\
@@ -187,6 +190,8 @@ the density results as a mechanism stress test rather than as a full-population
 estimate. The key conclusion is that close second-best behavior is not driven by
 a single perturbation seed, but the exact mechanism varies by graph.
 
+\FloatBarrier
+
 \subsection{Graph-Level Mechanism Case Studies}
 
 \paragraph{Question.}
@@ -212,7 +217,10 @@ perturbations.
 \begin{table*}[t]
 \centering
 \small
-\begin{tabular}{p{0.14\linewidth}p{0.22\linewidth}p{0.28\linewidth}p{0.28\linewidth}}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.11\linewidth}
+                >{\raggedright\arraybackslash}p{0.22\linewidth}
+                >{\raggedright\arraybackslash}p{0.30\linewidth}
+                >{\raggedright\arraybackslash}p{0.29\linewidth}@{}}
 \toprule
 Graph & Original mechanism & Density effect & Interpretation \\
 \midrule

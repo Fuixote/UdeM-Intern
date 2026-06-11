@@ -1,20 +1,66 @@
-\section{Mechanism: Close Substitutes}
+\section{Mechanism: Close Substitute Solutions}
 
 Our central hypothesis is that DFL is most useful when prediction errors change
-the objective value of the selected solution, not merely its identity. In
-packing-style graph problems, feasible solutions can be composed of several
-components. If each component has close substitutes, a prediction error may swap
-one feasible solution for another while changing the true objective only
-slightly.
+the objective value of the selected solution, not merely its identity. This
+distinction is important in graph combinatorial optimization because two
+different feasible solutions can have very similar true objective values.
 
-This mechanism predicts two empirical patterns. First, solution identity can
-change even when normalized regret remains small. Second, all-edge prediction
-error should be a weak explanation of decision gap compared with error on
-decision-changing edges, such as edges in the symmetric difference between the
-oracle and selected solutions.
+\paragraph{Property X.}
+We use Property X to denote close substitute solutions in a decomposable
+packing-style feasible set. Informally, a problem has this property when a
+feasible decision is assembled from several mostly independent components, and
+one component can often be replaced by another feasible component with only a
+small change in true objective value. In such problems, prediction errors may
+change the selected solution identity without creating large decision regret.
 
-This framing avoids a stronger claim that DFL is unnecessary for all packing
-problems. The claim is conditional: when the feasible landscape contains many
-near-optimal alternatives, DFL has less room to improve over a strong two-stage
-model; when prediction errors redirect a coupled decision to a much worse
-solution, DFL can matter substantially.
+\paragraph{Decision identity vs. decision value.}
+Let $y^\star$ be the oracle solution under the true objective and let
+$y_{\mathrm{2stage}}$ be the solution selected by a two-stage predictor. The fact
+that $y_{\mathrm{2stage}} \neq y^\star$ is not, by itself, evidence of a harmful
+decision error. The relevant quantity is the normalized oracle gap,
+\[
+    \mathrm{gap}(y)
+    =
+    \frac{\mathrm{obj}(y^\star)-\mathrm{obj}(y)}
+    {|\mathrm{obj}(y^\star)|},
+\]
+for reward-maximization problems. A different selected solution with small
+$\mathrm{gap}(y)$ is a close substitute, not a catastrophic decision failure.
+
+\paragraph{A simple implication.}
+This observation creates an immediate ceiling on possible improvement. If
+\[
+    \mathrm{gap}(y_{\mathrm{2stage}}) \le \epsilon,
+\]
+then the maximum possible normalized improvement of any method over two-stage
+on this instance is at most $\epsilon$. Indeed, even an oracle-perfect method
+can reduce the gap only from $\mathrm{gap}(y_{\mathrm{2stage}})$ to zero. Thus,
+when two-stage already selects an $\epsilon$-near-oracle alternative, a
+decision-focused method has little remaining objective gap to close on that
+instance.
+
+\paragraph{Improvement ceiling.}
+This ceiling does not imply that DFL is unnecessary. It says that the benefit of
+DFL is instance-dependent. DFL can matter when prediction errors move the
+optimizer to a much worse solution. But in instances with many close
+substitutes, improving the prediction objective or even recovering the exact
+oracle identity may yield only limited normalized-regret improvement. This is
+the mechanism we test empirically: KEP may have many non-oracle solutions that
+are still near-optimal under the true objective.
+
+\paragraph{Why KEP fits.}
+Kidney-exchange decisions are packings of vertex-disjoint cycles and chains.
+This structure is decomposable: a feasible solution can often exchange one
+cycle or chain for another while preserving feasibility elsewhere in the graph.
+When several cycles or chains have similar true value, different packings can
+be close substitutes. Therefore, a two-stage model may select a different set of
+cycles/chains from the oracle while still achieving a near-oracle objective
+value.
+
+\paragraph{Why shortest path differs.}
+Shortest-path decisions have a more coupled serial structure. Selecting one
+wrong intermediate segment can redirect the entire path, and the resulting path
+need not be a local close substitute for the oracle path. Thus, a similar
+prediction-order error can create much larger regret in shortest path than in a
+decomposable packing problem. This contrast explains why shortest-path
+benchmarks can show large DFL gains while KEP shows more moderate gains.

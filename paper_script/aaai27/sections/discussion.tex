@@ -1,12 +1,46 @@
 \section{Discussion}
 
-The results should be framed as an explanation of when DFL has room to improve,
-not as a universal negative result about packing problems. Close substitutes can
-make two-stage predictions decision-robust even when some edge predictions are
-poor. Conversely, coupled path-like decisions can amplify a small ranking error
-into large regret.
+\paragraph{Guideline.}
+The main takeaway is not that DFL is broadly unnecessary, but that its room for
+improvement depends on how prediction errors affect the downstream objective.
+DFL is most useful when prediction errors change the objective value of the
+selected solution, not merely its identity. If a predictor selects a different
+feasible solution whose true value is nearly oracle-level, then the normalized
+regret left for any decision-aware training method to remove is small.
 
-The next writing step is to replace the placeholder experiment paragraph with
-the exact decision-analysis tables and figure references, then tighten the
-claims around the strongest verified evidence: observed near ties, solution
-overlap, and symmetric-difference error correlations.
+\paragraph{When two-stage may be enough.}
+In problems with close substitute solutions, a two-stage model can have decision
+performance similar to DFL even when it does not recover the oracle solution
+identity. This is especially plausible in decomposable packing-style feasible
+sets, where a solution is assembled from multiple components and one component
+can often be exchanged for another with little loss in objective value. Our KEP
+rank-2 evidence, cycle-length sensitivity, density perturbations, and case
+studies all point to this mechanism: many alternative packings remain close to
+the oracle under the true objective.
+
+\paragraph{When DFL may help.}
+The contrast is that some feasible sets amplify local prediction errors. In
+coupled or path-like problems, an incorrect local preference can redirect the
+whole decision rather than swapping one nearly equivalent component. In that
+setting, selected-solution identity and objective value are more tightly linked,
+and DFL can have substantially more room to improve over a two-stage baseline.
+This helps explain why shortest-path benchmarks can show large SPO+ gains while
+KEP-like packing problems may show more similar performance between two-stage
+and optimization-aware training.
+
+\paragraph{Limitations.}
+Our KEP experiments cover one synthetic regime, so the numerical magnitudes
+should not be read as universal constants for kidney exchange. The density
+sensitivity analysis uses selected case graphs rather than a full distributional
+benchmark, and the toy examples are illustrative mechanisms rather than
+statistical proof. The evidence supports the proposed explanation, but broader
+benchmarks are needed before treating Property X as a complete taxonomy of when
+DFL helps.
+
+\paragraph{Future work.}
+A natural next step is to test Property X directly on standard stable-set, set
+packing, matching, and knapsack-style benchmarks. The key empirical question is
+whether best/second-best diagnostics can predict when two-stage and DFL methods
+will have similar decision performance. If this diagnostic transfers across
+problem classes, it could become a practical pre-check for whether the extra
+complexity of decision-focused training is likely to pay off.

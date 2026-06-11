@@ -1,10 +1,11 @@
-\section{Toy Examples}
+\section{Toy Examples Supporting the Mechanism}
 
-Figure~\ref{fig:toy-regret} summarizes the expanded toy family. In the
-packing-style examples, two-stage prediction changes the selected solution but
-the normalized gap remains below the 5\% reference line. In the path-like
-controls, a ranking error redirects the whole connected path and creates much
-larger regret.
+We first illustrate Property X in controlled toy problems before turning to
+real KEP evidence. Figure~\ref{fig:toy-regret} summarizes the expanded toy
+family. In the packing-style examples, two-stage prediction changes the
+selected solution but the normalized gap remains below the 5\% reference line.
+In the path-like controls, a ranking error redirects the whole connected path
+and creates much larger regret.
 
 \begin{figure}[t]
     \centering
@@ -37,8 +38,36 @@ for each toy problem family.
     \input{tables/toy_summary_for_paper}
 \end{table*}
 
-The parametric construction is the most direct generality argument. It contains
-two complete feasible solutions, $S_\star$ and $S_\epsilon$, with true values
-$1$ and $1-\epsilon$. If the two-stage predictor slightly overestimates
-$S_\epsilon$, it selects the wrong solution identity. Nevertheless, normalized
-regret is only $\epsilon$.
+\paragraph{Packing-style positive examples.}
+The positive examples instantiate Property X across several decomposable
+packing-style structures: KEP/set packing, stable set, weighted matching,
+cardinality knapsack, and partition matroid. In every case, the two-stage
+predictor selects a solution with a different identity from the oracle, but the
+true objective loss is small. The normalized gap is $1\%$ for KEP/set packing,
+$1\%$ for stable set, $2\%$ for weighted matching, $2.5\%$ for cardinality
+knapsack, and $1\%$ for partition matroid. These examples show that wrong
+solution identity does not necessarily imply a large decision error. The
+selected solution can be a close substitute for the oracle because the feasible
+decision is assembled from replaceable components.
+
+\paragraph{Path-like negative controls.}
+The path-like examples show the opposite behavior. In the shortest-path toy
+problem, two-stage underestimates the wrong path and selects a path whose true
+cost gives $60\%$ normalized regret. In the serial-path control, the same type
+of ranking error redirects the whole chain and yields $50\%$ regret. These
+negative controls support the shortest-path contrast in our main question:
+when feasibility couples the decision into one serial structure, a local
+prediction error can redirect the entire solution rather than replacing one
+component with a close substitute.
+
+\paragraph{Parametric epsilon family.}
+The parametric construction is the closest toy example to a general mechanism
+argument. It contains two complete feasible solutions, $S_\star$ and
+$S_\epsilon$, with true values $1$ and $1-\epsilon$. If the two-stage predictor
+slightly overestimates $S_\epsilon$, it selects the wrong solution identity for
+every $\epsilon$. Nevertheless, the normalized regret is exactly $\epsilon$.
+Thus, regret can be made arbitrarily small even when the selected solution
+identity changes. This is the core intuition behind the improvement ceiling in
+the previous section: if a two-stage model already selects an
+$\epsilon$-near-oracle close substitute, then even a decision-focused method has
+at most $\epsilon$ normalized gap left to close on that instance.
