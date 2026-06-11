@@ -1,18 +1,259 @@
 \section{Experiments and Diagnostics}
 
-The empirical analysis focuses on kidney-exchange prediction tasks and
-shortest-path controls. For kidney exchange, we compare a two-stage predictor
-selected by validation MSE with SPO+ models selected by validation decision
-metrics. We evaluate on held-out graph instances and summarize normalized
-decision gap, solution overlap, and edge-level prediction-error diagnostics.
+We now test the central hypothesis from the previous section: in
+decomposable packing-style problems, prediction errors may change the identity
+of the selected solution without substantially changing its true objective
+value. We focus on kidney exchange, where a feasible decision is a set of
+vertex-disjoint cycles and chains. All kidney-exchange experiments use the
+Step2b-d8 label regime and compare a two-stage model selected by validation MSE
+with an SPO+ model selected by validation SPO+ loss. Unless otherwise stated,
+we use maximum cycle length three and maximum chain length four.
 
-The current decision-analysis evidence supports the close-substitute story in
-two ways. First, many different selected solutions are near ties under the true
-objective. Second, raw all-edge MSE is much less aligned with decision gap than
-error concentrated on decision-changing edges. This suggests that prediction
-errors matter most when they alter the selected feasible components in a way
-that harms the true objective.
+For each graph and method, we compute the best predicted solution, denoted
+rank~1. We then add a no-good cut excluding this solution and re-solve to obtain
+the second-best distinct predicted solution, denoted rank~2. Both solutions are
+evaluated using the true edge weights and compared against the oracle solution.
+The main quantity of interest is the normalized oracle gap:
+\[
+    \mathrm{gap}(y)
+    =
+    \frac{\mathrm{obj}(y^\star)-\mathrm{obj}(y)}
+    {|\mathrm{obj}(y^\star)|},
+\]
+where $y^\star$ is the oracle solution and $\mathrm{obj}(\cdot)$ is the true
+objective value. A rank-2 solution within $5\%$ of the oracle indicates that the
+second-best predicted solution is still a high-quality alternative.
 
-The final paper should report the main decision-analysis tables and plots here:
-case-study summaries, observed-candidate near-tie statistics, and
-decision-critical MSE correlations.
+\subsection{Close Second-Best Solutions in KEP}
+
+\paragraph{Question.}
+Do KEP instances contain close alternative solutions near the top of the
+predicted ranking?
+
+\paragraph{Setup.}
+We evaluate 9 selected training seeds and 400 held-out graphs, giving 3600
+graph-seed cases for each method and rank. For each case, we compute rank~1 and
+rank~2 solutions for 2stage and SPO+ and evaluate both under the true weights.
+
+\paragraph{Results.}
+Table~\ref{tab:second-best-summary} summarizes the main rank-1/rank-2
+comparison. SPO+ improves the best predicted solution over 2stage, reducing the
+mean normalized gap from $6.09\%$ to $4.94\%$. However, the rank-2 solutions do
+not collapse in quality. The 2stage rank-2 solution has mean normalized gap
+$7.04\%$, and the SPO+ rank-2 solution has mean normalized gap $6.32\%$.
+Moreover, $45.19\%$ of 2stage rank-2 solutions and $47.97\%$ of SPO+ rank-2
+solutions are within $5\%$ of the oracle.
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{llrrrr}
+\toprule
+Method & Rank & Mean gap & Median gap & Exact & Within 5\% \\
+\midrule
+2stage & 1 & 6.09\% & 4.38\% & 17.72\% & 53.14\% \\
+2stage & 2 & 7.04\% & 5.75\% & 8.14\% & 45.19\% \\
+SPO+ & 1 & 4.94\% & 3.46\% & 23.44\% & 59.28\% \\
+SPO+ & 2 & 6.32\% & 5.28\% & 7.19\% & 47.97\% \\
+\bottomrule
+\end{tabular}
+\caption{Best and second-best KEP solutions under max-cycle 3. Rank~2 is
+obtained by excluding the rank-1 solution with a no-good cut.}
+\label{tab:second-best-summary}
+\end{table}
+
+\paragraph{Interpretation.}
+These results directly support the close-substitute hypothesis. In many KEP
+instances, excluding the best predicted solution still leaves a second predicted
+solution whose true objective value is close to the oracle. Thus, changing
+solution identity is not always equivalent to incurring large decision regret.
+This helps explain why the average improvement of SPO+ over 2stage is moderate:
+when 2stage already selects a near-oracle alternative, there is little remaining
+objective gap for a decision-focused method to close.
+
+\subsection{Cycle-Length Sensitivity}
+
+\paragraph{Question.}
+Is the closeness of rank-2 solutions merely an artifact of restricting cycles
+to length three?
+
+\paragraph{Setup.}
+We keep the same trained models, graph split, and selected seeds, and only
+change the KEP feasible set by allowing maximum cycle length $K \in
+\{3,4,5\}$. The maximum chain length remains fixed at four. For each $K$, we
+recompute the oracle, rank~1, and rank~2 solutions.
+
+\paragraph{Results.}
+Table~\ref{tab:cycle-summary} reports the rank-2 results across cycle lengths.
+The rank-2 gap does not increase as longer cycles are allowed. For 2stage, the
+rank-2 mean normalized gap is essentially stable: $7.04\%$ for $K=3$,
+$6.93\%$ for $K=4$, and $6.88\%$ for $K=5$. For SPO+, the rank-2 gap decreases
+from $6.32\%$ to $5.61\%$. The within-$5\%$ rate also increases for both
+methods.
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{llrrr}
+\toprule
+Max cycle & Method & Rank-2 mean gap & Rank-2 median gap & Within 5\% \\
+\midrule
+3 & 2stage & 7.04\% & 5.75\% & 45.19\% \\
+4 & 2stage & 6.93\% & 5.53\% & 47.50\% \\
+5 & 2stage & 6.88\% & 5.20\% & 48.94\% \\
+3 & SPO+ & 6.32\% & 5.28\% & 47.97\% \\
+4 & SPO+ & 6.20\% & 5.03\% & 49.78\% \\
+5 & SPO+ & 5.61\% & 4.39\% & 54.83\% \\
+\bottomrule
+\end{tabular}
+\caption{Cycle-length sensitivity. Increasing the maximum cycle length from 3
+to 4 or 5 does not make rank-2 solutions systematically farther from the
+oracle.}
+\label{tab:cycle-summary}
+\end{table}
+
+\paragraph{Interpretation.}
+The max-cycle-3 observation is robust to longer cycles. Although enlarging the
+feasible set changes the oracle and many selected solutions, the second-best
+solutions remain close to the oracle in aggregate. Therefore, the presence of
+close rank-2 alternatives is not simply a consequence of the max-cycle-3
+restriction. We treat oracle improvement under larger feasible sets as a sanity
+check rather than a main finding, since it is expected when more feasible
+solutions are allowed.
+
+\subsection{Arc-Density Sensitivity}
+
+\paragraph{Question.}
+Does the close-rank-2 behavior persist when the graph density changes?
+
+\paragraph{Setup.}
+We perform a selected-case density sensitivity study on three
+mechanism-representative graphs: G-696, a close-alternatives case; G-392, an
+SPO+ region-correction case; and G-1560, a rank-2 promotion case. We keep
+max-cycle 3 and max-chain 4 fixed and generate four arc-density variants:
+adding $25\%$ arcs, adding 25 arcs, removing 25 arcs, and removing $25\%$ arcs.
+The fixed-count removal follows the advisor-requested decrease condition, while
+the percentage removal is treated as a robustness variant. Because arc
+perturbation is random, we repeat the generation with perturbation seeds
+0--4. This gives 15 graph-perturbation cases per variant and method.
+
+\paragraph{Results.}
+Table~\ref{tab:density-summary} summarizes the rank-2 results across the three
+selected graphs and five perturbation seeds. The original selected cases have
+rank-2 mean normalized gaps of $11.38\%$ for 2stage and $11.76\%$ for SPO+.
+The add-arc variants reduce the average rank-2 gap: add-$25\%$ arcs gives
+$5.83\%$ for 2stage and $4.86\%$ for SPO+, while add-25-arcs gives $6.76\%$
+and $5.69\%$. Removal variants are more seed-sensitive, but do not show a
+systematic worsening in this selected set.
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{llrr}
+\toprule
+Variant & Method & Rank-2 mean gap & Within 5\% \\
+\midrule
+Original & 2stage & 11.38\% & 66.67\% \\
+Original & SPO+ & 11.76\% & 66.67\% \\
+Add 25\% arcs & 2stage & 5.83\% & 53.33\% \\
+Add 25\% arcs & SPO+ & 4.86\% & 60.00\% \\
+Add 25 arcs & 2stage & 6.76\% & 46.67\% \\
+Add 25 arcs & SPO+ & 5.69\% & 53.33\% \\
+Remove 25 arcs & 2stage & 8.57\% & 60.00\% \\
+Remove 25 arcs & SPO+ & 8.28\% & 66.67\% \\
+Remove 25\% arcs & 2stage & 4.86\% & 53.33\% \\
+Remove 25\% arcs & SPO+ & 8.14\% & 46.67\% \\
+\bottomrule
+\end{tabular}
+\caption{Arc-density sensitivity on three selected mechanism graphs, averaged
+over perturbation seeds 0--4. These are selected-case robustness results, not
+population-level statistics.}
+\label{tab:density-summary}
+\end{table}
+
+The oracle changes in the expected direction: add-arc variants increase the
+oracle objective in all selected graph-perturbation cases, and remove-arc
+variants decrease it in all selected graph-perturbation cases. More importantly,
+the added arcs are actively used by the oracle and by the learned rank-1/rank-2
+solutions. Thus, the density perturbations genuinely reshape the feasible
+landscape rather than adding irrelevant arcs.
+
+\paragraph{Interpretation.}
+The density study is more mechanism-sensitive than the cycle-length study.
+Adding arcs tends to create additional high-quality alternatives in these
+selected graphs. Removal is more dependent on which arcs are removed: some
+seeds mildly worsen rank-2 gaps, while others improve them. We therefore use
+the density results as a mechanism stress test rather than as a full-population
+estimate. The key conclusion is that close second-best behavior is not driven by
+a single perturbation seed, but the exact mechanism varies by graph.
+
+\subsection{Graph-Level Mechanism Case Studies}
+
+\paragraph{Question.}
+What mechanisms are hidden by the aggregate density averages?
+
+\paragraph{Setup.}
+The three density-sensitivity graphs were selected because they represent
+different mechanisms in the original max-cycle-3 analysis. We therefore
+interpret density sensitivity graph by graph, using the multi-seed robustness
+runs to avoid over-interpreting a single perturbation seed.
+
+\paragraph{Results and interpretation.}
+Table~\ref{tab:case-mechanisms} summarizes the mechanism-level interpretation.
+G-696 mostly preserves the close-alternatives behavior: both methods keep
+rank-2 gaps near or below $5\%$ under most add/remove perturbations. G-392
+mostly preserves the SPO+ region-correction behavior under moderate
+perturbations, but density changes the original 2stage failure mode and makes
+the SPO+ advantage less distinguishable under large percentage removal. G-1560
+is the most fragile: the exact relation ``2stage rank~2 becomes SPO+ rank~1''
+is stable in the original graph but becomes seed-sensitive after arc
+perturbations.
+
+\begin{table*}[t]
+\centering
+\small
+\begin{tabular}{p{0.14\linewidth}p{0.22\linewidth}p{0.28\linewidth}p{0.28\linewidth}}
+\toprule
+Graph & Original mechanism & Density effect & Interpretation \\
+\midrule
+G-696 &
+Close alternatives. Original rank-2 gaps are $1.02\%$ for 2stage and
+$3.75\%$ for SPO+. &
+Add-arc and fixed-removal variants mostly keep rank-2 gaps below $5\%$.
+The larger removal variant is mixed for SPO+. &
+The close-alternative mechanism is mostly preserved. Density perturbation does
+not improve the graph so much as preserve an already-close rank-2 structure. \\
+\midrule
+G-392 &
+SPO+ region correction. Original 2stage rank-2 gap is $31.94\%$, while
+SPO+ rank-2 is $2.53\%$ and SPO+ rank-1 is oracle-level. &
+Perturbations improve the original 2stage failure mode but make SPO+ rank-2
+less close than in the original graph. SPO+ remains closer under moderate
+perturbations. &
+The SPO+ correction mechanism is mostly preserved, but large percentage removal
+weakens the distinction between 2stage and SPO+. \\
+\midrule
+G-1560 &
+Rank-2 promotion. In the original graph, the near-oracle 2stage rank-2 solution
+is exactly SPO+ rank-1. &
+After density perturbation, exact promotion becomes seed-sensitive. Rank-2 gaps
+remain informative, but the same edge-set promotion is no longer stable. &
+The graph still has useful second-best structure, but the exact promotion
+mechanism is fragile under arc perturbation. \\
+\bottomrule
+\end{tabular}
+\caption{Per-graph mechanism interpretation for density sensitivity. The
+aggregate averages summarize perturb-seed robustness; this table explains which
+mechanisms are preserved or changed.}
+\label{tab:case-mechanisms}
+\end{table*}
+
+\paragraph{Summary.}
+The experiments support a consistent picture. In KEP, rank-2 solutions are often
+close to the oracle, and this remains true under longer cycle lengths. Density
+perturbations change the feasible landscape more sharply, but the selected
+case studies show that close alternatives can persist, while the exact mechanism
+behind a method's improvement can be graph-dependent. These empirical patterns
+are consistent with the proposed property: close substitute solutions in a
+decomposable packing-style feasible set can limit the average advantage of
+decision-focused learning over a strong two-stage model.
