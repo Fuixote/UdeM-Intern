@@ -11,6 +11,37 @@ Given that the implementation is reliable, why can 2stage remain competitive?
 Which prediction errors are decision-critical, and which are irrelevant?
 ```
 
+## Toy Example Family
+
+The toy-example generator is:
+
+```text
+surrogate_experiment_results/decision_analysis/scripts/build_toy_property_x_examples.py
+```
+
+Run it from the repo root:
+
+```bash
+MPLCONFIGDIR=/tmp/matplotlib-toy python3 \
+  surrogate_experiment_results/decision_analysis/scripts/build_toy_property_x_examples.py
+```
+
+It writes a paper-facing toy family under:
+
+```text
+surrogate_experiment_results/decision_analysis/results/toy_examples/
+surrogate_experiment_results/decision_analysis/plots/toy_examples/
+```
+
+The current family includes positive packing-style examples
+(`KEP/set-packing`, `stable set`, `weighted matching`,
+`cardinality knapsack`, and `partition matroid`), a parametric epsilon
+construction where regret can be made arbitrarily small while the selected
+solution identity changes, and path-like negative controls (`shortest path` and
+`serial path`) where a ranking error redirects the whole connected decision and
+creates large regret. Use these as mechanism illustrations, not as a theorem
+that every packing instance has small decision-focused-learning gains.
+
 ---
 
 ## 总体路线

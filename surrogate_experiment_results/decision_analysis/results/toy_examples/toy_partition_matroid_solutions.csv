@@ -1,0 +1,9 @@
+example,problem_family,objective_sense,solution,true_value,predicted_value_2stage,predicted_value_dfl,rank_by_true_value,rank_by_2stage_prediction,rank_by_dfl_prediction,normalized_gap_to_oracle
+toy_partition_matroid,partition matroid,maximize,A1,10.0,10.0,10.0,6,8,6,0.5
+toy_partition_matroid,partition matroid,maximize,B1,10.0,10.0,10.0,5,7,5,0.5
+toy_partition_matroid,partition matroid,maximize,A2,9.9,10.15,9.9,8,6,8,0.505
+toy_partition_matroid,partition matroid,maximize,B2,9.9,10.15,9.9,7,5,7,0.505
+toy_partition_matroid,partition matroid,maximize,A1 + B1,20.0,20.0,20.0,1,4,1,0.0
+toy_partition_matroid,partition matroid,maximize,A1 + B2,19.9,20.15,19.9,3,3,3,0.005000000000000071
+toy_partition_matroid,partition matroid,maximize,A2 + B1,19.9,20.15,19.9,2,2,2,0.005000000000000071
+toy_partition_matroid,partition matroid,maximize,A2 + B2,19.8,20.3,19.8,4,1,4,0.009999999999999964

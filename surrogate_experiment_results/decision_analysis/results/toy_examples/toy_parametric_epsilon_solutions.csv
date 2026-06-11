@@ -1,0 +1,9 @@
+example,problem_family,objective_sense,solution,true_value,predicted_value_2stage,predicted_value_dfl,rank_by_true_value,rank_by_2stage_prediction,rank_by_dfl_prediction,normalized_gap_to_oracle
+toy_parametric_epsilon_0p050,parametric packing family,maximize,S_star,1.0,1.0,1.0,1,2,1,0.0
+toy_parametric_epsilon_0p050,parametric packing family,maximize,S_epsilon,0.95,1.05,0.95,2,1,2,0.050000000000000044
+toy_parametric_epsilon_0p020,parametric packing family,maximize,S_star,1.0,1.0,1.0,1,2,1,0.0
+toy_parametric_epsilon_0p020,parametric packing family,maximize,S_epsilon,0.98,1.02,0.98,2,1,2,0.020000000000000018
+toy_parametric_epsilon_0p010,parametric packing family,maximize,S_star,1.0,1.0,1.0,1,2,1,0.0
+toy_parametric_epsilon_0p010,parametric packing family,maximize,S_epsilon,0.99,1.01,0.99,2,1,2,0.010000000000000009
+toy_parametric_epsilon_0p001,parametric packing family,maximize,S_star,1.0,1.0,1.0,1,2,1,0.0
+toy_parametric_epsilon_0p001,parametric packing family,maximize,S_epsilon,0.999,1.001,0.999,2,1,2,0.0010000000000000009

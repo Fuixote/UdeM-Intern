@@ -1,0 +1,11 @@
+example,problem_family,objective_sense,solution,true_value,predicted_value_2stage,predicted_value_dfl,rank_by_true_value,rank_by_2stage_prediction,rank_by_dfl_prediction,normalized_gap_to_oracle
+toy_knapsack_capacity,cardinality knapsack,maximize,A,10.0,10.0,10.0,8,10,8,0.5
+toy_knapsack_capacity,cardinality knapsack,maximize,B,10.0,10.0,10.0,7,9,7,0.5
+toy_knapsack_capacity,cardinality knapsack,maximize,C,9.75,10.2,9.75,10,8,10,0.5125
+toy_knapsack_capacity,cardinality knapsack,maximize,D,9.75,10.2,9.75,9,7,9,0.5125
+toy_knapsack_capacity,cardinality knapsack,maximize,A + B,20.0,20.0,20.0,1,6,1,0.0
+toy_knapsack_capacity,cardinality knapsack,maximize,A + C,19.75,20.2,19.75,5,5,5,0.0125
+toy_knapsack_capacity,cardinality knapsack,maximize,A + D,19.75,20.2,19.75,4,4,4,0.0125
+toy_knapsack_capacity,cardinality knapsack,maximize,B + C,19.75,20.2,19.75,3,3,3,0.0125
+toy_knapsack_capacity,cardinality knapsack,maximize,B + D,19.75,20.2,19.75,2,2,2,0.0125
+toy_knapsack_capacity,cardinality knapsack,maximize,C + D,19.5,20.4,19.5,6,1,6,0.025

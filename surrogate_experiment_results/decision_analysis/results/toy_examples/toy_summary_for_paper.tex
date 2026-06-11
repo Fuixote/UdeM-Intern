@@ -2,8 +2,13 @@
 \toprule
 Problem & Oracle / true best & 2stage selected & 2stage normalized gap \\
 \midrule
-KEP / set packing & $C_{12}+C_{34}$, value $20.0$ & $C_{13}+C_{24}$, value $19.8$ & $1.0\%$ \\
-Stable set & $\{A,B\}$, value $20.0$ & $\{C,D\}$, value $19.8$ & $1.0\%$ \\
-Shortest path & Path A, cost $5.0$ & Path B, cost $8.0$ & $60.0\%$ \\
+KEP / set packing & C12 + C34, value 20 & C13 + C24, value 19.8 & 1.0\% \\
+Stable set & A + B, value 20 & C + D, value 19.8 & 1.0\% \\
+Weighted matching & M12 + M34, value 20 & M13 + M24, value 19.6 & 2.0\% \\
+Cardinality knapsack & A + B, value 20 & C + D, value 19.5 & 2.5\% \\
+Partition matroid & A1 + B1, value 20 & A2 + B2, value 19.8 & 1.0\% \\
+Parametric packing family & S\_star, value 1 & S\_epsilon, value 0.999 & 0.1\% \\
+Shortest path & Path A: s-a1-a2-t, cost 5 & Path B: s-b1-b2-t, cost 8 & 60.0\% \\
+Serial path control & Serial route A: low-cost chain, cost 10 & Serial route B: high-cost chain, cost 15 & 50.0\% \\
 \bottomrule
 \end{tabular}
