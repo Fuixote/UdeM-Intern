@@ -24,6 +24,29 @@ where $y^\star$ is the oracle solution and $\mathrm{obj}(\cdot)$ is the true
 objective value. A rank-2 solution within $5\%$ of the oracle indicates that the
 second-best predicted solution is still a high-quality alternative.
 
+\begin{table}[t]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.34\linewidth}
+                >{\raggedright\arraybackslash}p{0.58\linewidth}@{}}
+\toprule
+Item & Setting \\
+\midrule
+Regime & Step2b-d8 \\
+Train seeds & 9 selected training seeds \\
+Held-out graphs & 400 \\
+Graph-seed cases & 3600 per method and rank \\
+Methods & \texttt{2stage\_val\_mse}; \texttt{spoplus\_val\_spoplus\_loss} \\
+Cycle and chain limits & Max cycle 3 unless stated; max chain 4 \\
+Rank-2 computation & No-good cut excluding the rank-1 predicted solution \\
+Metrics & Normalized oracle gap, within-5\% rate, exact oracle rate, edge Jaccard \\
+\bottomrule
+\end{tabular}
+\caption{Compact experimental setup for the KEP diagnostics.}
+\label{tab:experiment-setup}
+\end{table}
+
 \subsection{Close Second-Best Solutions in KEP}
 
 \paragraph{Question.}
@@ -141,8 +164,11 @@ perturbation is random, we repeat the generation with perturbation seeds
 
 \paragraph{Results.}
 Table~\ref{tab:density-summary} summarizes the rank-2 results across the three
-selected graphs and five perturbation seeds. The original selected cases have
-rank-2 mean normalized gaps of $11.38\%$ for 2stage and $11.76\%$ for SPO+.
+selected graphs and five perturbation seeds. These values should not be compared
+directly to the full-run 3600-case averages in Table~\ref{tab:second-best-summary},
+because the density study uses three deliberately selected mechanism graphs. The
+original selected cases have rank-2 mean normalized gaps of $11.38\%$ for 2stage
+and $11.76\%$ for SPO+.
 The add-arc variants reduce the average rank-2 gap: add-$25\%$ arcs gives
 $5.83\%$ for 2stage and $4.86\%$ for SPO+, while add-25-arcs gives $6.76\%$
 and $5.69\%$. Removal variants are more seed-sensitive, but do not show a
