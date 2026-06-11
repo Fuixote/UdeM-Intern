@@ -1,29 +1,24 @@
 \section{Toy Examples Supporting the Mechanism}
 
+\begin{figure*}[t!]
+    \centering
+    \includegraphics[width=0.98\textwidth]{figures/toy_examples_schematic_grid_compact.png}
+    \caption{Toy examples for close substitutes versus path-like regret.
+    Packing-style examples show different selected-solution identities with
+    small normalized gaps, while path-like controls show that redirecting the
+    whole route can create large regret. The parametric construction shows that
+    the regret can be made arbitrarily small even when the selected identity
+    always changes.}
+    \label{fig:toy-schematic}
+\end{figure*}
+
 We first illustrate Property X in controlled toy problems before turning to
-real KEP evidence. Figure~\ref{fig:toy-regret} summarizes the expanded toy
-family. In the packing-style examples, two-stage prediction changes the
-selected solution but the normalized gap remains below the 5\% reference line.
-In the path-like controls, a ranking error redirects the whole connected path
-and creates much larger regret.
-
-\begin{figure}[t]
-    \centering
-    \includegraphics[width=\linewidth]{figures/toy_regret_comparison.png}
-    \caption{Toy family showing that solution identity changes can correspond
-    to either small or large regret. Packing-style positive examples have close
-    substitutes; path-like negative controls do not.}
-    \label{fig:toy-regret}
-\end{figure}
-
-\begin{figure}[t]
-    \centering
-    \includegraphics[width=\linewidth]{figures/toy_parametric_epsilon_curve.png}
-    \caption{Parametric close-substitute construction. The selected solution
-    changes for every $\epsilon$, but the normalized regret is exactly
-    $\epsilon$ and can be made arbitrarily small.}
-    \label{fig:toy-epsilon}
-\end{figure}
+real KEP evidence. Figure~\ref{fig:toy-schematic} visualizes the expanded toy
+family by pairing oracle decisions with the two-stage selected decisions. In the
+packing-style examples, two-stage prediction changes the selected solution but
+the normalized gap remains below the 5\% reference line. In the path-like
+controls, a ranking error redirects the whole connected path and creates much
+larger regret.
 
 Table~\ref{tab:toy-summary} lists the oracle and two-stage selected solutions
 for each toy problem family.
