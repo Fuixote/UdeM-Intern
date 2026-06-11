@@ -1,68 +1,121 @@
-\section{Toy Examples Supporting the Mechanism}
+\section{Randomized Toy Experiments}
 
-\begin{figure*}[t!]
+The previous section identifies Property X as the availability of close
+substitute solutions in a decomposable feasible set. We now test this mechanism
+in randomized toy families rather than relying on a single hand-designed
+example. The goal is not to prove a theorem about every packing or path
+problem, but to separate two effects: how often prediction noise changes the
+selected solution identity, and how much true-objective regret that identity
+change creates.
+
+\paragraph{Randomized families.}
+We compare three stochastic problem families. The first is a decomposable
+packing family with 12 independent blocks and 4 candidate components per block;
+a feasible solution chooses one component from each block. The second is a
+stable-set realization of the same close-substitute mechanism: the conflict
+graph is a disjoint union of 12 cliques with 4 candidate vertices per clique, so
+an independent set can choose at most one vertex from each clique. With positive
+weights, the oracle and predicted solutions choose one non-conflicting vertex
+per clique. The third is a path-like control with 4 parallel $s$--$t$ paths,
+each containing 12 edges; selecting a different path changes the entire coupled
+route.
+
+All families are controlled by two parameters. The parameter $\tau$ controls
+the separation between alternatives, and $\sigma$ controls independent
+prediction noise. For each $(\tau,\sigma)$ pair, we generate 500 random
+instances. For each instance, we compute the oracle solution under true
+coefficients, the two-stage solution under noisy predicted coefficients, the
+normalized regret of the two-stage solution, whether the solution identity
+changes, and the true oracle--second-best gap. We use the two-stage normalized
+regret as the instance-level improvement ceiling: no decision-focused method
+can improve over two-stage by more than the remaining gap to oracle.
+
+\begin{figure*}[t]
     \centering
-    \includegraphics[width=0.98\textwidth]{figures/toy_examples_schematic_grid_compact.png}
-    \caption{Toy examples for close substitutes versus path-like regret.
-    Packing-style examples show different selected-solution identities with
-    small normalized gaps, while path-like controls show that redirecting the
-    whole route can create large regret. The parametric construction shows that
-    the regret can be made arbitrarily small even when the selected identity
-    always changes.}
-    \label{fig:toy-schematic}
+    \includegraphics[width=0.98\textwidth]{figures/randomized_identity_mismatch_vs_regret.png}
+    \caption{Randomized toy-family comparison. Solution identity can change
+    frequently even when normalized regret remains small. The relevant quantity
+    for decision-focused learning is therefore not identity mismatch alone, but
+    the regret left after the two-stage selected solution is evaluated under the
+    true objective.}
+    \label{fig:randomized-identity-regret}
 \end{figure*}
 
-We first illustrate Property X in controlled toy problems before turning to
-real KEP evidence. Figure~\ref{fig:toy-schematic} visualizes the expanded toy
-family by pairing oracle decisions with the two-stage selected decisions. In the
-packing-style examples, two-stage prediction changes the selected solution but
-the normalized gap remains below the 5\% reference line. In the path-like
-controls, a ranking error redirects the whole connected path and creates much
-larger regret.
+\paragraph{Close substitutes: frequent identity changes, small regret.}
+Table~\ref{tab:randomized-toy-summary} reports representative settings from the
+randomized sweep. In the close-substitute regime ($\tau=0.02$,
+$\sigma=0.10$), both decomposable packing and clustered stable set have
+$100\%$ identity mismatch, but their mean normalized regrets are only $1.07\%$
+and $1.05\%$, respectively, and all instances are within $5\%$ of oracle. Thus,
+in these decomposable families, noisy two-stage predictions often change the
+selected solution, but the selected solution is still a close substitute under
+the true objective.
 
-Table~\ref{tab:toy-summary} lists the oracle and two-stage selected solutions
-for each toy problem family.
+The shortest-path control shows why the problem label alone is not the full
+explanation. In the close-substitute path regime, the path family also has
+small mean regret ($0.47\%$), because the alternative paths are themselves
+close. This supports the conditional version of our hypothesis: close
+substitutes, not packing terminology by itself, limit the room for
+decision-focused learning.
+
+\paragraph{Separated alternatives: regret can reappear.}
+When alternatives are more separated and prediction noise is larger
+($\tau=0.30$, $\sigma=0.30$), the decomposable families no longer have uniformly
+small regret. Mean regret rises to $7.71\%$ for packing and $7.57\%$ for stable
+set, and the within-$5\%$ rates fall to $21.2\%$ and $24.8\%$. This does not
+contradict Property X; it clarifies it. Decomposability makes local replacements
+possible, but if prediction noise changes many local components at once, the
+losses can accumulate and leave more room for decision-focused learning.
+
+For the path family in the same separated regime, the unconditional mean regret
+is $2.30\%$ because identity mismatch occurs in only $39.8\%$ of instances.
+Conditional on a mismatch, however, the mean regret is $5.78\%$, almost the
+same as the mean oracle--second-best gap of $5.80\%$. This is the path-like
+contrast: when a ranking error redirects the route to a materially worse path,
+the regret is controlled by the path-level best-second gap.
 
 \begin{table*}[t]
-    \centering
-    \caption{Toy examples for the close-substitute mechanism and path-like
-    negative controls.}
-    \label{tab:toy-summary}
-    \small
-    \setlength{\tabcolsep}{3pt}
-    \input{tables/toy_summary_for_paper}
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}llrrrrr@{}}
+\toprule
+Regime & Family & Mismatch & Mean regret & Regret if mismatch & Oracle--2nd gap & Within 5\% \\
+\midrule
+$\tau=.02,\sigma=.10$ & Packing & 100.0\% & 1.07\% & 1.07\% & 0.0067\% & 100.0\% \\
+$\tau=.02,\sigma=.10$ & Stable set & 100.0\% & 1.05\% & 1.05\% & 0.0072\% & 100.0\% \\
+$\tau=.02,\sigma=.10$ & Shortest path & 66.8\% & 0.47\% & 0.71\% & 0.4163\% & 100.0\% \\
+\midrule
+$\tau=.30,\sigma=.30$ & Packing & 100.0\% & 7.71\% & 7.71\% & 0.0800\% & 21.2\% \\
+$\tau=.30,\sigma=.30$ & Stable set & 100.0\% & 7.57\% & 7.57\% & 0.0880\% & 24.8\% \\
+$\tau=.30,\sigma=.30$ & Shortest path & 39.8\% & 2.30\% & 5.78\% & 5.80\% & 81.8\% \\
+\bottomrule
+\end{tabular}
+\caption{Representative randomized toy results. Close substitutes allow
+frequent identity changes with small regret. When prediction noise pushes the
+selected solution away from close substitutes, regret increases and the
+potential room for DFL increases.}
+\label{tab:randomized-toy-summary}
 \end{table*}
 
-\paragraph{Packing-style positive examples.}
-The positive examples instantiate Property X across several decomposable
-packing-style structures: KEP/set packing, stable set, weighted matching,
-cardinality knapsack, and partition matroid. In every case, the two-stage
-predictor selects a solution with a different identity from the oracle, but the
-true objective loss is small. The normalized gap is $1\%$ for KEP/set packing,
-$1\%$ for stable set, $2\%$ for weighted matching, $2.5\%$ for cardinality
-knapsack, and $1\%$ for partition matroid. These examples show that wrong
-solution identity does not necessarily imply a large decision error. The
-selected solution can be a close substitute for the oracle because the feasible
-decision is assembled from replaceable components.
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=0.98\textwidth]{figures/randomized_property_x_phase_diagram.png}
+    \caption{Mean two-stage regret, interpreted as the maximum possible
+    decision-focused improvement over two-stage, across substitute separation
+    $\tau$ and prediction noise $\sigma$. The relevant diagnostic is the regret
+    of the selected alternative, not whether the selected solution identity
+    differs from the oracle.}
+    \label{fig:randomized-phase}
+\end{figure*}
 
-\paragraph{Path-like negative controls.}
-The path-like examples show the opposite behavior. In the shortest-path toy
-problem, two-stage underestimates the wrong path and selects a path whose true
-cost gives $60\%$ normalized regret. In the serial-path control, the same type
-of ranking error redirects the whole chain and yields $50\%$ regret. These
-negative controls support the shortest-path contrast in our main question:
-when feasibility couples the decision into one serial structure, a local
-prediction error can redirect the entire solution rather than replacing one
-component with a close substitute.
-
-\paragraph{Parametric epsilon family.}
-The parametric construction is the closest toy example to a general mechanism
-argument. It contains two complete feasible solutions, $S_\star$ and
-$S_\epsilon$, with true values $1$ and $1-\epsilon$. If the two-stage predictor
-slightly overestimates $S_\epsilon$, it selects the wrong solution identity for
-every $\epsilon$. Nevertheless, the normalized regret is exactly $\epsilon$.
-Thus, regret can be made arbitrarily small even when the selected solution
-identity changes. This is the core intuition behind the improvement ceiling in
-the previous section: if a two-stage model already selects an
-$\epsilon$-near-oracle close substitute, then even a decision-focused method has
-at most $\epsilon$ normalized gap left to close on that instance.
+\paragraph{Takeaway.}
+The randomized toy experiments support the conditional Property X hypothesis.
+For combinatorial problems with close substitute solutions, two-stage
+prediction can select a different solution identity while leaving little
+decision regret for DFL to remove. This pattern appears not only in an abstract
+decomposable packing model but also in a stable-set formulation with conflict
+constraints. Conversely, when the selected alternative is materially worse, as
+can happen when many local components are changed or when a path is redirected
+to a worse route, the regret and the potential value of decision-focused
+learning both increase.
