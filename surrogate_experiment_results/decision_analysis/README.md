@@ -257,3 +257,155 @@ edge_hamming_with_opt = mean(y_method != y_opt)
 2. 它们选不同 solution，但 true objective 很接近；
 3. SPO+ 避免了 2stage 选到的明显低质量 solution。
 ```
+
+---
+
+## Fixed-Topology Label-Seed Audit for G-392 and G-1560
+
+Purpose: test whether the Case C behavior for `G-392.json` and `G-1560.json`
+is robust when topology is fixed but Step2c-style multiplicative labels vary.
+
+Important scope note: this is a fixed-model diagnostic, not a full Step2c
+retraining experiment. The audit keeps the original Step2b d8 trained
+parameters fixed, keeps graph arcs fixed, regenerates only labels with
+Step2c-style deterministic multiplicative noise, then replays oracle/rank-1/
+rank-2 decisions.
+
+Command used on garnet:
+
+```bash
+python surrogate_experiment_results/decision_analysis/scripts/audit_fixed_topology_label_seed.py \
+  --graphs G-392.json G-1560.json \
+  --label-seeds 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 \
+    25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 \
+  --output surrogate_experiment_results/decision_analysis/results/fixed_topology_label_seed/fixed_topology_label_seed_rows.csv
+```
+
+Outputs:
+
+```text
+surrogate_experiment_results/decision_analysis/results/fixed_topology_label_seed/fixed_topology_label_seed_rows.csv
+surrogate_experiment_results/decision_analysis/results/fixed_topology_label_seed/fixed_topology_label_seed_summary.csv
+```
+
+Result snapshot:
+
+```text
+rows: 400
+G-392:  36/50 label seeds preserve strict Case C signature, preservation rate 0.72
+G-1560: 30/50 label seeds preserve strict Case C signature, preservation rate 0.60
+Both graphs: unique_topology_hashes = 1, unique_label_hashes = 50
+Both graphs: SPO+ rank-1 gap is lower than 2stage rank-1 gap for all 50 label seeds
+```
+
+Interpretation: this supports a topology-conditioned mechanism more strongly
+than the initial two-seed smoke. The result still should not be stated as
+"Step2c retraining preserves the case" until a consistent Step2c relabel +
+retrain check is run.
+
+## Actual Step2c Replay for G-392 and G-1560
+
+To distinguish the fixed-model relabel audit from true Step2c model behavior,
+the two original Case C graph/seed pairs were replayed under the actual
+Step2c d8 trained models and Step2c labels:
+
+```text
+G-392.json  with subset_seed=1
+G-1560.json with subset_seed=30
+```
+
+Rank-1 replay output:
+
+```text
+surrogate_experiment_results/decision_analysis/results/fixed_topology_label_seed/step2c_actual_case_replay_G392_G1560.csv
+```
+
+Rank-1/rank-2 replay output:
+
+```text
+surrogate_experiment_results/decision_analysis/results/fixed_topology_label_seed/step2c_actual_second_best_G392_G1560.csv
+```
+
+Actual Step2c result snapshot:
+
+```text
+G-392, seed=1:
+  2stage rank1 gap = 25.01%
+  2stage rank2 gap = 28.63%
+  SPO+   rank1 gap = 0.83%
+  SPO+   rank2 gap = 25.01%
+  mechanism: SPO+ correction persists.
+
+G-1560, seed=30:
+  2stage rank1 gap = 35.89%
+  2stage rank2 gap = 0.51%
+  SPO+   rank1 gap = 0.51%
+  SPO+   rank2 gap = 37.89%
+  mechanism: rank-2 promotion persists exactly; 2stage rank2 and SPO+ rank1
+  have identical solution signatures.
+```
+
+Interpretation: the actual Step2c trained-model replay preserves the two
+case-level mechanisms on these selected graph/seed pairs. This is stronger than
+the fixed-model relabel audit, but it is still a two-graph case study rather
+than a Step2c-wide frequency claim.
+
+## Actual Step2c Fixed-Topology Label-Seed Robustness
+
+After confirming the two selected graph/seed pairs under actual Step2c trained
+models, the fixed-topology audit was rerun on the same Step2c basis:
+
+```text
+G-392.json  uses Step2c subset_seed=1  trained weights.
+G-1560.json uses Step2c subset_seed=30 trained weights.
+```
+
+Only `label_seed` varies. Graph topology, arc features, `max_cycle=3`,
+`max_chain=4`, and the trained model weights are fixed. This is still a
+fixed-model diagnostic; it is not 1000 independent Step2c retraining runs.
+
+The formal run was launched on garnet in tmux session
+`step2c_ft_label_1000`, with completion email handled by
+`notify_step2c_ft_label_1000` through `scripts/experiment_notify.py`.
+
+Main outputs:
+
+```text
+surrogate_experiment_results/decision_analysis/results/fixed_topology_label_seed/step2c_fixed_topology_label_seed_1000_rows.csv
+surrogate_experiment_results/decision_analysis/results/fixed_topology_label_seed/step2c_fixed_topology_label_seed_1000_summary.csv
+surrogate_experiment_results/decision_analysis/results/fixed_topology_label_seed/step2c_fixed_topology_label_seed_1000_readout.md
+surrogate_experiment_results/decision_analysis/plots/fixed_topology_label_seed/step2c_fixed_topology_1000_seed_summary_v2.png
+```
+
+Result snapshot:
+
+```text
+rows: 8000
+
+G-392:
+  label seeds = 1000
+  unique_topology_hashes = 1
+  unique_label_hashes = 1000
+  strict Case C preserved rate = 0.661 +/- 0.029
+  SPO+ better rate = 1.000
+  SPO+ correction persistence rate = 0.661 +/- 0.029
+  rank-2 promotion persistence rate = 0.000
+
+G-1560:
+  label seeds = 1000
+  unique_topology_hashes = 1
+  unique_label_hashes = 1000
+  strict Case C preserved rate = 0.545 +/- 0.031
+  SPO+ better rate = 0.998
+  SPO+ correction persistence rate = 0.000
+  rank-2 promotion persistence rate = 0.545 +/- 0.031
+```
+
+Interpretation: with topology fixed and actual Step2c trained weights fixed,
+the two case mechanisms remain common across label realizations, but not
+universal. `G-392` remains a robust SPO+ correction example in about two thirds
+of label seeds, while `G-1560` remains a rank-2 promotion example in slightly
+over half of label seeds. This supports a topology-conditioned explanation
+conditioned on these trained weights, while preserving the caveat that a
+smaller relabel-and-retrain check is still needed before claiming retraining
+robustness.
