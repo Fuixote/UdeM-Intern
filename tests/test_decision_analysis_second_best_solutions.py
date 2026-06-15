@@ -40,6 +40,44 @@ class DecisionAnalysisSecondBestSolutionTests(unittest.TestCase):
         self.assertEqual(args.max_cycle, 5)
         self.assertEqual(args.max_chain, 6)
 
+    def test_selected_cases_can_be_generated_from_subset_seed_range(self):
+        module = self.load_module()
+
+        args = module.parse_args(
+            [
+                "--regime",
+                "step2c_poly_d8_mult_eps050",
+                "--subset-seed-start",
+                "0",
+                "--subset-seed-stop",
+                "2",
+                "--case-type-prefix",
+                "step2c_fixed_graph",
+            ]
+        )
+        cases = module.selected_cases_for_args(args)
+
+        self.assertEqual(
+            cases,
+            [
+                {
+                    "regime": "step2c_poly_d8_mult_eps050",
+                    "case_type": "step2c_fixed_graph_seed0",
+                    "subset_seed": "0",
+                },
+                {
+                    "regime": "step2c_poly_d8_mult_eps050",
+                    "case_type": "step2c_fixed_graph_seed1",
+                    "subset_seed": "1",
+                },
+                {
+                    "regime": "step2c_poly_d8_mult_eps050",
+                    "case_type": "step2c_fixed_graph_seed2",
+                    "subset_seed": "2",
+                },
+            ],
+        )
+
     def test_output_schemas_record_cycle_length_controls(self):
         module = self.load_module()
 

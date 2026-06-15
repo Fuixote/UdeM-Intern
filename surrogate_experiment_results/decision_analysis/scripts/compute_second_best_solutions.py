@@ -496,12 +496,26 @@ def rows_for_model_record(
     return rows
 
 
+def selected_cases_for_args(args) -> list[dict[str, str]]:
+    if args.subset_seed_start is None and args.subset_seed_stop is None:
+        return load_selected_cases(args.selected_seeds, args.regime)
+
+    return [
+        {
+            "regime": args.regime,
+            "case_type": f"{args.case_type_prefix}_seed{seed}",
+            "subset_seed": str(seed),
+        }
+        for seed in range(int(args.subset_seed_start), int(args.subset_seed_stop) + 1)
+    ]
+
+
 def compute_second_best_rows(args) -> list[dict[str, Any]]:
     common, load_model_weight, _, _, _ = ensure_step1c_imports()
 
     import gurobipy as gp
 
-    selected_cases = load_selected_cases(args.selected_seeds, args.regime)
+    selected_cases = selected_cases_for_args(args)
 
     test_entries = load_or_make_split_entries(
         split_path=args.split_path,
@@ -644,6 +658,24 @@ def parse_args(argv=None):
     parser.add_argument("--split-path", type=Path, default=DEFAULT_SPLIT_PATH)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--summary-output", type=Path, default=DEFAULT_SUMMARY_OUTPUT)
+    parser.add_argument(
+        "--subset-seed-start",
+        type=int,
+        help=(
+            "Generate selected-case rows for an inclusive subset_seed range. "
+            "Use with --subset-seed-stop to avoid a selected-seeds CSV."
+        ),
+    )
+    parser.add_argument(
+        "--subset-seed-stop",
+        type=int,
+        help="Inclusive end of generated subset_seed range.",
+    )
+    parser.add_argument(
+        "--case-type-prefix",
+        default="subset_seed",
+        help="Prefix for generated case_type values when using a subset_seed range.",
+    )
 
     parser.add_argument("--split-seed", type=int, default=42)
     parser.add_argument("--train-pool-size", type=int, default=1200)
@@ -706,6 +738,11 @@ def parse_args(argv=None):
         raise ValueError("--max-cycle must be >= 2")
     if args.max_chain < 1:
         raise ValueError("--max-chain must be >= 1")
+    if args.subset_seed_start is not None or args.subset_seed_stop is not None:
+        if args.subset_seed_start is None or args.subset_seed_stop is None:
+            parser.error("--subset-seed-start and --subset-seed-stop must be provided together")
+        if args.subset_seed_stop < args.subset_seed_start:
+            parser.error("--subset-seed-stop must be >= --subset-seed-start")
 
     return args
 

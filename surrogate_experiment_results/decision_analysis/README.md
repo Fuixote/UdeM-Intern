@@ -305,6 +305,116 @@ Interpretation: the actual Step2c trained-model replay preserves the two
 case-level mechanisms on these selected graph/seed pairs. This is still a
 two-graph case study rather than a Step2c-wide frequency claim.
 
+## Main Step2c Fixed-Graph Model-Seed Robustness Result
+
+The next robustness audit holds the graph instance, Step2c labels, arc
+features, solver settings, and feasible set fixed, then varies only the trained
+model induced by the fixed-pool training subset:
+
+```text
+regime: step2c_poly_d8_mult_eps050
+graphs: G-392.json, G-1560.json
+subset_seed: 0..49
+train_size: 50
+max_cycle: 3
+max_chain: 4
+top_k: 5
+methods: 2stage selected by validation MSE; SPO+ selected by validation SPO+ loss
+```
+
+The replay was run on garnet from `/local1/fuweik/UdeM-Intern`:
+
+```bash
+source configs/runtime/garnet.env
+python surrogate_experiment_results/decision_analysis/scripts/compute_second_best_solutions.py \
+  --regime step2c_poly_d8_mult_eps050 \
+  --run-root surrogate_experiment_results/Step2_resampling/phase1_runs \
+  --dataset-dir dataset/processed/step2c_poly_d8_mult_eps050_main2000_seed20260523 \
+  --split-path surrogate_experiment_results/Step2_resampling/splits/step2c_poly_d8_mult_eps050/master_split_seed=42.json \
+  --subset-seed-start 0 \
+  --subset-seed-stop 49 \
+  --case-type-prefix step2c_fixed_graph_model_seed \
+  --graphs G-392.json G-1560.json \
+  --max-solutions 5 \
+  --max-cut-attempts 60 \
+  --progress-every 1 \
+  --output surrogate_experiment_results/decision_analysis/results/fixed_graph_model_seed/step2c_g392_g1560_all50_top5_second_best.csv \
+  --summary-output surrogate_experiment_results/decision_analysis/results/fixed_graph_model_seed/step2c_g392_g1560_all50_top5_second_best_summary.csv
+
+python surrogate_experiment_results/decision_analysis/scripts/summarize_fixed_graph_model_seed_audit.py \
+  --input surrogate_experiment_results/decision_analysis/results/fixed_graph_model_seed/step2c_g392_g1560_all50_top5_second_best.csv \
+  --output surrogate_experiment_results/decision_analysis/results/fixed_graph_model_seed/step2c_g392_g1560_all50_seed_audit.csv \
+  --summary-output surrogate_experiment_results/decision_analysis/results/fixed_graph_model_seed/step2c_g392_g1560_all50_seed_audit_summary.csv \
+  --top-k 5
+```
+
+Main outputs:
+
+```text
+surrogate_experiment_results/decision_analysis/results/fixed_graph_model_seed/step2c_g392_g1560_all50_top5_second_best.csv
+surrogate_experiment_results/decision_analysis/results/fixed_graph_model_seed/step2c_g392_g1560_all50_top5_second_best_summary.csv
+surrogate_experiment_results/decision_analysis/results/fixed_graph_model_seed/step2c_g392_g1560_all50_seed_audit.csv
+surrogate_experiment_results/decision_analysis/results/fixed_graph_model_seed/step2c_g392_g1560_all50_seed_audit_summary.csv
+```
+
+Definitions were fixed before reading the all-50 summary:
+
+```text
+Strict Case C:
+  2stage rank1 gap >= 10%, SPO+ rank1 gap <= 5%, Delta >= 5 pp
+
+Strong Case C:
+  2stage rank1 gap >= 20%, SPO+ rank1 gap <= 5%, Delta >= 10 pp
+
+G-392 correction:
+  Strict Case C and 2stage rank2 gap > 10%
+
+G-1560 exact rank-2 promotion:
+  Strict Case C, 2stage rank2 gap <= 5%, and
+  signature(SPO+ rank1) == signature(2stage rank2)
+
+G-1560 top-5 promotion:
+  signature(SPO+ rank1) is one of 2stage ranks 2..5 and
+  SPO+ rank1 gap <= 5%
+```
+
+Result snapshot:
+
+```text
+G-392 all 50 seeds:
+  Strict Case C = 50/50, Wilson 95% CI [0.929, 1.000]
+  SPO+ better = 50/50
+  correction preserved = 50/50, Wilson 95% CI [0.929, 1.000]
+  exact rank-2 promotion = 0/50
+  median Delta = 24.18 pp
+  median gaps: 2stage rank1 25.01%, SPO+ rank1 0.83%, 2stage rank2 28.63%
+
+G-392 excluding discovery seed 1:
+  Strict Case C = 49/49, Wilson 95% CI [0.927, 1.000]
+  correction preserved = 49/49, Wilson 95% CI [0.927, 1.000]
+
+G-1560 all 50 seeds:
+  Strict Case C = 50/50, Wilson 95% CI [0.929, 1.000]
+  SPO+ better = 50/50
+  exact rank-2 promotion = 41/50, Wilson 95% CI [0.692, 0.902]
+  top-5 promotion = 50/50, Wilson 95% CI [0.929, 1.000]
+  median Delta = 35.37 pp
+  median gaps: 2stage rank1 35.89%, SPO+ rank1 0.51%, 2stage rank2 0.51%
+
+G-1560 excluding discovery seed 30:
+  Strict Case C = 49/49, Wilson 95% CI [0.927, 1.000]
+  exact rank-2 promotion = 40/49, Wilson 95% CI [0.686, 0.900]
+  top-5 promotion = 49/49, Wilson 95% CI [0.927, 1.000]
+```
+
+Interpretation: these two selected Step2c graph instances are robust to
+trained-model/subset_seed variation under fixed actual labels. `G-392` remains
+a correction case across every model seed, and `G-1560` remains a promotion case
+across every model seed under the top-5 definition, with exact rank-2 promotion
+in most but not all model seeds. This supports selected graph-instance
+robustness. It still should not be stated as pure topology causality because
+topology, arc features, fixed labels, and feasible-set geometry remain bundled.
+
 ## Main Step2c Fixed-Topology Label-Seed Robustness Result
 
 After confirming the two selected graph/seed pairs under actual Step2c trained
