@@ -1,0 +1,15 @@
+\begin{tabular}{llrrrrrrr}
+\toprule
+Graph & Mechanism & B found & C=B & 2stage rank(C) & true rank(C) & $\Delta_{true}$ & $\Delta_{2stage}$ & $\Delta_{SPO+}$ \\
+\midrule
+G-392 & Deep-candidate correction & 1.00 & 1.00 & 8 & 3 & 61.58 & -4.24 & 3.49 \\
+G-1285 & Clean exact rank-2 promotion & 1.00 & 1.00 & 2 & 1 & 42.02 & -0.60 & 1.72 \\
+G-1560 & Large-effect top-K promotion & 1.00 & 1.00 & 2 & 2 & 70.42 & -2.71 & 3.42 \\
+G-1169 & Broad top20 promotion & 1.00 & 0.20 & 11 & 16 & 29.17 & -2.81 & 10.19 \\
+G-1449 & Deep top20 promotion outside top5 & 1.00 & 0.00 & 8 & 8 & 20.84 & -2.62 & 6.19 \\
+G-142 & Both-poor negative control & 0.00 & 0.00 & 1 & not in top50 & 0.00 & 0.00 & 0.00 \\
+G-946 & Both-poor negative control & 0.00 & 0.00 & 1 & not in top50 & 0.00 & 0.00 & 0.00 \\
+G-14 & Harmful SPO+ reranking & 1.00 & 0.00 & 9 & not in top50 & -28.14 & -2.24 & 5.27 \\
+G-163 & Harmful SPO+ reranking & 1.00 & 0.00 & 8 & 20 & -44.57 & -2.36 & 0.51 \\
+\bottomrule
+\end{tabular}

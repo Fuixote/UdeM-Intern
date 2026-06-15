@@ -1,0 +1,5 @@
+panel,graph_id,mechanism_label,outcome,c_rank_under_2stage,c_true_rank,true_delta_a_to_c,two_stage_pred_delta_a_to_c,spoplus_pred_delta_a_to_c
+A,G-392,Deep-candidate correction,SPO+ helps,8,3,61.58,-4.24,3.49
+B,G-1285,Clean exact rank-2 promotion,SPO+ helps,2,1,42.02,-0.60,1.72
+C,G-1560,Large-effect top-K promotion,SPO+ helps,2,2,70.42,-2.71,3.42
+D,G-14,Harmful SPO+ reranking,SPO+ hurts,9,not in top50,-28.14,-2.24,5.27

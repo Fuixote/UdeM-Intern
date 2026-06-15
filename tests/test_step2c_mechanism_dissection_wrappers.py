@@ -56,6 +56,21 @@ class Step2cMechanismDissectionWrapperTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("Build Step2c mechanism-dissection", result.stdout)
 
+    def test_experiment_directory_exposes_presentation_entrypoint(self):
+        script = AUDIT_DIR / "scripts" / "build_presentation_artifacts.py"
+        self.assertTrue(script.exists(), f"Missing wrapper script: {script}")
+
+        result = subprocess.run(
+            [sys.executable, str(script), "--help"],
+            cwd=PROJECT_ROOT,
+            check=False,
+            text=True,
+            capture_output=True,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("Build presentation tables and figures", result.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

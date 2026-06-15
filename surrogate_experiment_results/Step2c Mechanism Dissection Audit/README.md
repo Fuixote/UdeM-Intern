@@ -22,6 +22,7 @@ scripts/compute_predicted_topm_solutions.py
 scripts/compute_true_oracle_landscape.py
 scripts/summarize_step2c_mechanism_dissection.py
 scripts/audit_rank_reversal_critical_edges.py
+scripts/build_presentation_artifacts.py
 ```
 
 They are thin wrappers around shared, tested utilities in:
@@ -177,6 +178,53 @@ This strengthens the paper-safe claim:
 SPO+ helps in these selected Step2c graph instances by correcting
 decision-critical ranking errors within the feasible-solution landscape.
 It is more precise than saying that SPO+ simply discovers a new topology basin.
+```
+
+### Presentation artifacts snapshot: 2026-06-15
+
+The current presentation package is generated from the committed CSV audit
+outputs only. It does not require Gurobi or remote reruns.
+
+Run:
+
+```bash
+MPLCONFIGDIR=/tmp/matplotlib-cache \
+python3 "surrogate_experiment_results/Step2c Mechanism Dissection Audit/scripts/build_presentation_artifacts.py"
+```
+
+Outputs:
+
+```text
+presentation/step2c_paper_mechanism_table.csv
+presentation/step2c_paper_mechanism_table.tex
+presentation/step2c_rank_reversal_figure_data.csv
+presentation/step2c_case_panel_table.csv
+presentation/step2c_top_critical_edges_by_case.csv
+presentation/step2c_rank_reversal_story.md
+presentation/figures/step2c_rank_reversal_triplets.{png,pdf}
+presentation/figures/step2c_rank_reversal_case_panels.{png,pdf}
+```
+
+Recommended advisor-facing order:
+
+```text
+1. Use step2c_paper_mechanism_table.csv as the one-table mechanism atlas.
+2. Show step2c_rank_reversal_triplets to establish the global reversal pattern:
+   success cases have true delta > 0, 2stage predicted delta < 0, SPO+ predicted delta > 0;
+   harmful controls have true delta < 0 but SPO+ predicted delta > 0.
+3. Show step2c_rank_reversal_case_panels for the four main cases:
+   G-392, G-1285, G-1560, and G-14.
+4. Use step2c_top_critical_edges_by_case.csv to explain which solution-difference
+   edges contribute most to the rank reversal.
+```
+
+The resulting story is:
+
+```text
+SPO+ helps when it promotes a near-oracle candidate that 2stage already had but
+ranked too low. It hurts when the same kind of reranking promotes a candidate
+that is not near-oracle. This is a candidate-landscape / decision-boundary
+mechanism, not pure topology causality.
 ```
 
 固定候选图：
