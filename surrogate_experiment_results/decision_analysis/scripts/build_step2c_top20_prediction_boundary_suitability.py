@@ -52,6 +52,8 @@ DEFAULT_BOUNDARY_OUTPUT = DEFAULT_RESULTS_DIR / "step2c_all400_top20_prediction_
 DEFAULT_JOIN_OUTPUT = DEFAULT_RESULTS_DIR / "step2c_all400_graph_top20_boundary_outcome_table.csv"
 DEFAULT_ASSOC_OUTPUT = DEFAULT_RESULTS_DIR / "step2c_phase4_top20_feature_family_association.csv"
 DEFAULT_OVERLAY_OUTPUT = DEFAULT_RESULTS_DIR / "step2c_phase4_top20_selected_case_overlay.csv"
+DEFAULT_MATCHED_CONTROLS_INPUT = DEFAULT_RESULTS_DIR / "step2c_phase3_matched_controls.csv"
+DEFAULT_TARGET_MATCHED_OUTPUT = DEFAULT_RESULTS_DIR / "step2c_phase4_top20_target_vs_matched_summary.csv"
 DEFAULT_STORY_OUTPUT = DEFAULT_PRESENTATION_DIR / "step2c_phase4_top20_boundary_story.md"
 
 TOP20_PREDICTION_BOUNDARY_FEATURES = (
@@ -69,6 +71,12 @@ TOP20_PREDICTION_BOUNDARY_FEATURES = (
     "top20_unique_signature_count_median",
     "ranking_ambiguity_top20_score",
 )
+TOP20_AMBIGUITY_COMPONENTS = (
+    "median_2stage_top1_top20_pred_margin_pct",
+    "mean_2stage_top20_within_1pct_count",
+    "median_2stage_top20_diversity_from_rank1",
+    "median_2stage_top20_pairwise_diversity",
+)
 
 PHASE4_FEATURE_FAMILIES = {
     **PHASE2_FEATURE_FAMILIES,
@@ -79,6 +87,26 @@ PHASE4_FEATURE_KEYS = tuple(
 )
 
 BOUNDARY_FIELDS = ["graph_id", "seed_count", *TOP20_PREDICTION_BOUNDARY_FEATURES]
+TARGET_MATCHED_FEATURES = (
+    "ranking_ambiguity_top20_score",
+    "mean_2stage_top20_within_1pct_count",
+    "median_2stage_top20_pairwise_diversity",
+    "median_2stage_top1_top20_pred_margin_pct",
+)
+TARGET_MATCHED_FIELDS = [
+    "target_graph_id",
+    "target_case_group",
+    "n_controls_with_top20",
+    *[
+        name
+        for feature in TARGET_MATCHED_FEATURES
+        for name in (
+            f"target_{feature}",
+            f"matched_{feature}_median",
+            f"target_{feature}_percentile_within_matched",
+        )
+    ],
+]
 
 
 def finite_median(values: list[Any]) -> float:
@@ -224,7 +252,12 @@ def read_top20_boundary_rows(path: str | Path) -> list[dict[str, str]]:
     return rows
 
 
-def zscores(rows: list[dict[str, Any]], key: str) -> dict[str, float]:
+def zscores(
+    rows: list[dict[str, Any]],
+    key: str,
+    *,
+    eligible_graphs: set[str] | None = None,
+) -> dict[str, float]:
     values = [parse_float(row.get(key)) for row in rows]
     clean = [value for value in values if math.isfinite(value)]
     mean = finite_mean(clean)
@@ -232,25 +265,52 @@ def zscores(rows: list[dict[str, Any]], key: str) -> dict[str, float]:
     output: dict[str, float] = {}
     for row, value in zip(rows, values):
         graph_id = str(row["graph_id"])
-        output[graph_id] = 0.0 if std == 0 or not math.isfinite(value) else (value - mean) / std
+        if eligible_graphs is not None and graph_id not in eligible_graphs:
+            output[graph_id] = float("nan")
+        else:
+            output[graph_id] = 0.0 if std == 0 or not math.isfinite(value) else (value - mean) / std
     return output
 
 
 def add_top20_ambiguity_score(rows: list[dict[str, Any]]) -> None:
     if not rows:
         return
-    z_margin = zscores(rows, "median_2stage_top1_top20_pred_margin_pct")
-    z_within = zscores(rows, "mean_2stage_top20_within_1pct_count")
-    z_rank1_diversity = zscores(rows, "median_2stage_top20_diversity_from_rank1")
-    z_pairwise_diversity = zscores(rows, "median_2stage_top20_pairwise_diversity")
+    eligible_graphs = {
+        str(row["graph_id"])
+        for row in rows
+        if any(math.isfinite(parse_float(row.get(feature))) for feature in TOP20_AMBIGUITY_COMPONENTS)
+    }
+    z_margin = zscores(
+        rows,
+        "median_2stage_top1_top20_pred_margin_pct",
+        eligible_graphs=eligible_graphs,
+    )
+    z_within = zscores(
+        rows,
+        "mean_2stage_top20_within_1pct_count",
+        eligible_graphs=eligible_graphs,
+    )
+    z_rank1_diversity = zscores(
+        rows,
+        "median_2stage_top20_diversity_from_rank1",
+        eligible_graphs=eligible_graphs,
+    )
+    z_pairwise_diversity = zscores(
+        rows,
+        "median_2stage_top20_pairwise_diversity",
+        eligible_graphs=eligible_graphs,
+    )
     for row in rows:
         graph_id = str(row["graph_id"])
-        row["ranking_ambiguity_top20_score"] = (
-            -z_margin[graph_id]
-            + z_within[graph_id]
-            + z_rank1_diversity[graph_id]
-            + z_pairwise_diversity[graph_id]
-        )
+        if graph_id not in eligible_graphs:
+            row["ranking_ambiguity_top20_score"] = float("nan")
+        else:
+            row["ranking_ambiguity_top20_score"] = (
+                -z_margin[graph_id]
+                + z_within[graph_id]
+                + z_rank1_diversity[graph_id]
+                + z_pairwise_diversity[graph_id]
+            )
 
 
 def join_phase2_with_top20(
@@ -338,6 +398,47 @@ def build_phase4_selected_overlay_rows(
     return output
 
 
+def build_top20_target_vs_matched_summary_rows(
+    rows: list[dict[str, Any]],
+    match_rows: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    by_graph = {str(row["graph_id"]): row for row in rows}
+    controls_by_target: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in match_rows:
+        controls_by_target[str(row["target_graph_id"])].append(row)
+
+    output: list[dict[str, Any]] = []
+    for target_graph_id in sorted(controls_by_target, key=graph_sort_key):
+        target = by_graph.get(target_graph_id)
+        if not target:
+            continue
+        matches = controls_by_target[target_graph_id]
+        controls = [
+            by_graph[str(row["control_graph_id"])]
+            for row in matches
+            if str(row["control_graph_id"]) in by_graph
+            and math.isfinite(
+                parse_float(by_graph[str(row["control_graph_id"])].get("ranking_ambiguity_top20_score"))
+            )
+        ]
+        row: dict[str, Any] = {
+            "target_graph_id": target_graph_id,
+            "target_case_group": matches[0].get("target_case_group", "") if matches else "",
+            "n_controls_with_top20": len(controls),
+        }
+        for feature in TARGET_MATCHED_FEATURES:
+            target_value = parse_float(target.get(feature))
+            control_values = [parse_float(control.get(feature)) for control in controls]
+            row[f"target_{feature}"] = target_value
+            row[f"matched_{feature}_median"] = finite_median(control_values)
+            row[f"target_{feature}_percentile_within_matched"] = percentile_rank(
+                control_values,
+                target_value,
+            )
+        output.append(row)
+    return output
+
+
 def fieldnames_from_rows(rows: list[dict[str, Any]]) -> list[str]:
     keys: list[str] = []
     for row in rows:
@@ -379,6 +480,9 @@ def write_phase4_story(
     output.parent.mkdir(parents=True, exist_ok=True)
     best_helpful = best_by_family(association_rows, metric="auroc_helpful")
     top20 = best_helpful.get("top20_prediction_boundary", {})
+    top20_covered = sum(
+        math.isfinite(parse_float(row.get("ranking_ambiguity_top20_score"))) for row in joined_rows
+    )
 
     lines = [
         "# Step2c Graph-Level DFL Suitability: Phase 4 Top20 Boundary Readout",
@@ -390,7 +494,8 @@ def write_phase4_story(
         "",
         "## Population",
         "",
-        f"- graphs: {len(joined_rows)}",
+        f"- joined graphs: {len(joined_rows)}",
+        f"- top20-covered graphs: {top20_covered}",
         "",
         "## Top20 Boundary Signal",
         "",
@@ -439,6 +544,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--join-output", type=Path, default=DEFAULT_JOIN_OUTPUT)
     parser.add_argument("--association-output", type=Path, default=DEFAULT_ASSOC_OUTPUT)
     parser.add_argument("--overlay-output", type=Path, default=DEFAULT_OVERLAY_OUTPUT)
+    parser.add_argument("--matched-controls-input", type=Path, default=DEFAULT_MATCHED_CONTROLS_INPUT)
+    parser.add_argument("--target-matched-output", type=Path, default=DEFAULT_TARGET_MATCHED_OUTPUT)
     parser.add_argument("--story-output", type=Path, default=DEFAULT_STORY_OUTPUT)
     return parser.parse_args(argv)
 
@@ -450,11 +557,14 @@ def build_phase4_outputs(args: argparse.Namespace) -> dict[str, list[dict[str, A
     joined_rows = join_phase2_with_top20(phase2_rows, boundary_rows)
     association_rows = build_phase4_association_rows(joined_rows)
     overlay_rows = build_phase4_selected_overlay_rows(joined_rows)
+    match_rows = read_csv(args.matched_controls_input) if args.matched_controls_input.exists() else []
+    target_matched_rows = build_top20_target_vs_matched_summary_rows(joined_rows, match_rows)
 
     write_csv(args.boundary_output, boundary_rows, BOUNDARY_FIELDS)
     write_csv(args.join_output, joined_rows, fieldnames_from_rows(joined_rows))
     write_csv(args.association_output, association_rows, ASSOCIATION_FIELDS)
     write_csv(args.overlay_output, overlay_rows, fieldnames_from_rows(overlay_rows))
+    write_csv(args.target_matched_output, target_matched_rows, TARGET_MATCHED_FIELDS)
     write_phase4_story(
         args.story_output,
         joined_rows=joined_rows,
@@ -466,6 +576,7 @@ def build_phase4_outputs(args: argparse.Namespace) -> dict[str, list[dict[str, A
         "joined_rows": joined_rows,
         "association_rows": association_rows,
         "overlay_rows": overlay_rows,
+        "target_matched_rows": target_matched_rows,
     }
 
 
@@ -476,6 +587,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Saved {len(outputs['joined_rows'])} graph-top20 rows to {args.join_output}")
     print(f"Saved {len(outputs['association_rows'])} Phase 4 association rows to {args.association_output}")
     print(f"Saved {len(outputs['overlay_rows'])} selected case rows to {args.overlay_output}")
+    print(f"Saved {len(outputs['target_matched_rows'])} target-matched rows to {args.target_matched_output}")
     print(f"Saved Phase 4 readout to {args.story_output}")
     return 0
 

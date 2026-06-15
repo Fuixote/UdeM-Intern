@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -129,6 +130,37 @@ class Step2cTop20PredictionBoundarySuitabilityTests(unittest.TestCase):
             by_graph["G-b.json"]["ranking_ambiguity_top20_score"],
         )
 
+    def test_join_top20_leaves_missing_graphs_without_top20_score(self):
+        module = self.load_module()
+        phase2_rows = [
+            {"graph_id": "G-a.json", "median_delta_pp": "20", "helpful_graph": "1", "harmful_graph": "0"},
+            {"graph_id": "G-b.json", "median_delta_pp": "-10", "helpful_graph": "0", "harmful_graph": "1"},
+            {"graph_id": "G-missing.json", "median_delta_pp": "0", "helpful_graph": "0", "harmful_graph": "0"},
+        ]
+        top20_rows = [
+            {
+                "graph_id": "G-a.json",
+                "median_2stage_top1_top20_pred_margin_pct": 0.01,
+                "mean_2stage_top20_within_1pct_count": 4.0,
+                "median_2stage_top20_diversity_from_rank1": 0.7,
+                "median_2stage_top20_pairwise_diversity": 0.8,
+            },
+            {
+                "graph_id": "G-b.json",
+                "median_2stage_top1_top20_pred_margin_pct": 0.30,
+                "mean_2stage_top20_within_1pct_count": 1.0,
+                "median_2stage_top20_diversity_from_rank1": 0.2,
+                "median_2stage_top20_pairwise_diversity": 0.1,
+            },
+        ]
+
+        joined = module.join_phase2_with_top20(phase2_rows, top20_rows)
+        by_graph = {row["graph_id"]: row for row in joined}
+
+        self.assertTrue(module.math.isfinite(by_graph["G-a.json"]["ranking_ambiguity_top20_score"]))
+        self.assertTrue(module.math.isfinite(by_graph["G-b.json"]["ranking_ambiguity_top20_score"]))
+        self.assertFalse(module.math.isfinite(by_graph["G-missing.json"]["ranking_ambiguity_top20_score"]))
+
     def test_phase4_association_includes_top20_prediction_boundary_family(self):
         module = self.load_module()
         rows = [
@@ -174,6 +206,89 @@ class Step2cTop20PredictionBoundarySuitabilityTests(unittest.TestCase):
             1.0,
         )
         self.assertAlmostEqual(by_feature["ranking_ambiguity_top20_score"]["auroc_helpful"], 1.0)
+
+    def test_phase4_story_reports_top20_covered_graph_count(self):
+        module = self.load_module()
+        joined_rows = [
+            {"graph_id": "G-a.json", "ranking_ambiguity_top20_score": "1.0"},
+            {"graph_id": "G-missing.json", "ranking_ambiguity_top20_score": "nan"},
+        ]
+        association_rows = [
+            {
+                "feature_family": "top20_prediction_boundary",
+                "feature": "ranking_ambiguity_top20_score",
+                "auroc_helpful": "0.75",
+                "auroc_harmful": "0.60",
+                "spearman_median_delta_pp": "0.10",
+            }
+        ]
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            story_path = Path(tmpdir) / "story.md"
+            module.write_phase4_story(
+                story_path,
+                joined_rows=joined_rows,
+                association_rows=association_rows,
+                overlay_rows=[],
+            )
+            story = story_path.read_text(encoding="utf-8")
+
+        self.assertIn("- joined graphs: 2", story)
+        self.assertIn("- top20-covered graphs: 1", story)
+
+    def test_top20_target_vs_matched_summary_compares_target_to_covered_controls(self):
+        module = self.load_module()
+        joined_rows = [
+            {
+                "graph_id": "G-target.json",
+                "ranking_ambiguity_top20_score": "3.0",
+                "mean_2stage_top20_within_1pct_count": "5.0",
+                "median_2stage_top20_pairwise_diversity": "0.8",
+                "median_2stage_top1_top20_pred_margin_pct": "0.01",
+            },
+            {
+                "graph_id": "G-control-a.json",
+                "ranking_ambiguity_top20_score": "1.0",
+                "mean_2stage_top20_within_1pct_count": "2.0",
+                "median_2stage_top20_pairwise_diversity": "0.2",
+                "median_2stage_top1_top20_pred_margin_pct": "0.10",
+            },
+            {
+                "graph_id": "G-control-b.json",
+                "ranking_ambiguity_top20_score": "2.0",
+                "mean_2stage_top20_within_1pct_count": "3.0",
+                "median_2stage_top20_pairwise_diversity": "0.4",
+                "median_2stage_top1_top20_pred_margin_pct": "0.20",
+            },
+            {"graph_id": "G-control-missing.json"},
+        ]
+        match_rows = [
+            {
+                "target_graph_id": "G-target.json",
+                "target_case_group": "helpful_success",
+                "control_graph_id": "G-control-a.json",
+            },
+            {
+                "target_graph_id": "G-target.json",
+                "target_case_group": "helpful_success",
+                "control_graph_id": "G-control-b.json",
+            },
+            {
+                "target_graph_id": "G-target.json",
+                "target_case_group": "helpful_success",
+                "control_graph_id": "G-control-missing.json",
+            },
+        ]
+
+        rows = module.build_top20_target_vs_matched_summary_rows(joined_rows, match_rows)
+
+        self.assertEqual(len(rows), 1)
+        row = rows[0]
+        self.assertEqual(row["target_graph_id"], "G-target.json")
+        self.assertEqual(row["n_controls_with_top20"], 2)
+        self.assertAlmostEqual(row["matched_ranking_ambiguity_top20_score_median"], 1.5)
+        self.assertAlmostEqual(row["target_ranking_ambiguity_top20_score_percentile_within_matched"], 1.0)
+        self.assertAlmostEqual(row["target_median_2stage_top1_top20_pred_margin_pct_percentile_within_matched"], 0.0)
 
     def test_experiment_directory_exposes_phase4_entrypoint(self):
         self.assertTrue(WRAPPER_PATH.exists(), f"Missing wrapper: {WRAPPER_PATH}")

@@ -475,7 +475,20 @@ results/step2c_all400_top20_prediction_boundary_features.csv
 results/step2c_all400_graph_top20_boundary_outcome_table.csv
 results/step2c_phase4_top20_feature_family_association.csv
 results/step2c_phase4_top20_selected_case_overlay.csv
+results/step2c_phase4_top20_target_vs_matched_summary.csv
 presentation/step2c_phase4_top20_boundary_story.md
+```
+
+For the targeted selected+matched all50 variant, the curated outputs use the
+same schema with the `step2c_selected_matched_all50_...` prefix:
+
+```text
+results/step2c_selected_matched_all50_top20_prediction_boundary_features.csv
+results/step2c_selected_matched_all50_graph_top20_boundary_outcome_table.csv
+results/step2c_selected_matched_all50_top20_feature_family_association.csv
+results/step2c_selected_matched_all50_top20_selected_case_overlay.csv
+results/step2c_selected_matched_all50_top20_target_vs_matched_summary.csv
+presentation/step2c_selected_matched_all50_top20_boundary_story.md
 ```
 
 ### Phase 4 Features
@@ -568,7 +581,7 @@ The selected cases prove a population-level topology law.
 ## Current Status
 
 ```text
-Status: protocol formalized; Phase 1, Phase 2, and Phase 3 implemented and run locally. Phase 4 protocol and summarizer are implemented; raw all-400 top20 generation is deferred. A 5-seed all-400 pilot is complete, and the selected+matched all50 top20 run is in progress on garnet.
+Status: protocol formalized; Phase 1, Phase 2, and Phase 3 implemented and run locally. Phase 4 protocol and summarizer are implemented. A 5-seed all-400 pilot is complete, and the selected+matched all50 top20 run is complete. Full all-400 x all50 top20 generation remains deferred.
 Primary regime: step2c_poly_d8_mult_eps050
 Graph population: 400 heldout graphs from the existing all-400 model-seed audit
 Solver constraints represented in features: max_cycle=3, max_chain=4
@@ -689,7 +702,79 @@ top20 ranking_ambiguity_top20_score:
 
 This supports the interpretation that top20 boundary features are better
 reranking-sensitivity markers than top5 features. They still do not determine
-whether reranking will help or hurt. The next targeted run is selected +
-matched controls x all 50 seeds x top20, which tests whether this top20 signal
-is stable for the paper-critical graph set.
+whether reranking will help or hurt. The completed targeted run below uses
+selected + matched controls x all 50 seeds x top20 to test whether this top20
+signal is stable for the paper-critical graph set.
+```
+
+Latest Phase 4 selected+matched all50 run:
+
+```text
+run type: 9 selected targets + 151 unique topology-matched controls,
+  subset_seed 0..49, 2stage top20
+raw solution rows: 160,000
+expected rows: 160,000 = 160 graphs x 50 seeds x 20 ranks
+top20 boundary rows: 160
+graph-top20 rows: 400 joined rows, with 160 top20-covered graphs
+Phase 4 association rows: 68
+selected case overlay rows: 9
+target-vs-matched summary rows: 9
+```
+
+Selected+matched all50 top20 readout:
+
+```text
+Best helpful top20 feature:
+  mean_2stage_top20_within_1pct_count
+  helpful AUROC = 0.752
+  harmful AUROC = 0.601
+  Spearman with median_delta_pp = 0.134
+
+Composite top20 ambiguity:
+  ranking_ambiguity_top20_score
+  helpful AUROC = 0.745
+  harmful AUROC = 0.810
+  Spearman with median_delta_pp = 0.061
+
+Best harmful/reranking-sensitivity top20 feature:
+  median_2stage_top20_pairwise_diversity
+  harmful AUROC = 0.823
+  helpful AUROC = 0.658
+  Spearman with median_delta_pp = -0.046
+```
+
+Target-vs-matched top20 pattern:
+
+```text
+G-1169 is the clearest high-top20-boundary helpful target:
+  target top20 ambiguity percentile within matched controls = 1.00
+  target top20 within-1pct percentile within matched controls = 0.95
+
+G-1449 is also top20 near-tie rich:
+  target top20 within-1pct percentile within matched controls = 0.80
+  target top20 ambiguity percentile within matched controls = 0.65
+
+G-392, G-1285, and G-1560 remain strong SPO+ mechanism cases, but their generic
+top20 ambiguity percentiles within matched controls are not uniformly extreme
+(0.25, 0.60, and 0.45). Their explanation should stay tied to the earlier
+candidate-identity and rank-reversal evidence rather than to a generic
+top20-ambiguity rule.
+
+The harmful reranking controls are also high on top20 boundary sensitivity:
+  G-14 top20 ambiguity percentile within matched controls = 0.80
+  G-163 top20 ambiguity percentile within matched controls = 0.80
+
+The both-poor controls are not cleanly separated by top20 ambiguity:
+  G-142 top20 ambiguity percentile within matched controls = 0.70
+  G-946 top20 ambiguity percentile within matched controls = 0.55
+```
+
+Selected+matched all50 interpretation:
+
+```text
+Top20 boundary diagnostics are stable enough to support the ranking-boundary
+story on the selected target/matched-control graph set, but they are still not
+a sufficient predictor of SPO+ benefit. They mark reranking opportunity/risk.
+The sign and quality of the reranking still require candidate-identity,
+true-rank, and critical-edge diagnostics.
 ```
