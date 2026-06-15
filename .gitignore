@@ -48,6 +48,7 @@ main.pdf
 surrogate_experiment_results/decision_analysis/scripts/__pycache__/
 surrogate_experiment_results/decision_analysis/scripts/__pycache__/**
 surrogate_experiment_results/decision_analysis/results/edge_error_criticality.csv
+surrogate_experiment_results/decision_analysis/results/all400_model_seed_baseline/step2c_all400_all50_top5_second_best.csv
 
 # Papers and image artifacts are intentionally trackable so GitHub-hosted AI
 # tools can inspect generated reports and figures.
