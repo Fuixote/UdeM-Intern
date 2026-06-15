@@ -21,6 +21,7 @@ The experiment-local entrypoints are:
 scripts/compute_predicted_topm_solutions.py
 scripts/compute_true_oracle_landscape.py
 scripts/summarize_step2c_mechanism_dissection.py
+scripts/audit_rank_reversal_critical_edges.py
 ```
 
 They are thin wrappers around shared, tested utilities in:
@@ -52,6 +53,10 @@ results/step2c_selected_graphs_all50_top20_predicted.csv
 results/step2c_selected_graphs_true_top50_oracle_landscape.csv
 results/step2c_selected_graphs_candidate_basin_diagnostic.csv
 results/step2c_selected_graphs_mechanism_atlas.csv
+results/step2c_rank_reversal_table.csv
+results/step2c_critical_edge_table.csv
+results/step2c_rank_reversal_summary.csv
+results/step2c_critical_edge_summary.csv
 ```
 
 Observed row counts:
@@ -91,17 +96,100 @@ SPO+ promotes a non-near-oracle candidate and harms performance
 Under this refined view, G-392 is not "2stage never found the good basin"; it is
 "2stage found it only deep in the candidate list, while SPO+ made it rank1."
 
+### Rank-reversal and critical-edge audit snapshot: 2026-06-15
+
+The second audit takes the candidate-basin result one level deeper. It asks:
+
+```text
+Which candidate is being reranked, and do the method-specific predicted scores
+actually reverse the true decision-critical ordering?
+```
+
+Scope:
+
+```text
+graphs =
+  G-392, G-1285, G-1560,
+  G-1169, G-1449,
+  G-142, G-946,
+  G-14, G-163
+
+subset_seed = 0,...,49
+roles per graph/seed =
+  A: 2stage rank1
+  B: best near-oracle candidate inside 2stage top20
+  C: SPO+ rank1
+```
+
+Outputs:
+
+```text
+rank-reversal rows: 1,350 = 9 graphs * 50 seeds * 3 roles
+critical-edge rows: 9,158
+rank-reversal summary rows: 9
+critical-edge summary rows: 14
+```
+
+The core score pattern is:
+
+```text
+successful reranking:
+  true delta from A to C is positive
+  2stage predicted delta from A to C is negative
+  SPO+ predicted delta from A to C is positive
+
+harmful reranking:
+  true delta from A to C is negative
+  SPO+ predicted delta from A to C is still positive
+```
+
+Graph-level summary:
+
+| Graph | Updated mechanism | B found | SPO+=B | C rank under 2stage | C true rank | true delta A->C | 2stage pred delta A->C | SPO+ pred delta A->C |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| G-392 | Deep-candidate correction / reranking | 1.00 | 1.00 | 8 | 3 | +61.58 | -4.24 | +3.49 |
+| G-1285 | Clean exact rank-2 promotion | 1.00 | 1.00 | 2 | 1 | +42.02 | -0.60 | +1.72 |
+| G-1560 | Large-effect top-K promotion | 1.00 | 1.00 | 2 | 2 | +70.42 | -2.71 | +3.42 |
+| G-1169 | Broad top20 promotion | 1.00 | 0.20 | 11 | 16 | +29.17 | -2.81 | +10.19 |
+| G-1449 | Deep top20 promotion outside top5 | 1.00 | 0.00 | 8 | 8 | +20.84 | -2.62 | +6.19 |
+| G-142 | Both-poor negative control | 0.00 | 0.00 | 1 | NA | 0.00 | 0.00 | 0.00 |
+| G-946 | Both-poor negative control | 0.00 | 0.00 | 1 | NA | 0.00 | 0.00 | 0.00 |
+| G-14 | Harmful SPO+ reranking | 1.00 | 0.00 | 9 | not top50 | -28.14 | -2.24 | +5.27 |
+| G-163 | Harmful SPO+ reranking | 1.00 | 0.00 | 8 | 20 | -44.57 | -2.36 | +0.51 |
+
+Interpretation:
+
+```text
+For the success cases, 2stage often already contains the near-oracle candidate
+in its predicted top20, but assigns it a lower predicted score than its bad rank1
+solution. SPO+ reverses exactly this decision-critical ordering and promotes the
+true-better candidate to rank1.
+
+For the harmful controls, SPO+ also reverses the 2stage ordering, but the promoted
+candidate is worse under the fixed true labels. This makes G-14 and G-163 useful
+counterexamples: candidate promotion is not sufficient; the promoted candidate
+must be near-oracle.
+```
+
+This strengthens the paper-safe claim:
+
+```text
+SPO+ helps in these selected Step2c graph instances by correcting
+decision-critical ranking errors within the feasible-solution landscape.
+It is more precise than saying that SPO+ simply discovers a new topology basin.
+```
+
 固定候选图：
 
 ```text
-Clean correction:
+Deep-candidate correction:
   G-392
 
 Clean promotion:
   G-1285
   G-1560
 
-Unexplained SPO+ success:
+Broad/deep top20 promotion, formerly unexplained:
   G-1169
   G-1449
 
@@ -223,11 +311,17 @@ If no, is SPO+ discovering a solution outside the 2stage candidate basin?
 
 ## 每类图应该验证什么机制
 
-### G-392：clean correction prototype
+### G-392：deep-candidate correction prototype
 
-你要证明的不是“G-392 上 SPO+ 好”，这个已经证明了。你要证明的是：
+你要证明的不是“G-392 上 SPO+ 好”，这个已经证明了。当前要展示的是：
 
-> **2stage 的 top candidate region 没有覆盖 near-oracle basin，而 SPO+ 稳定进入了另一个 better decision basin。**
+> **2stage misses the near-oracle candidate in rank1/rank2/top5, but has it deep
+> in top20; SPO+ makes that same near-oracle candidate rank1.**
+
+The top20/top50 and rank-reversal audits show that the earlier outside-basin
+hypothesis was too strong. G-392 is still a correction case relative to the
+rank1/rank2/top5 diagnostics, but the correction happens by deep reranking inside
+the broader 2stage top20 candidate list.
 
 应该输出：
 
@@ -235,7 +329,7 @@ If no, is SPO+ discovering a solution outside the 2stage candidate basin?
 2stage rank1 gap ≈ 25.01%
 2stage rank2 gap ≈ 28.63%
 2stage top5 是否全部 bad?
-2stage top20 是否仍然没有 near-oracle?
+2stage top20 是否包含 near-oracle?  当前答案：包含，50/50 seeds
 SPO+ rank1 gap ≈ 0.83%
 SPO+ rank1 是否在 true-label top-M near-oracle set?
 SPO+ rank1 与 oracle 的 Jaccard
@@ -244,11 +338,13 @@ oracle-vs-2stage symdiff 中 high-error edges 的集中度
 oracle-vs-SPO+ symdiff 中 high-error edges 的集中度
 ```
 
-如果 2stage top20 仍没有 near-oracle，而 SPO+ rank1 在 true top-M 里，那 G-392 的 claim 会很强：
+The current G-392 claim is:
 
-> “This is not promotion of a latent 2stage alternative; SPO+ moves the decision into a different near-oracle basin.”
+> “This is not exact rank-2 or top-5 promotion; SPO+ promotes a near-oracle
+> candidate that 2stage had only deep in its predicted top20.”
 
-这就是 AAAI 里最干净的 correction story。
+This remains a clean correction story relative to rank1/rank2/top5, but not an
+outside-basin discovery story.
 
 ### G-1285：clean exact rank-2 promotion prototype
 
@@ -303,20 +399,22 @@ are these alternatives structurally similar?
 
 > “near-oracle candidate promotion from the 2stage top-K set.”
 
-### G-1169 / G-1449：unexplained success，最可能有新发现
+### G-1169 / G-1449：formerly unexplained, now broad/deep top20 promotion
 
-这两个我非常赞成优先做。它们可能是你论文里最有 novelty 的地方，但现在不能急着讲故事。
-
-对这两个图，先跑三步：
+这两个图最初看起来像 unexplained stable SPO+ success，因为 exact rank2/top5 hash
+diagnostics 解释不了。top20/top50 audit 之后，当前定位应改成：
 
 ```text
-1. Expand K from 5 to 20 or 50.
-2. Replace exact hash match by structural similarity:
-   Jaccard(SPO+ rank1, 2stage rank k)
-3. Compare SPO+ rank1 against true-label top-M oracle landscape.
+G-1169: broad top20 promotion; SPO+ rank1 median 2stage rank = 11.
+G-1449: deep top20 promotion outside top5; SPO+ rank1 median 2stage rank = 8.
 ```
 
-可能出现三种结果：
+它们的价值不是证明第三类完全独立机制，而是证明 top5 指标太窄：
+
+> Many apparent unexplained successes are near-oracle candidates that 2stage
+> already found in top20 but deeply misranked.
+
+Still-useful diagnostic interpretation:
 
 | 结果                                                            | 解释                                     |
 | ------------------------------------------------------------- | -------------------------------------- |
@@ -325,13 +423,8 @@ are these alternatives structurally similar?
 | SPO+ rank1 完全不在 2stage candidate basin，但接近 oracle             | 第三类 correction mechanism               |
 | SPO+ rank1 near-oracle，但 oracle landscape 有很多等价 alternatives  | 可能是 high-degeneracy solution landscape |
 
-这两个图先不要命名机制。建议暂时叫：
-
-```text
-unexplained stable SPO+ success
-```
-
-等 top20/top50 + Jaccard diagnostics 出来后再命名。
+For this run, the first row is the supported explanation for both G-1169 and
+G-1449.
 
 ### G-1657 / G-191：boundary cases
 
