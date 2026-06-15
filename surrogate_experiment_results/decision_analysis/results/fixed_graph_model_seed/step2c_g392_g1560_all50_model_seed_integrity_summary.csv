@@ -1,0 +1,5 @@
+regime,graph_id,method_label,row_count,unique_checkpoint_hashes,unique_train_subset_hashes,unique_prediction_hashes,unique_rank1_signatures,unique_rank2_signatures,mean_prediction_l2_from_discovery_seed,min_prediction_l2_from_discovery_seed,max_prediction_l2_from_discovery_seed,mean_prediction_corr_with_discovery_seed,min_prediction_corr_with_discovery_seed,max_prediction_corr_with_discovery_seed,unique_top5_signature_hashes
+step2c_poly_d8_mult_eps050,G-1560.json,2stage_val_mse,50,50,50,50,1,2,2.0174078165039555,0.0,4.48359869120727,0.9998835484844364,0.9994728205313175,1.0,4
+step2c_poly_d8_mult_eps050,G-1560.json,spoplus_val_spoplus_loss,50,50,50,50,1,1,8.193544868964633,0.0,25.799960144515865,0.999115111208932,0.9967146854645661,1.0,3
+step2c_poly_d8_mult_eps050,G-392.json,2stage_val_mse,50,50,50,50,1,1,2.0438939884124583,0.0,4.4101728408040195,0.9996793655185863,0.9987239207042601,1.0,1
+step2c_poly_d8_mult_eps050,G-392.json,spoplus_val_spoplus_loss,50,50,50,50,1,2,10.629731980435112,0.0,24.968986994100938,0.9977110254074287,0.9907531240843932,1.0,10

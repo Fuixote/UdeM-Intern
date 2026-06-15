@@ -355,6 +355,8 @@ surrogate_experiment_results/decision_analysis/results/fixed_graph_model_seed/st
 surrogate_experiment_results/decision_analysis/results/fixed_graph_model_seed/step2c_g392_g1560_all50_top5_second_best_summary.csv
 surrogate_experiment_results/decision_analysis/results/fixed_graph_model_seed/step2c_g392_g1560_all50_seed_audit.csv
 surrogate_experiment_results/decision_analysis/results/fixed_graph_model_seed/step2c_g392_g1560_all50_seed_audit_summary.csv
+surrogate_experiment_results/decision_analysis/results/fixed_graph_model_seed/step2c_g392_g1560_all50_model_seed_integrity.csv
+surrogate_experiment_results/decision_analysis/results/fixed_graph_model_seed/step2c_g392_g1560_all50_model_seed_integrity_summary.csv
 ```
 
 Definitions were fixed before reading the all-50 summary:
@@ -414,6 +416,198 @@ across every model seed under the top-5 definition, with exact rank-2 promotion
 in most but not all model seeds. This supports selected graph-instance
 robustness. It still should not be stated as pure topology causality because
 topology, arc features, fixed labels, and feasible-set geometry remain bundled.
+
+Integrity check: because the all-50 result is very regular, an additional
+artifact-level sanity check was run on garnet:
+
+```bash
+source configs/runtime/garnet.env
+python surrogate_experiment_results/decision_analysis/scripts/audit_fixed_graph_model_seed_integrity.py \
+  --input surrogate_experiment_results/decision_analysis/results/fixed_graph_model_seed/step2c_g392_g1560_all50_top5_second_best.csv \
+  --dataset-dir dataset/processed/step2c_poly_d8_mult_eps050_main2000_seed20260523 \
+  --project-root /local1/fuweik/UdeM-Intern \
+  --output surrogate_experiment_results/decision_analysis/results/fixed_graph_model_seed/step2c_g392_g1560_all50_model_seed_integrity.csv \
+  --summary-output surrogate_experiment_results/decision_analysis/results/fixed_graph_model_seed/step2c_g392_g1560_all50_model_seed_integrity_summary.csv \
+  --top-k 5
+```
+
+Integrity result snapshot:
+
+```text
+G-392, 2stage:
+  unique checkpoints = 50
+  unique train subsets = 50
+  unique prediction vectors = 50
+  unique rank1 signatures = 1
+  unique rank2 signatures = 1
+  unique top5 signature hashes = 1
+  prediction L2 from discovery seed: min 0.00, mean 2.04, max 4.41
+
+G-392, SPO+:
+  unique checkpoints = 50
+  unique train subsets = 50
+  unique prediction vectors = 50
+  unique rank1 signatures = 1
+  unique rank2 signatures = 2
+  unique top5 signature hashes = 10
+  prediction L2 from discovery seed: min 0.00, mean 10.63, max 24.97
+
+G-1560, 2stage:
+  unique checkpoints = 50
+  unique train subsets = 50
+  unique prediction vectors = 50
+  unique rank1 signatures = 1
+  unique rank2 signatures = 2
+  unique top5 signature hashes = 4
+  prediction L2 from discovery seed: min 0.00, mean 2.02, max 4.48
+
+G-1560, SPO+:
+  unique checkpoints = 50
+  unique train subsets = 50
+  unique prediction vectors = 50
+  unique rank1 signatures = 1
+  unique rank2 signatures = 1
+  unique top5 signature hashes = 3
+  prediction L2 from discovery seed: min 0.00, mean 8.19, max 25.80
+```
+
+Interpretation of the integrity check: the audit did load 50 distinct
+checkpoints trained on 50 distinct subsets, and the fixed-graph prediction
+vectors differ for every graph/method pair. The stable Case C result is
+therefore not explained by accidentally reusing one checkpoint or one training
+subset. The stability is at the decision level: despite prediction-vector
+variation, rank-1 solution signatures are unchanged across all 50 seeds for
+both selected graphs and both methods.
+
+## Step2c All-400 Heldout Graph Model-Seed Baseline
+
+The population-denominator audit extends the fixed-graph model-seed check from
+two selected graph instances to all 400 heldout graphs in the same Step2c split.
+This is the first baseline that can say whether `G-392` and `G-1560` are unusual
+relative to the heldout graph population.
+
+Scope:
+
+```text
+regime: step2c_poly_d8_mult_eps050
+graphs: all 400 heldout graphs from master_split_seed=42
+subset_seed: 0..49
+train_size: 50
+max_cycle: 3
+max_chain: 4
+top_k: 5
+methods: 2stage selected by validation MSE; SPO+ selected by validation SPO+ loss
+labels: fixed actual Step2c labels
+```
+
+The top-5 replay was run on garnet:
+
+```bash
+source configs/runtime/garnet.env
+python surrogate_experiment_results/decision_analysis/scripts/compute_second_best_solutions.py \
+  --regime step2c_poly_d8_mult_eps050 \
+  --run-root surrogate_experiment_results/Step2_resampling/phase1_runs \
+  --dataset-dir dataset/processed/step2c_poly_d8_mult_eps050_main2000_seed20260523 \
+  --split-path surrogate_experiment_results/Step2_resampling/splits/step2c_poly_d8_mult_eps050/master_split_seed=42.json \
+  --subset-seed-start 0 \
+  --subset-seed-stop 49 \
+  --case-type-prefix step2c_all400_model_seed \
+  --max-solutions 5 \
+  --max-cut-attempts 60 \
+  --progress-every 100 \
+  --output surrogate_experiment_results/decision_analysis/results/all400_model_seed_baseline/step2c_all400_all50_top5_second_best.csv \
+  --summary-output surrogate_experiment_results/decision_analysis/results/all400_model_seed_baseline/step2c_all400_all50_top5_second_best_summary.csv
+
+python surrogate_experiment_results/decision_analysis/scripts/summarize_all400_model_seed_baseline.py \
+  --input surrogate_experiment_results/decision_analysis/results/all400_model_seed_baseline/step2c_all400_all50_top5_second_best.csv \
+  --seed-audit-output surrogate_experiment_results/decision_analysis/results/all400_model_seed_baseline/step2c_all400_all50_seed_audit.csv \
+  --graph-summary-output surrogate_experiment_results/decision_analysis/results/all400_model_seed_baseline/step2c_all400_all50_graph_summary.csv \
+  --percentile-output surrogate_experiment_results/decision_analysis/results/all400_model_seed_baseline/step2c_g392_g1560_all400_percentiles.csv \
+  --distribution-output surrogate_experiment_results/decision_analysis/results/all400_model_seed_baseline/step2c_all400_metric_distribution.csv \
+  --top-k 5
+```
+
+Main outputs:
+
+```text
+surrogate_experiment_results/decision_analysis/results/all400_model_seed_baseline/step2c_all400_all50_top5_second_best.csv
+surrogate_experiment_results/decision_analysis/results/all400_model_seed_baseline/step2c_all400_all50_top5_second_best_summary.csv
+surrogate_experiment_results/decision_analysis/results/all400_model_seed_baseline/step2c_all400_all50_seed_audit.csv
+surrogate_experiment_results/decision_analysis/results/all400_model_seed_baseline/step2c_all400_all50_graph_summary.csv
+surrogate_experiment_results/decision_analysis/results/all400_model_seed_baseline/step2c_g392_g1560_all400_percentiles.csv
+surrogate_experiment_results/decision_analysis/results/all400_model_seed_baseline/step2c_all400_metric_distribution.csv
+```
+
+Output sizes:
+
+```text
+top5 replay rows: 200000
+seed audit rows: 20000
+graph summary rows: 400
+target percentile rows: 24
+metric distribution rows: 12
+```
+
+All-400 distribution snapshot:
+
+```text
+strict_case_c_rate: median 0.000, p90 0.000, p95 0.061, max 1.000
+strong_case_c_rate: median 0.000, p90 0.000, p95 0.000, max 1.000
+correction_rate: median 0.000, p90 0.000, p95 0.000, max 1.000
+exact_rank2_promotion_rate: median 0.000, p90 0.000, p95 0.000, max 1.000
+topk_promotion_rate: median 0.000, p90 0.802, p95 1.000, max 1.000
+median_delta_pp: median 0.000, p90 6.214, p95 10.695, max 35.374
+```
+
+Target percentile snapshot:
+
+```text
+G-392:
+  strict_case_c_rate = 1.00
+    percentile_midrank = 98.625, rank_desc = 1, ties = 11/400
+  strong_case_c_rate = 1.00
+    percentile_midrank = 99.625, rank_desc = 1, ties = 3/400
+  correction_rate = 1.00
+    percentile_midrank = 99.250, rank_desc = 1, ties = 6/400
+  median_delta_pp = 24.18
+    percentile_midrank = 99.625, rank_desc = 2
+  median 2stage rank1 gap = 25.01%
+    percentile_midrank = 95.375, rank_desc = 19
+  median SPO+ rank1 gap = 0.83%
+    percentile_midrank = 19.625
+  median 2stage rank2 gap = 28.63%
+    percentile_midrank = 97.375, rank_desc = 11
+
+G-1560:
+  strict_case_c_rate = 1.00
+    percentile_midrank = 98.625, rank_desc = 1, ties = 11/400
+  strong_case_c_rate = 1.00
+    percentile_midrank = 99.625, rank_desc = 1, ties = 3/400
+  exact_rank2_promotion_rate = 0.82
+    percentile_midrank = 99.625, rank_desc = 2
+  topk_promotion_rate = 1.00
+    percentile_midrank = 95.875, rank_desc = 1, ties = 33/400
+  median_delta_pp = 35.37
+    percentile_midrank = 99.875, rank_desc = 1
+  median 2stage rank1 gap = 35.89%
+    percentile_midrank = 99.125, rank_desc = 4
+  median SPO+ rank1 gap = 0.51%
+    percentile_midrank = 16.875
+  median 2stage rank2 gap = 0.51%
+    percentile_midrank = 10.625
+```
+
+Interpretation: the selected graph instances are not merely robust examples;
+they are extreme relative to the heldout graph population. Most heldout graphs
+have zero Strict Case C preservation across the 50 model seeds, while both
+targets have 50/50 Strict Case C. `G-392` is among the strongest correction
+cases in the population, with 2stage rank1 and rank2 both far from oracle while
+SPO+ rank1 remains near oracle. `G-1560` has the largest median Delta among all
+400 graphs and is a top-ranked promotion case: exact rank-2 promotion is very
+high, and top-5 promotion is perfect. This supports graph-instance specificity
+and a feasible-set-conditioned mechanism claim for the selected cases. It still
+does not prove pure topology causality, because topology, arc features, fixed
+labels, and feasible-set geometry remain bundled.
 
 ## Main Step2c Fixed-Topology Label-Seed Robustness Result
 
