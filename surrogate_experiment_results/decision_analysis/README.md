@@ -260,54 +260,10 @@ edge_hamming_with_opt = mean(y_method != y_opt)
 
 ---
 
-## Fixed-Topology Label-Seed Audit for G-392 and G-1560
-
-Purpose: test whether the Case C behavior for `G-392.json` and `G-1560.json`
-is robust when topology is fixed but Step2c-style multiplicative labels vary.
-
-Important scope note: this is a fixed-model diagnostic, not a full Step2c
-retraining experiment. The audit keeps the original Step2b d8 trained
-parameters fixed, keeps graph arcs fixed, regenerates only labels with
-Step2c-style deterministic multiplicative noise, then replays oracle/rank-1/
-rank-2 decisions.
-
-Command used on garnet:
-
-```bash
-python surrogate_experiment_results/decision_analysis/scripts/audit_fixed_topology_label_seed.py \
-  --graphs G-392.json G-1560.json \
-  --label-seeds 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 \
-    25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 \
-  --output surrogate_experiment_results/decision_analysis/results/fixed_topology_label_seed/fixed_topology_label_seed_rows.csv
-```
-
-Outputs:
-
-```text
-surrogate_experiment_results/decision_analysis/results/fixed_topology_label_seed/fixed_topology_label_seed_rows.csv
-surrogate_experiment_results/decision_analysis/results/fixed_topology_label_seed/fixed_topology_label_seed_summary.csv
-```
-
-Result snapshot:
-
-```text
-rows: 400
-G-392:  36/50 label seeds preserve strict Case C signature, preservation rate 0.72
-G-1560: 30/50 label seeds preserve strict Case C signature, preservation rate 0.60
-Both graphs: unique_topology_hashes = 1, unique_label_hashes = 50
-Both graphs: SPO+ rank-1 gap is lower than 2stage rank-1 gap for all 50 label seeds
-```
-
-Interpretation: this supports a topology-conditioned mechanism more strongly
-than the initial two-seed smoke. The result still should not be stated as
-"Step2c retraining preserves the case" until a consistent Step2c relabel +
-retrain check is run.
-
 ## Actual Step2c Replay for G-392 and G-1560
 
-To distinguish the fixed-model relabel audit from true Step2c model behavior,
-the two original Case C graph/seed pairs were replayed under the actual
-Step2c d8 trained models and Step2c labels:
+The two original Case C graph/seed pairs were replayed under the actual Step2c
+d8 trained models and Step2c labels:
 
 ```text
 G-392.json  with subset_seed=1
@@ -346,11 +302,10 @@ G-1560, seed=30:
 ```
 
 Interpretation: the actual Step2c trained-model replay preserves the two
-case-level mechanisms on these selected graph/seed pairs. This is stronger than
-the fixed-model relabel audit, but it is still a two-graph case study rather
-than a Step2c-wide frequency claim.
+case-level mechanisms on these selected graph/seed pairs. This is still a
+two-graph case study rather than a Step2c-wide frequency claim.
 
-## Actual Step2c Fixed-Topology Label-Seed Robustness
+## Main Step2c Fixed-Topology Label-Seed Robustness Result
 
 After confirming the two selected graph/seed pairs under actual Step2c trained
 models, the fixed-topology audit was rerun on the same Step2c basis:
