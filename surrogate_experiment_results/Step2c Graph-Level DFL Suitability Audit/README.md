@@ -319,6 +319,57 @@ Harmful reranking controls:
   G-163
 ```
 
+### Phase 3 Inputs
+
+```text
+results/step2c_all400_graph_boundary_outcome_table.csv
+```
+
+This input is the Phase 2 joined all-400 table, containing Phase 1 graph /
+feasible-set features, all-400 model-seed outcomes, and Phase 2
+prediction-boundary features.
+
+### Phase 3 Script
+
+```text
+scripts/build_phase3_matched_controls.py
+```
+
+The experiment-local script is a thin wrapper around:
+
+```text
+surrogate_experiment_results/decision_analysis/scripts/
+  build_step2c_matched_controls_suitability.py
+```
+
+### Phase 3 Outputs
+
+```text
+results/step2c_phase3_matched_controls.csv
+results/step2c_phase3_target_vs_matched_summary.csv
+presentation/step2c_phase3_matched_controls_story.md
+```
+
+The default Phase 3 run uses 20 matched controls per README target graph. The
+control pool excludes the README target set itself, so the selected success /
+both-poor / harmful graphs do not serve as each other's matched controls.
+
+Allowed claim:
+
+```text
+Selected target cases remain unusual, or do not remain unusual, relative to
+graphs with similar coarse raw topology.
+```
+
+Important boundary:
+
+```text
+The matching variables are intentionally coarse raw-topology descriptors. A
+target that remains extreme after this match supports graph-instance
+specificity beyond these coarse descriptors, but it still does not prove
+topology causality.
+```
+
 ## Report-Safe Claim Templates
 
 Strong result:
@@ -354,7 +405,7 @@ The selected cases prove a population-level topology law.
 ## Current Status
 
 ```text
-Status: protocol formalized; Phase 1 and Phase 2 implemented and run locally.
+Status: protocol formalized; Phase 1, Phase 2, and Phase 3 implemented and run locally.
 Primary regime: step2c_poly_d8_mult_eps050
 Graph population: 400 heldout graphs from the existing all-400 model-seed audit
 Solver constraints represented in features: max_cycle=3, max_chain=4
@@ -411,4 +462,34 @@ with clean promotion. G-392 and G-1560 remain strong mechanism cases, but their
 top5 boundary scores are not uniformly extreme, consistent with the earlier
 top20/rank-reversal finding that top5 diagnostics are only a partial view of
 the candidate landscape.
+```
+
+Latest Phase 3 run:
+
+```text
+matched-control rows: 180
+target-vs-matched summary rows: 9
+controls per target: 20
+matching variables: num_vertices, num_arcs, density, num_2cycles,
+  num_3cycles, largest_scc_fraction
+```
+
+Initial Phase 3 readout:
+
+```text
+The five helpful success targets remain high relative to topology-matched
+controls on median_delta_pp. G-392, G-1285, G-1449, and G-1560 are at the top
+of their matched-control sets, and G-1169 is at the 95th percentile. This
+supports graph-instance specificity beyond the six coarse topology variables
+used for matching.
+
+The harmful reranking controls G-14 and G-163 sit at the bottom of their
+matched-control sets on median_delta_pp while also having high ambiguity
+percentiles. This reinforces the Phase 2 interpretation that ambiguity marks a
+reranking-sensitive boundary, not guaranteed SPO+ improvement.
+
+The both-poor controls G-142 and G-946 are not extreme on median_delta_pp
+relative to their matched controls. They are useful as failure examples in the
+mechanism story, but they do not appear graph-instance-extreme under this
+coarse matched-control diagnostic.
 ```
