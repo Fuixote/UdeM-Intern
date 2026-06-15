@@ -210,14 +210,63 @@ avoid overinterpreting small differences.
 Only after Phase 1, add features from 2stage predicted candidate lists. Start
 with existing all-400 top5 artifacts before considering an all-400 top20 rerun.
 
-Candidate features:
+Phase 2 intentionally uses the existing all-400 top5 artifact. It does not
+rerun the solver for all-400 top20.
+
+### Inputs
+
+```text
+surrogate_experiment_results/decision_analysis/results/all400_model_seed_baseline/
+  step2c_all400_all50_top5_second_best.csv
+
+results/step2c_all400_graph_feature_outcome_table.csv
+```
+
+The top5 candidate artifact is a large generated input and is not committed to
+git. It should be regenerated or synced separately when reproducing Phase 2.
+
+### Script
+
+```text
+scripts/build_phase2_prediction_boundary.py
+```
+
+The experiment-local script is a thin wrapper around:
+
+```text
+surrogate_experiment_results/decision_analysis/scripts/
+  build_step2c_prediction_boundary_suitability.py
+```
+
+### Outputs
+
+```text
+results/step2c_all400_prediction_boundary_features.csv
+results/step2c_all400_graph_boundary_outcome_table.csv
+results/step2c_phase2_feature_family_association.csv
+results/step2c_phase2_selected_case_overlay.csv
+presentation/step2c_phase2_dfl_suitability_story.md
+```
+
+### Phase 2 Features
 
 ```text
 2stage top1-top2 predicted margin
 2stage top1-top5 predicted margin
-number of top5 solutions within a small predicted margin
-top5 solution diversity
-rank1 stability across subset_seed
+2stage top1-top2 / top1-top5 predicted margin normalized by rank1 score
+number of top5 solutions within 1% / 5% predicted margin
+top5 mean Jaccard-to-rank1 and diversity
+rank1 unique-signature count and modal-signature rate across subset_seed
+ranking_ambiguity_score
+```
+
+The `ranking_ambiguity_score` is a descriptive composite:
+
+```text
+smaller top1-top2 margin
++ smaller top1-top5 margin
++ more top5 candidates within 1%
++ higher top5 diversity from rank1
 ```
 
 Allowed claim:
@@ -225,6 +274,13 @@ Allowed claim:
 ```text
 After training a standard 2stage model, prediction-boundary diagnostics add
 signal about whether DFL reranking may be useful.
+```
+
+Important boundary:
+
+```text
+High ambiguity is an opportunity/risk signal, not a sufficient condition for
+SPO+ improvement. Harmful reranking controls can also have high ambiguity.
 ```
 
 ## Phase 3: Matched Controls
@@ -298,7 +354,7 @@ The selected cases prove a population-level topology law.
 ## Current Status
 
 ```text
-Status: protocol formalized; Phase 1 implemented and run locally.
+Status: protocol formalized; Phase 1 and Phase 2 implemented and run locally.
 Primary regime: step2c_poly_d8_mult_eps050
 Graph population: 400 heldout graphs from the existing all-400 model-seed audit
 Solver constraints represented in features: max_cycle=3, max_chain=4
@@ -324,4 +380,35 @@ feasible-set descriptors alone do not give a simple DFL-suitability rule.
 
 Phase 2 should add prediction-boundary features from existing 2stage candidate
 lists before making stronger suitability claims.
+```
+
+Latest Phase 2 run:
+
+```text
+prediction-boundary feature rows: 400
+graph-boundary outcome rows: 400
+Phase 2 feature association rows: 55
+selected case overlay rows: 9
+```
+
+Initial Phase 2 readout:
+
+```text
+Prediction-boundary diagnostics add the clearest helpful-graph signal so far:
+ranking_ambiguity_score has helpful AUROC 0.715. Its Spearman association with
+median_delta_pp is still weak, so this is not a simple monotone effect-size
+predictor.
+
+The same ambiguity signal is also high for harmful reranking controls such as
+G-14 and G-163. Therefore Phase 2 supports a boundary/instability
+interpretation: 2stage candidate ambiguity identifies graphs where DFL
+reranking can matter, but it does not determine whether the reranking will be
+beneficial.
+
+Selected helpful cases split into different boundary profiles. G-1169 and
+G-1449 are high-ambiguity deep-reranking cases. G-1285 combines high diversity
+with clean promotion. G-392 and G-1560 remain strong mechanism cases, but their
+top5 boundary scores are not uniformly extreme, consistent with the earlier
+top20/rank-reversal finding that top5 diagnostics are only a partial view of
+the candidate landscape.
 ```
