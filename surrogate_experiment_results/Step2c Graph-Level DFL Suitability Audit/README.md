@@ -370,6 +370,128 @@ specificity beyond these coarse descriptors, but it still does not prove
 topology causality.
 ```
 
+## Phase 4: All-400 Top20 Prediction-Boundary Extension
+
+Phase 4 follows the expert-prioritized next step after Phase 1/2/3. Phase 2
+used only existing all-400 2stage top5 candidate lists. The mechanism
+dissection audit showed that several important cases, especially G-392,
+G-1169, and G-1449, are top20/deep-reranking cases. Therefore Phase 4 extends
+the prediction-boundary diagnostics from top5 to top20.
+
+Phase 4 still uses post-training 2stage predicted candidates, so it is not a
+topology-only diagnostic.
+
+### Phase 4 Raw Candidate Generation
+
+Generate the raw all-400 top20 2stage candidate artifact with the existing
+no-good-cut solver path:
+
+```bash
+python surrogate_experiment_results/decision_analysis/scripts/compute_second_best_solutions.py \
+  --regime step2c_poly_d8_mult_eps050 \
+  --dataset-dir dataset/processed/step2c_poly_d8_mult_eps050_main2000_seed20260523 \
+  --subset-seed-start 0 \
+  --subset-seed-stop 49 \
+  --case-type-prefix subset_seed \
+  --method-labels 2stage_val_mse \
+  --max-cycle 3 \
+  --max-chain 4 \
+  --max-solutions 20 \
+  --max-cut-attempts 80 \
+  --output surrogate_experiment_results/decision_analysis/results/all400_model_seed_baseline/step2c_all400_all50_top20_2stage.csv \
+  --summary-output surrogate_experiment_results/decision_analysis/results/all400_model_seed_baseline/step2c_all400_all50_top20_2stage_summary.csv \
+  --progress-every 25
+```
+
+The raw top20 artifact is expected to be large and must remain ignored by git.
+
+### Phase 4 Inputs
+
+```text
+surrogate_experiment_results/decision_analysis/results/all400_model_seed_baseline/
+  step2c_all400_all50_top20_2stage.csv
+
+results/step2c_all400_graph_boundary_outcome_table.csv
+```
+
+### Phase 4 Script
+
+```text
+scripts/build_phase4_top20_prediction_boundary.py
+```
+
+The experiment-local script is a thin wrapper around:
+
+```text
+surrogate_experiment_results/decision_analysis/scripts/
+  build_step2c_top20_prediction_boundary_suitability.py
+```
+
+### Phase 4 Outputs
+
+```text
+results/step2c_all400_top20_prediction_boundary_features.csv
+results/step2c_all400_graph_top20_boundary_outcome_table.csv
+results/step2c_phase4_top20_feature_family_association.csv
+results/step2c_phase4_top20_selected_case_overlay.csv
+presentation/step2c_phase4_top20_boundary_story.md
+```
+
+### Phase 4 Features
+
+```text
+2stage top1-top20 predicted margin
+2stage top1-top20 predicted margin normalized by rank1 score
+number of top20 solutions within 1% / 5% predicted margin
+top20 mean Jaccard-to-rank1 and diversity
+top20 mean pairwise Jaccard and pairwise diversity
+rank1 unique-signature count and modal-signature rate across subset_seed
+top20 unique-signature count
+ranking_ambiguity_top20_score
+```
+
+Allowed claim:
+
+```text
+Top20 prediction-boundary diagnostics test whether the broader 2stage candidate
+landscape explains graph instances that top5 diagnostics under-rank.
+```
+
+Important boundary:
+
+```text
+Top20 boundary features are still post-training diagnostics. They can support
+the learned-ranking-boundary story but cannot be used as pre-training topology
+causal evidence.
+```
+
+## Follow-Up Roadmap
+
+The expert review suggests several later steps. Keep them separate from Phase 4
+so that each claim has a clear denominator and evidence boundary.
+
+```text
+Phase 5:
+  Multivariate cross-validated diagnostic models.
+  Compare feature groups A raw topology, B cycle/chain, C feasible/conflict
+  geometry, D top5 boundary, E top20 boundary.
+
+Phase 6:
+  Helpful-vs-harmful modeling inside high-ambiguity graphs.
+  Test what separates beneficial reranking from harmful reranking after the
+  graph is already identified as reranking-sensitive.
+
+Phase 7:
+  Matched-control robustness.
+  Repeat matching with richer specs: coarse topology only; topology plus
+  feasible geometry; topology plus top20 ambiguity; k = 10, 20, 50 controls.
+
+Phase 8:
+  Cross-regime robustness.
+  Replicate the graph-level suitability audit on Step2b or another Step2c
+  sensitivity regime before making broader distribution-level claims.
+```
+
 ## Report-Safe Claim Templates
 
 Strong result:
@@ -405,7 +527,7 @@ The selected cases prove a population-level topology law.
 ## Current Status
 
 ```text
-Status: protocol formalized; Phase 1, Phase 2, and Phase 3 implemented and run locally.
+Status: protocol formalized; Phase 1, Phase 2, and Phase 3 implemented and run locally. Phase 4 protocol and summarizer are implemented; raw all-400 top20 generation is pending.
 Primary regime: step2c_poly_d8_mult_eps050
 Graph population: 400 heldout graphs from the existing all-400 model-seed audit
 Solver constraints represented in features: max_cycle=3, max_chain=4
