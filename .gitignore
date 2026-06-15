@@ -55,6 +55,17 @@ surrogate_experiment_results/decision_analysis/results/all400_model_seed_baselin
 !surrogate_experiment_results/Step2c Mechanism Dissection Audit/results/*.csv
 surrogate_experiment_results/Step2c Mechanism Dissection Audit/results/smoke/
 
+# Curated Step2c graph-level DFL suitability audit artifacts are intentionally
+# trackable. Keep only small phase summaries and presentation readouts in git.
+!surrogate_experiment_results/Step2c Graph-Level DFL Suitability Audit/
+!surrogate_experiment_results/Step2c Graph-Level DFL Suitability Audit/README.md
+!surrogate_experiment_results/Step2c Graph-Level DFL Suitability Audit/scripts/
+!surrogate_experiment_results/Step2c Graph-Level DFL Suitability Audit/scripts/**
+!surrogate_experiment_results/Step2c Graph-Level DFL Suitability Audit/results/
+!surrogate_experiment_results/Step2c Graph-Level DFL Suitability Audit/results/*.csv
+!surrogate_experiment_results/Step2c Graph-Level DFL Suitability Audit/presentation/
+!surrogate_experiment_results/Step2c Graph-Level DFL Suitability Audit/presentation/*.md
+
 # Papers and image artifacts are intentionally trackable so GitHub-hosted AI
 # tools can inspect generated reports and figures.
 surrogate_experiment_results/plot_results_step1bc/combined_step1bc_per_graph.csv
