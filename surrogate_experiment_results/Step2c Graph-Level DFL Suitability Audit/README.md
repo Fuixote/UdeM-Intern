@@ -405,6 +405,47 @@ python surrogate_experiment_results/decision_analysis/scripts/compute_second_bes
 
 The raw top20 artifact is expected to be large and must remain ignored by git.
 
+### Phase 4 Targeted Selected+Matched Variant
+
+The full all-400 x all-50 top20 run is expensive. Before committing to that
+full run, use the Phase 3 target/matched-control graph set as a targeted
+stability audit:
+
+```text
+graphs:
+  9 README target graphs
+  + all unique topology-matched controls from
+    results/step2c_phase3_matched_controls.csv
+
+current unique graph count:
+  160 = 9 targets + 151 unique matched controls
+```
+
+Generate a graph list from the Phase 3 matched-control table, then run:
+
+```bash
+python surrogate_experiment_results/decision_analysis/scripts/compute_second_best_solutions.py \
+  --regime step2c_poly_d8_mult_eps050 \
+  --dataset-dir dataset/processed/step2c_poly_d8_mult_eps050_main2000_seed20260523 \
+  --subset-seed-start 0 \
+  --subset-seed-stop 49 \
+  --case-type-prefix subset_seed \
+  --method-labels 2stage_val_mse \
+  --max-cycle 3 \
+  --max-chain 4 \
+  --max-solutions 20 \
+  --max-cut-attempts 80 \
+  --graphs $(cat surrogate_experiment_results/decision_analysis/results/all400_model_seed_baseline/step2c_phase4_selected_matched_graphs.txt) \
+  --output surrogate_experiment_results/decision_analysis/results/all400_model_seed_baseline/step2c_selected_matched_all50_top20_2stage.csv \
+  --summary-output surrogate_experiment_results/decision_analysis/results/all400_model_seed_baseline/step2c_selected_matched_all50_top20_2stage_summary.csv \
+  --progress-every 20
+```
+
+This targeted run is intended to test whether top20 boundary diagnostics are
+stable across all 50 model seeds for the cases that matter most to the paper:
+selected helpful cases, both-poor controls, harmful controls, and their
+topology-matched controls.
+
 ### Phase 4 Inputs
 
 ```text
@@ -527,7 +568,7 @@ The selected cases prove a population-level topology law.
 ## Current Status
 
 ```text
-Status: protocol formalized; Phase 1, Phase 2, and Phase 3 implemented and run locally. Phase 4 protocol and summarizer are implemented; raw all-400 top20 generation is pending.
+Status: protocol formalized; Phase 1, Phase 2, and Phase 3 implemented and run locally. Phase 4 protocol and summarizer are implemented; raw all-400 top20 generation is deferred. A 5-seed all-400 pilot is complete, and the selected+matched all50 top20 run is in progress on garnet.
 Primary regime: step2c_poly_d8_mult_eps050
 Graph population: 400 heldout graphs from the existing all-400 model-seed audit
 Solver constraints represented in features: max_cycle=3, max_chain=4
@@ -614,4 +655,41 @@ The both-poor controls G-142 and G-946 are not extreme on median_delta_pp
 relative to their matched controls. They are useful as failure examples in the
 mechanism story, but they do not appear graph-instance-extreme under this
 coarse matched-control diagnostic.
+```
+
+Latest Phase 4 pilot:
+
+```text
+run type: all-400, subset_seed 0..4, 2stage top20
+raw solution rows: 39,950
+expected maximum rows: 40,000 = 400 graphs x 5 seeds x 20 ranks
+missing top20 rows: G-592 only reached rank10 in each pilot seed
+selected target graphs affected by missing top20 rows: none
+top20 boundary rows: 400
+graph-top20 rows: 400
+Phase 4 association rows: 68
+selected case overlay rows: 9
+```
+
+Initial Phase 4 pilot readout:
+
+```text
+Top20 prediction-boundary diagnostics modestly improve the helpful-graph signal
+over top5 and strongly improve the harmful/reranking-sensitive signal.
+
+top5 ranking_ambiguity_score:
+  helpful AUROC = 0.715
+  harmful AUROC = 0.577
+  Spearman with median_delta_pp = 0.109
+
+top20 ranking_ambiguity_top20_score:
+  helpful AUROC = 0.739
+  harmful AUROC = 0.732
+  Spearman with median_delta_pp = 0.063
+
+This supports the interpretation that top20 boundary features are better
+reranking-sensitivity markers than top5 features. They still do not determine
+whether reranking will help or hurt. The next targeted run is selected +
+matched controls x all 50 seeds x top20, which tests whether this top20 signal
+is stable for the paper-critical graph set.
 ```
