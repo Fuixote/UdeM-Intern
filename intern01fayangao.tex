@@ -1,0 +1,472 @@
+\documentclass[11pt, aspectratio=169]{beamer}
+
+% -- Packages -----------------------------------------------------------------
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{parskip}
+
+% -- Colours ------------------------------------------------------------------
+\definecolor{navyblue}{RGB}{26, 35, 100}
+\definecolor{crimson}{RGB}{153, 0, 0}
+\definecolor{accentgreen}{RGB}{0, 120, 80}
+\definecolor{pagebg}{RGB}{252, 252, 255}
+
+% -- Plain speaker-note Beamer style -----------------------------------------
+\usetheme{default}
+\usecolortheme{default}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{headline}{}
+\setbeamercolor{background canvas}{bg=pagebg}
+
+\setbeamercolor{frametitle}{fg=navyblue, bg=pagebg}
+\setbeamerfont{frametitle}{size=\large, series=\bfseries}
+\setbeamertemplate{frametitle}{%
+  \vspace{8pt}%
+  \textcolor{navyblue}{\textbf{\insertframetitle}}\\[-2pt]
+  \textcolor{navyblue!40}{\rule{\textwidth}{0.8pt}}%
+  \vspace{2pt}%
+}
+
+\setbeamercolor{footline}{fg=navyblue!50, bg=pagebg}
+\setbeamertemplate{footline}{%
+  \hfill
+  \textcolor{navyblue!40}{\footnotesize\insertframenumber\,/\,\inserttotalframenumber}%
+  \hspace{8pt}\vspace{4pt}
+}
+
+\setbeamertemplate{itemize item}{{\textcolor{navyblue}{---}}}
+\setbeamertemplate{itemize subitem}{{\textcolor{navyblue!60}{--}}}
+\usefonttheme{serif}
+\setbeamerfont{normal text}{size=\small}
+\setbeamersize{text margin left=22pt, text margin right=22pt}
+\setlength{\parskip}{0pt}
+
+% -- Short commands -----------------------------------------------------------
+\newcommand{\kw}[1]{\textcolor{navyblue}{\textbf{#1}}}
+\newcommand{\warn}[1]{\textcolor{crimson}{\textbf{#1}}}
+\newcommand{\good}[1]{\textcolor{accentgreen}{\textbf{#1}}}
+\newcommand{\tr}[1]{\vspace{0.35em}\textit{\textcolor{black!55}{Transition: #1}}}
+\newcommand{\timing}[1]{}
+
+\title{\textbf{Decision-Focused Learning for Kidney Exchange Programs}}
+\subtitle{Speaker Notes}
+\author{Weikang Fu}
+\date{\today}
+
+\setbeamertemplate{title page}{%
+  \vfill
+  \begin{center}
+    {\usebeamerfont{title}\textcolor{navyblue}{\inserttitle}}\\[6pt]
+    {\normalsize\textcolor{navyblue!70}{\insertsubtitle}}\\[24pt]
+    \textcolor{navyblue!30}{\rule{8cm}{0.6pt}}\\[16pt]
+    {\normalsize \insertauthor}\\[4pt]
+    {\small\textcolor{black!60}\insertdate}
+  \end{center}
+  \vfill
+}
+
+\begin{document}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Slide 1 \enspace\textmd{\small\textcolor{black!40}{--- Decision-Focused Learning for Kidney Exchange Programs}}}
+\small
+\timing{15 seconds}
+
+Good afternoon everyone. My name is Weikang Fu, and today I will introduce my
+internship research project: \kw{decision-focused learning for kidney exchange
+programs}.
+
+\vspace{0.35em}
+The main idea of this project is to connect machine learning with combinatorial
+optimization. In other words, it's the optimization application in the medical
+scenario.
+
+\tr{I will start with the motivation: why kidney exchange is important.}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Slide 2 \enspace\textmd{\small\textcolor{black!40}{--- Why Kidney Exchange Matters}}}
+\small
+\timing{40 seconds}
+
+Kidney transplantation is an important treatment for patients with kidney
+failure. But compatible living donors are scarce. Even when a patient has a
+willing donor, that donor may be medically incompatible with the patient.
+
+\vspace{0.35em}
+Kidney exchange can help solve this problem. It pools the patient-donor
+pairs together, and then selects edges between them to form cycles and chains.
+
+\vspace{0.35em}
+The top figure shows a cycle, where donors are exchanged among pairs. The
+bottom figure shows a chain, where a non-directed donor starts a sequence of
+transplants that can help multiple patients.
+
+\vspace{0.35em}
+The key point is that kidney exchange creates more transplant opportunities from
+the same pool of donors.
+
+\tr{Now I will describe how this becomes a graph optimization problem.}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Slide 3 \enspace\textmd{\small\textcolor{black!40}{--- Kidney Exchange as a Graph Optimization Problem}}}
+\footnotesize
+\timing{45 seconds}
+
+We can model a kidney exchange pool as a directed graph. The vertices are
+patient-donor pairs and non-directed donors. The edge means that the donor from
+one vertex can donate to the patient at another vertex.
+
+\vspace{0.35em}
+Then the decision problem is to select cycles and chains. Cycles use only
+patient-donor pairs, and chains start from a non-directed donor. In practice,
+these length limits are policy choices, not just mathematical parameters.
+For example, Germany mainly allows only two-way exchanges, so the cycle limit is
+\(K=2\). In Canada and the U.S., three-way cycles are allowed in the setting I
+discuss here, so \(K=3\). That move from 2 to 3 already creates many more
+candidate cycles.
+
+\vspace{0.35em}
+The reason is practical. Cycles usually require simultaneous surgeries, so most
+programs keep them short, often 2 or 3 pairs. Chains are different because they
+can be non-simultaneous. This is why mature KPD systems, especially in the U.S.,
+can support longer non-directed donor chains.
+
+\tr{The next slide gives a small example of what the optimizer has to consider.}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Slide 4 \enspace\textmd{\small\textcolor{black!40}{--- Example}}}
+\small
+\timing{25 seconds}
+
+This example shows a small KEP graph.
+
+\vspace{0.35em}
+I do not need to go through every chain here. The main point is that the solver
+first has to generate many candidate cycles and chains, and then select a
+feasible subset where no vertex is reused.
+
+\tr{After this example, let's talk about two main difficulty in this project.}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Slide 5 \enspace\textmd{\small\textcolor{black!40}{--- What Makes the Problem Difficult?}}}
+\small
+\timing{40 seconds}
+
+There are two difficulties. The first is the optimization difficulty. Cycles and
+chains create a combinatorial problem. Once the cycle length is bounded and
+larger than two, the problem becomes super hard to compute.
+
+\vspace{0.35em}
+The second difficulty is prediction. The benefit of a transplant edge is
+uncertain. For example, it may depend on medical conditions, transplant success probability, 
+or many other factors. Also, a good edge-level prediction does
+not always lead to the best final exchange plan. I think this is a very
+interesting point, and I will try to explain it in the later talks.
+
+\tr{To see why prediction matters, we first need to define what the optimizer sees in the problem.}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Slide 6 \enspace\textmd{\small\textcolor{black!40}{--- From Transplant Benefit to Edge Weights}}}
+\small
+\timing{40 seconds}
+
+For each possible transplant edge, we need a benefit score or sometimes called edge weight. 
+
+\vspace{0.35em}
+In the optimizer, all of this information is summarized as edge weights. So the
+optimizer does not directly see the full medical story. It sees a weighted
+compatibility graph, and then selects cycles and chains using these weights.
+
+\vspace{0.35em}
+In my experiments, these edge benefits are synthetic labels, not real clinical
+outcomes. Because the real datasets are not shared in most situations. This is
+a common scenario in medical machine learning. So I will firstly stick to the
+synthetic data to show the general framework of my project.
+
+\tr{Firstly, I will introduce the standard approach: Predict Then Optimize.}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Slide 7 \enspace\textmd{\small\textcolor{black!40}{--- Standard Approach: Predict Then Optimize}}}
+\small
+\timing{45 seconds}
+
+The standard approach is called predict then optimize. In step one, we train a
+machine learning model to predict edge weights from features. Usually this is
+done with a prediction loss function such as MSE.
+
+\vspace{0.35em}
+In step two, we pass these predicted weights into the KEP optimizer, here
+represented by the Gurobi solver, and obtain the selected exchange plan.
+
+\vspace{0.35em}
+The problem is the mismatch at the bottom: prediction loss is not necessarily the same as
+decision quality. A model can have low prediction error but still induce a bad
+exchange plan.
+
+\tr{This mismatch motivates the main research idea.}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Slide 8 \enspace\textmd{\small\textcolor{black!40}{--- Research Idea: Learning for the Final Exchange Plan}}}
+\footnotesize
+\timing{50 seconds}
+
+The research idea is to train for the final exchange plan, not only for
+weights accuracy.
+
+\vspace{0.35em}
+The example on the right shows the intuition. If all edge weights are multiplied
+by five, the numerical predictions are very different, but the selected exchange
+plan is the same. So exact edge-weight recovery is not always the final goal. The
+goal is to learn weights that induce better exchange plans.
+
+\vspace{0.35em}
+But we cannot directly train this objective easily, because the solver is
+discrete and not directly differentiable. So instead, we train the reward model
+with a decision-focused surrogate loss.
+
+\tr{However, end-to-end training through the optimizer is not straightforward.}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Slide 9 \enspace\textmd{\small\textcolor{black!40}{--- Why End-to-End Training Is Hard}}}
+\small
+\timing{50 seconds}
+
+There are two main challenges.
+
+\vspace{0.35em}
+First, non-differentiability. The KEP solver returns a discrete exchange plan.
+Small changes in predicted weights may not change the selected plan at all. So
+the true decision gap has zero gradients in almost everywhere.
+
+\vspace{0.35em}
+Second, computational cost. End-to-end training calls the KEP solver inside the
+learning loop. Perturbation-based surrogates require many repeated solver calls,
+so training becomes much more expensive than standard MSE training.
+
+\vspace{0.35em}
+This is why the experimental design needs to be controlled: same graph data,
+same solver, but different training objectives.
+
+\tr{The next slide shows how I implemented this idea in the experimental pipeline.}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Slide 10 \enspace\textmd{\small\textcolor{black!40}{--- Research Approach: Experimental Pipeline}}}
+\footnotesize
+\timing{50 seconds}
+
+This slide shows the end-to-end pipeline. The input is a KEP graph. A predictor
+produces edge weights. These weights go into the KEP solver, and the solver
+returns an exchange plan.
+
+\vspace{0.35em}
+The difference from the standard approach is the training signal. Instead of only
+using MSE on edge weights, the decision-focused approach uses a surrogate based
+on the final decision.
+
+\vspace{0.35em}
+There are two practical solutions here. The first is surrogate gradients: we use
+a decision-focused surrogate loss to turn discrete solver outputs into a usable
+training signal. In this study, FY perturbation is the main surrogate.
+
+\vspace{0.35em}
+The second is Gurobi model reuse: when possible, we reuse the cycle and chain
+structure and update only the edge weights or objective. This helps reduce the
+cost of repeated solver calls.
+
+\tr{I firstly checked whether solver reuse can actually help lower the cost of computation.}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Slide 11 \enspace\textmd{\small\textcolor{black!40}{--- Engineering Check: Solver Reuse Benchmark}}}
+\small
+\timing{30 seconds}
+
+This slide is an just an engineering check to show that since
+solver-in-the-loop training is expensive, reusing the model
+structure helps.
+
+\vspace{0.35em}
+The result is that reuse is faster in every formulation. The gains are
+especially large when model building dominates the runtime.
+
+\vspace{0.35em}
+So this can really help us to build a benchmark so that if we want to do something about the cost here,
+this can be a very good starting point.
+
+\tr{Before showing the diagnostic plots, I first define the controlled Stage1 setting.}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Slide 12 \enspace\textmd{\small\textcolor{black!40}{--- Stage 1 Experiment Settings}}}
+\small
+\timing{30 seconds}
+
+Before the contour plots, this slide defines the controlled experimental setting.
+The purpose is to keep the learning problem simple enough that we can visualize
+what the training objectives are doing.
+
+\vspace{0.35em}
+The reward model is a two-feature linear probe:
+\[
+    \hat w_e(\theta)=\theta_1 u_e+\theta_2 c_e .
+\]
+Here \(u_e\) is the edge utility feature, and \(c_e\) is the recipient cPRA
+feature. So \(\theta_1\) controls the utility weight, and \(\theta_2\) controls
+the cPRA weight.
+
+\vspace{0.35em}
+The synthetic labels are generated from a noisy linear rule:
+\[
+    w^{\mathrm{syn}}_e
+    =
+    \max\{0,\,(10u_e+5c_e)(1+\xi_e)\}.
+\]
+The coefficient \([10,5]\) is the noise-free signal, and the multiplicative edge
+noise has scale \(\sigma=0.10\). These are synthetic edge benefits, not clinical
+outcomes.
+
+\tr{With this setting fixed, we can now look at how MSE and FY move in the decision landscape.}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Slide 13 \enspace\textmd{\small\textcolor{black!40}{--- Experiment: Contour Landscapes}}}
+\small
+\timing{45 seconds}
+
+This experiment is a controlled diagnostic. I use a simple two-feature linear
+probe, based on utility and recipient cPRA, so that we can visualize the learning
+landscape.
+
+\vspace{0.35em}
+The contour plots compare MSE training and FY-based decision-focused training.
+MSE moves toward the clean-label direction, roughly \([10,5]\), because it tries
+to fit the synthetic edge labels.
+
+\vspace{0.35em}
+FY behaves differently. It follows a decision-induced path, because its training
+signal comes from the exchange plans selected by the optimizer, not only from
+edge-level prediction error.
+
+\vspace{0.35em}
+The key message is that decision-focused training changes the geometry of
+learning.
+
+\tr{The next slide looks at the same diagnostic from a 3D trajectory view.}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Slide 14 \enspace\textmd{\small\textcolor{black!40}{--- Experiment: 3D Trajectories}}}
+\small
+\timing{35 seconds}
+
+The 3D plots separate three things: movement in parameter space, change in
+decision gap, and change in the FY objective.
+
+\vspace{0.35em}
+One important observation is that the FY objective and the decision gap do not
+always improve monotonically together. Also, the best decision-gap checkpoint can
+occur before the final epoch.
+
+\vspace{0.35em}
+This matters because it suggests that checkpoint selection and validation
+strategy are important. We should not assume that the final epoch is always the
+best final decision model.
+
+\tr{After this in-sample diagnostic, I tested generalization on held-out and unseen graphs.}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Slide 15 \enspace\textmd{\small\textcolor{black!40}{--- Experiment: Generalization Study}}}
+\footnotesize
+\timing{1 minute 5 seconds}
+
+This is the main generalization result. The metric is normalized decision gap,
+and lower is better.
+
+\vspace{0.35em}
+There are three evaluation settings. The first is the original held-out
+noisy-linear test set with 400 graphs. In this setting, the FY-loss-selected
+end-to-end model improves over the two-stage baseline.
+
+\vspace{0.35em}
+The second setting is a newly generated unseen noisy-linear test set with 1000
+graphs. Here, the advantage becomes weaker and less stable.
+
+\vspace{0.35em}
+The third setting is a realistic-synthetic stress test with 2000 graphs. This
+uses a different label regime, and under this shift, the two-stage baseline is
+tied or better.
+
+\vspace{0.35em}
+So the result is nuanced. Decision-focused surrogate training can help in a
+controlled setting, but the gain is not automatically robust. It depends on
+validation, label regime, and how well the train and test distributions match.
+
+\tr{I also ran an additional full-pipeline experiment with MLP and GNN predictors.}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Slide 16 \enspace\textmd{\small\textcolor{black!40}{--- Additional Result: Full MLP/GNN KEP Pipeline}}}
+\small
+\timing{35 seconds}
+
+This slide shows an additional experiment using larger MLP and GNN predictors. I
+compared two-stage MLP and GNN, end-to-end MLP and GNN, and an oracle that uses
+ground-truth weights.
+
+\vspace{0.35em}
+The main pattern is consistent with the previous message. End-to-end GNN gives
+modest and repeatable gains over the two-stage GNN baseline. But end-to-end MLP
+does not consistently improve over two-stage MLP. Also, the oracle gap remains
+substantial.
+
+\vspace{0.35em}
+So the benefit is architecture-dependent. End-to-end learning can help, but it is
+not a guaranteed improvement for every model.
+
+\tr{I will finish with the main takeaways, limitations, and next steps.}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Slide 17 \enspace\textmd{\small\textcolor{black!40}{--- Takeaways: Promising, but Not Yet Robust}}}
+\small
+\timing{45 seconds}
+
+The main takeaway is that decision-focused surrogate learning is promising, but
+not yet robust.
+
+\vspace{0.35em}
+What worked is that DFL changes the learned reward geometry. It can reduce
+downstream decision gap in controlled settings, and it trains toward final
+exchange plans rather than only edge prediction.
+
+\vspace{0.35em}
+The main limitations are that the experiments use synthetic labels, not clinical
+outcomes. Step1 uses a simple two-feature probe. I also used limited seeds and
+distribution settings, and solver-in-the-loop training is computationally
+expensive.
+
+\vspace{0.35em}
+For future work, I would like to use richer clinical edge-benefit models,
+stronger graph predictors, larger unseen tests with multiple seeds, and better
+validation strategies for surrogate training.
+
+\vspace{0.35em}
+So the final message is: decision-focused surrogate learning gives a useful
+signal in controlled KEP benchmarks, but robustness remains the key challenge.
+Thank you, and I am happy to take questions.
+
+\end{frame}
+
+\end{document}
