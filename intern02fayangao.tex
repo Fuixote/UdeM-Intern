@@ -1,0 +1,363 @@
+\documentclass[11pt,aspectratio=169]{beamer}
+
+% -- Packages -----------------------------------------------------------------
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{parskip}
+\usepackage{amsmath}
+
+% -- Colours ------------------------------------------------------------------
+\definecolor{navyblue}{RGB}{26,35,100}
+\definecolor{crimson}{RGB}{153,0,0}
+\definecolor{accentgreen}{RGB}{0,120,80}
+\definecolor{pagebg}{RGB}{252,252,255}
+
+% -- Plain speaker-note Beamer style ------------------------------------------
+\usetheme{default}
+\usecolortheme{default}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{headline}{}
+\setbeamercolor{background canvas}{bg=pagebg}
+
+\setbeamercolor{frametitle}{fg=navyblue,bg=pagebg}
+\setbeamerfont{frametitle}{size=\large,series=\bfseries}
+\setbeamertemplate{frametitle}{%
+  \vspace{8pt}%
+  \textcolor{navyblue}{\textbf{\insertframetitle}}\\[-2pt]
+  \textcolor{navyblue!40}{\rule{\textwidth}{0.8pt}}%
+  \vspace{2pt}%
+}
+
+\setbeamercolor{footline}{fg=navyblue!50,bg=pagebg}
+\setbeamertemplate{footline}{%
+  \hfill
+  \textcolor{navyblue!40}{\footnotesize\insertframenumber\,/\,\inserttotalframenumber}%
+  \hspace{8pt}\vspace{4pt}
+}
+
+\setbeamertemplate{itemize item}{{\textcolor{navyblue}{---}}}
+\setbeamertemplate{itemize subitem}{{\textcolor{navyblue!60}{--}}}
+\usefonttheme{serif}
+\setbeamerfont{normal text}{size=\small}
+\setbeamersize{text margin left=22pt,text margin right=22pt}
+\setlength{\parskip}{0pt}
+
+% -- Short commands ------------------------------------------------------------
+\newcommand{\kw}[1]{\textcolor{navyblue}{\textbf{#1}}}
+\newcommand{\warn}[1]{\textcolor{crimson}{\textbf{#1}}}
+\newcommand{\good}[1]{\textcolor{accentgreen}{\textbf{#1}}}
+\newcommand{\tr}[1]{\vspace{0.35em}\textit{\textcolor{black!55}{Transition: #1}}}
+\newcommand{\timing}[1]{\textcolor{black!45}{\scriptsize Target: #1}\par\vspace{0.25em}}
+
+\title{Decision-Focused Learning for Kidney Exchange Programs}
+\subtitle{Speaker Notes for Final Internship Presentation}
+\author{Weikang Fu}
+\date{\today}
+
+\begin{document}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Slide 1 \enspace\textmd{\small\textcolor{black!40}{--- Title}}}
+\small
+\timing{20 seconds}
+
+Good afternoon everyone. My name is Weikang Fu. Today I will present the final report of my internship project: \kw{decision-focused learning for kidney exchange programs}.
+
+\vspace{0.35em}
+The main question today is not only whether decision-focused learning can help. I want to focus on a more useful question: \kw{why does it help, and why is the gain limited in kidney exchange?}
+
+\vspace{0.35em}
+The short answer is: in kidney exchange, DFL is not a magic replacement for the two-stage method. It is better understood as a way to rerank candidate exchange plans.
+
+\tr{I will start by connecting this talk with my previous presentation.}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Slide 2 \enspace\textmd{\small\textcolor{black!40}{--- From the Previous Talk}}}
+\small
+\timing{40 seconds}
+
+In my first presentation, the question was simple: can decision-focused learning improve controlled KEP decisions?
+
+\vspace{0.35em}
+At that time, the answer was promising, but still not fully clear. I had some positive signal, but the robustness was still an open issue.
+
+\vspace{0.35em}
+So for this final talk, I changed the question. I am not just asking, ``does DFL beat the two-stage method?'' Instead, I ask: \kw{when does DFL help, when does it fail, and when is it not really needed?}
+
+\vspace{0.35em}
+This is the main shift of the project: from a method comparison to a mechanism study. In other words, I want to explain the behavior, not only report the numbers.
+
+\tr{Let me quickly recall the KEP decision problem.}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Slide 3 \enspace\textmd{\small\textcolor{black!40}{--- Recap: Kidney Exchange as a Weighted Decision Problem}}}
+\small
+\timing{35 seconds}
+
+Kidney exchange can be modeled as a weighted directed graph.
+
+\vspace{0.35em}
+The input is a compatibility graph. Vertices are patient-donor pairs and non-directed donors. A directed edge means one donor can donate to another patient.
+
+\vspace{0.35em}
+The decision is to select vertex-disjoint cycles and chains. Cycles and chains must satisfy length limits, because in the real world we cannot make them arbitrarily long.
+
+\vspace{0.35em}
+The learning model predicts edge weights, and the optimizer uses these weights to choose the final exchange plan. So the final object we care about is not a single edge. It is the whole selected set of cycles and chains.
+
+\tr{Next I will show the main experimental setting behind the rest of the talk.}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Slide 4 \enspace\textmd{\small\textcolor{black!40}{--- Main Experimental Backbone}}}
+\small
+\timing{50 seconds}
+
+This slide shows the main experimental backbone after the first talk.
+
+\vspace{0.35em}
+Here I use the polynomial degree of the synthetic label as a simple way to control label difficulty. Degree one is close to a simple linear reward. Higher degree makes the reward harder for the model.
+
+\vspace{0.35em}
+There are two regimes here. \kw{Step2b} uses noiseless polynomial labels. As the degree increases, the gap becomes larger. \kw{Step2c} adds multiplicative noise, so the task becomes harder, and the whole curve moves upward.
+
+\vspace{0.35em}
+The key point for the rest of the talk is this: degree eight, especially in Step2c, is the stress-test regime. The task is hard enough, and the SPO+ signal is visible. So I use this setting to study the mechanism.
+
+\tr{Now I will explain why kidney exchange behaves differently from a standard shortest-path benchmark.}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Slide 5 \enspace\textmd{\small\textcolor{black!40}{--- Why Compare KEP with Shortest Path?}}}
+\small
+\timing{55 seconds}
+
+Shortest path is a very common benchmark for decision-focused learning. It has a serial structure. If the model makes a wrong choice in one part of the path, the whole path can be redirected. So a ranking error can create a large decision gap.
+
+\vspace{0.35em}
+Kidney exchange is different. It is more like a packing problem. A solution is made of several cycles and chains. Sometimes one cycle or one chain can be replaced by another one, while the rest of the plan stays almost the same.
+
+\vspace{0.35em}
+This creates the main puzzle. DFL often improves shortest path a lot, but in KEP the average gain is more moderate. My explanation is that KEP has many close substitute plans.
+
+\tr{This leads to the key hypothesis of the project.}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Slide 6 \enspace\textmd{\small\textcolor{black!40}{--- Key Hypothesis: Close Substitute Solutions}}}
+\small
+\timing{55 seconds}
+
+The key hypothesis is that \kw{kidney exchange often contains many close substitute exchange plans}.
+
+\vspace{0.35em}
+What do I mean by close substitutes? Imagine the oracle plan uses Cycle A, Chain B, and Cycle C. The two-stage model may choose Cycle A, Chain B prime, and Cycle C. The plan is not exactly the same, but the value can still be close.
+
+\vspace{0.35em}
+This is important because it creates a simple ceiling. If the two-stage plan is already within epsilon of the oracle, then no method can improve by more than epsilon on that graph.
+
+\vspace{0.35em}
+So DFL can only remove regret that is actually present. If the two-stage method already finds a close substitute, there may not be much left for DFL to improve.
+
+\tr{To test this idea, I look beyond the selected rank-1 solution.}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Slide 7 \enspace\textmd{\small\textcolor{black!40}{--- Look Beyond Rank 1}}}
+\small
+\timing{40 seconds}
+
+The diagnostic idea is simple. If KEP has close substitutes, we should not only inspect the solution selected by the model.
+
+\vspace{0.35em}
+For each trained model and graph, I first solve for the best predicted KEP solution. Then I exclude that solution with a no-good cut. After that, I solve again to get rank 2, the next distinct candidate solution. Finally, I evaluate both rank 1 and rank 2 under the true reward.
+
+\vspace{0.35em}
+The question is: after rank 1 is removed, does the quality collapse, or is rank 2 still close to the oracle?
+
+\tr{The answer is the first main finding.}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Slide 8 \enspace\textmd{\small\textcolor{black!40}{--- Finding 1: Many Second-Best Solutions Are Still Good}}}
+\small
+\timing{60 seconds}
+
+The first finding is that many second-best solutions are still good.
+
+\vspace{0.35em}
+For the two-stage model, rank 2 has a mean normalized oracle gap of \kw{7.04 percent}, and \kw{45.19 percent} of those rank-2 solutions are within 5 percent of the oracle.
+
+\vspace{0.35em}
+For SPO+, rank 2 is also close. The mean gap is \kw{6.32 percent}, and \kw{47.97 percent} are within 5 percent of the oracle.
+
+\vspace{0.35em}
+So even when the best predicted solution is removed, the next predicted solution often remains near-oracle. This is strong evidence for the close-substitute hypothesis.
+
+\vspace{0.35em}
+It also helps explain why DFL gain is limited on average. The two-stage method may choose a different plan, but sometimes that different plan is already a good substitute.
+
+\tr{I also checked whether this pattern is stable when the feasible set changes.}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Slide 9 \enspace\textmd{\small\textcolor{black!40}{--- The Close-Substitute Pattern Persists}}}
+\small
+\timing{45 seconds}
+
+This pattern is not only from one fixed setting.
+
+\vspace{0.35em}
+First, I changed the maximum cycle length from 3 to 4 and 5, while keeping the maximum chain length fixed. The rank-2 gap does not become worse. For two-stage, the rank-2 gap goes from 7.04 percent to 6.93 percent and 6.88 percent. For SPO+, it goes from 6.32 percent to 6.20 percent and 5.61 percent.
+
+\vspace{0.35em}
+Second, I changed graph density by adding or removing arcs in selected cases. This does change the feasible landscape, and the exact mechanism becomes graph-dependent. But close alternatives often still appear.
+
+\vspace{0.35em}
+So the safe reading is: this is not a simple topology law. It is better understood as a graph-instance and feasible-landscape effect.
+
+\tr{Now I move from average patterns to the mechanism of SPO+.}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Slide 10 \enspace\textmd{\small\textcolor{black!40}{--- Finding 2: DFL Helps by Reranking Candidate Solutions}}}
+\small
+\timing{55 seconds}
+
+The second finding is about how DFL helps. In many cases, SPO+ does not create a completely new kind of solution. Instead, it reranks candidate solutions.
+
+\vspace{0.35em}
+Here is the idea. Under the two-stage predicted score, candidate A is ranked first, so two-stage selects A. But a near-oracle candidate B may already be in the two-stage top-20 list, just ranked lower, for example at rank 8.
+
+\vspace{0.35em}
+SPO+ changes the learned weights, and then B becomes rank 1. If B is near-oracle, this is successful reranking. If B is not near-oracle, then the same reranking move can hurt.
+
+\vspace{0.35em}
+So the mechanism is the same. The difference is the quality of the promoted candidate.
+
+\tr{The next two slides show concrete cases.}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Slide 11 \enspace\textmd{\small\textcolor{black!40}{--- Case Evidence: G-392 Exact Correction}}}
+\small
+\timing{40 seconds}
+
+This slide shows one concrete graph, G-392.
+
+\vspace{0.35em}
+Please do not focus on every single edge in the figure. The main point is the difference among the three plans. The green plan is the oracle, the red plan is the two-stage solution, and the blue plan is the SPO+ solution.
+
+\vspace{0.35em}
+In this seed, two-stage selects a high-gap solution. SPO+ recovers the oracle solution. In the mechanism audit, this is a clean correction case: the good candidate is already in the broader candidate list, but two-stage ranks it too low. SPO+ promotes it to the top.
+
+\tr{The next case is similar, but SPO+ does not exactly match the oracle.}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Slide 12 \enspace\textmd{\small\textcolor{black!40}{--- Case Evidence: G-1560 Near-Oracle Correction}}}
+\small
+\timing{40 seconds}
+
+This is another case, G-1560.
+
+\vspace{0.35em}
+Again, the green plan is the oracle, red is two-stage, and blue is SPO+. Here SPO+ does not exactly recover the oracle. But it moves much closer to it.
+
+\vspace{0.35em}
+The gap drops from \kw{0.2923} for two-stage to \kw{0.0120} for SPO+. So this is not only a small numerical change. It is a large decision improvement on this graph.
+
+\vspace{0.35em}
+Together with the harmful controls, these cases show the main lesson: DFL is useful when it promotes a near-oracle candidate. It is risky when it promotes the wrong candidate.
+
+\tr{After understanding selected cases, I ask whether we can see any graph-level signal.}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Slide 13 \enspace\textmd{\small\textcolor{black!40}{--- From Case Mechanisms to Graph-Level Diagnostics}}}
+\small
+\timing{45 seconds}
+
+The mechanism audit explains selected cases after the fact. The next question is more practical: can graph-level descriptors tell us when DFL is likely to help, hurt, or be unnecessary?
+
+\vspace{0.35em}
+Here I separate three kinds of evidence.
+
+\vspace{0.35em}
+Before prediction, we have raw topology and feasible-set geometry. This is the most useful for real deployment, because it is available early.
+
+\vspace{0.35em}
+After training a two-stage model, we can inspect the ranking boundary and candidate ambiguity. This is not pre-match only, but it is still useful before choosing whether to use DFL.
+
+\vspace{0.35em}
+After true-label evaluation, we can use the oracle landscape and mechanism audit. This is good for science, but not a deployable pre-match rule.
+
+\tr{With this boundary in mind, I first checked topology.}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Slide 14 \enspace\textmd{\small\textcolor{black!40}{--- Topology Alone Does Not Give a Simple Rule}}}
+\small
+\timing{40 seconds}
+
+I started from features that are available before prediction: number of vertices and arcs, density, degree distribution, components, cycle counts, and feasible exchange geometry.
+
+\vspace{0.35em}
+The result is cautious. Single-feature correlations are weak. I do not find a simple rule like ``dense graphs are good for DFL''.
+
+\vspace{0.35em}
+But this does not mean graph structure is useless. With matched controls, selected helpful targets remain high relative to graphs with similar coarse topology, while harmful controls remain low.
+
+\vspace{0.35em}
+So topology shapes the feasible landscape, but it is not enough by itself. We need to look at the learned candidate boundary as well.
+
+\tr{That leads to the top-20 boundary audit.}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Slide 15 \enspace\textmd{\small\textcolor{black!40}{--- Graph-Level Signal: Top20 Boundary Marks Opportunity and Risk}}}
+\small
+\timing{50 seconds}
+
+In the final top-20 audit, I used 160 top20-covered graphs, with 50 seeds per graph. These include selected target graphs and matched controls.
+
+\vspace{0.35em}
+The helpful signal is the within-1 percent top20 count. In simple words, it asks: how many two-stage top20 candidates are almost tied with the rank-1 predicted value? This signal gives a helpful A-U-R-O-C of 0.752.
+
+\vspace{0.35em}
+The risk signal is ambiguity and diversity. The same broad candidate boundary also appears in harmful reranking controls, with harmful A-U-R-O-C around 0.81 to 0.823.
+
+\vspace{0.35em}
+So top20 ambiguity means DFL reranking can matter. But it does not tell us whether the reranking will be beneficial. It marks opportunity and risk at the same time.
+
+\tr{I will now summarize the main takeaways.}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{Slide 16 \enspace\textmd{\small\textcolor{black!40}{--- Takeaways from this Project}}}
+\small
+\timing{50 seconds}
+
+Let me summarize the project in three points.
+
+\vspace{0.35em}
+First, this is about \kw{decision, not only prediction}. We are not only fitting edge rewards. We are studying how prediction errors change the downstream exchange decision.
+
+\vspace{0.35em}
+Second, we need to respect \kw{real KEP observability}. In a real system, we cannot use oracle labels before making decisions. So we must separate what is available before prediction, what is available after training a baseline, and what is only available after true-label evaluation.
+
+\vspace{0.35em}
+Third, \kw{DFL is conditional}. It can improve KEP decisions, but its effect is limited when two-stage already selects close substitutes. It can also be risky when it promotes the wrong candidate.
+
+\vspace{0.35em}
+So my final conclusion is: DFL for KEP should be mechanism-aware. It is useful when it promotes near-oracle candidates, limited when close substitutes already exist, and risky when it promotes the wrong candidate.
+
+\vspace{0.35em}
+The next step is to turn this mechanism story into a conference paper, not only a benchmark comparison. Thank you.
+\end{frame}
+
+\end{document}
