@@ -31,6 +31,174 @@ candidate list but ranks it too low, while SPO+ promotes it to rank1. Negative
 controls show that reranking can also hurt when the promoted candidate is not
 near-oracle.
 
+## Paper-Facing Takeaway
+
+The main result is not that raw graph topology alone predicts when SPO+ helps.
+The stronger and safer conclusion is:
+
+```text
+Top20 prediction-boundary diagnostics identify graph instances where DFL-style
+reranking can matter, but they do not determine whether reranking helps or
+hurts. Helpful cases require near-oracle candidates inside the candidate list;
+harmful cases show that ambiguity alone can also lead SPO+ to promote worse
+candidates.
+```
+
+This gives a clean story linking this audit to the mechanism-dissection audit:
+
+```text
+1. Raw topology / feasible-set features give weak-to-modest association signal.
+2. Post-training two-stage candidate-boundary features add clearer signal.
+3. Top20 features are more informative than top5 for deep-reranking cases.
+4. High ambiguity marks opportunity/risk, not guaranteed SPO+ improvement.
+5. Candidate identity, true rank, and critical-edge diagnostics are still needed
+   to decide whether reranking is beneficial.
+```
+
+### Results Worth Reporting
+
+| Finding | Evidence | Safe interpretation |
+| --- | --- | --- |
+| No simple topology-only rule | Phase 1 single-feature Spearman correlations with `median_delta_pp` are weak across feature families. | DFL advantage is not explained by density, cycle count, or another single raw graph descriptor. |
+| Boundary diagnostics add signal | Phase 2 top5 `ranking_ambiguity_score` has helpful AUROC `0.715`. | After training a standard two-stage model, its candidate-list boundary contains information about whether DFL reranking may matter. |
+| Top20 is better than top5 for deep reranking | Phase 4 pilot improves the ambiguity signal from top5 harmful AUROC `0.577` to top20 harmful AUROC `0.732`. | Important cases such as `G-1169` and `G-1449` are deep top20 promotion cases that top5 under-describes. |
+| Targeted all50 top20 run is the strongest denominator | Selected+matched run has `160,000 = 160 graphs x 50 subset seeds x 20 ranks` raw solution rows. | The key top20 claims are stable on the paper-critical target and matched-control set, not only on one selected seed. |
+| Best helpful top20 feature | `mean_2stage_top20_within_1pct_count`: helpful AUROC `0.752`, harmful AUROC `0.601`. | Rich near-tie structure in the two-stage top20 list is associated with useful reranking opportunities. |
+| Ambiguity is also a risk marker | `ranking_ambiguity_top20_score`: helpful AUROC `0.745`, harmful AUROC `0.810`. | Ambiguity means reranking can matter; it does not say the reranking will be beneficial. |
+| Harmful controls validate the caution | `G-14` and `G-163` both have top20 ambiguity percentile `0.80` within matched controls. | SPO+ can strongly rerank on ambiguous graphs and still hurt if it promotes a non-near-oracle candidate. |
+| Clean top20-boundary helpful cases | `G-1169`: ambiguity percentile `1.00`, within-1pct percentile `0.95`; `G-1449`: within-1pct percentile `0.80`. | These are the best examples for the top20 boundary story. |
+| Some successes need mechanism-specific explanation | `G-392`, `G-1285`, and `G-1560` have top20 ambiguity percentiles `0.25`, `0.60`, and `0.45`. | These should be explained through candidate identity, rank reversal, and critical edges rather than a generic ambiguity rule. |
+
+## Experiment Setting and Notation
+
+Primary regime and solver settings:
+
+| Item | Setting |
+| --- | --- |
+| Regime | `step2c_poly_d8_mult_eps050` |
+| Dataset root | `dataset/processed/step2c_poly_d8_mult_eps050_main2000_seed20260523` |
+| Base graph population | 400 heldout graphs from `master_split_seed=42` |
+| Model-seed dimension | `subset_seed = 0..49`, each corresponding to a fixed-pool training subset and trained checkpoint |
+| Compared methods | `2stage_val_mse` and `spoplus_val_spoplus_loss` for outcome summaries; Phase 2/4 boundary features are computed from two-stage predicted candidate lists |
+| Solver constraints | `max_cycle=3`, `max_chain=4` |
+| Phase 1/2/3 population | 400 heldout graphs |
+| Phase 4 pilot | all 400 graphs, `subset_seed=0..4`, two-stage top20 |
+| Phase 4 selected+matched run | 9 selected target graphs plus 151 unique topology-matched controls, all 50 subset seeds, two-stage top20 |
+
+Notation used below:
+
+```text
+g: heldout KEP graph
+s: subset_seed / trained-model seed
+m: method, either 2stage or SPO+
+r: predicted solution rank after repeated no-good cuts
+y*(g): oracle solution under true labels
+y_{m,r}(g,s): rank-r solution predicted by method m on graph g and seed s
+V_g(y): true objective value of solution y on graph g
+P_{m,r}(g,s): predicted objective score used by method m for rank-r solution
+E(y): selected edge/cycle-chain signature represented as an edge set
+```
+
+The normalized oracle gap is reported in percentage points:
+
+```text
+gap_{m,r}(g,s) =
+  100 * (V_g(y*(g)) - V_g(y_{m,r}(g,s))) / (abs(V_g(y*(g))) + 1e-9)
+```
+
+The method improvement used in the graph-level outcome tables is:
+
+```text
+delta_pp(g,s) = gap_{2stage,1}(g,s) - gap_{SPO+,1}(g,s)
+```
+
+Positive `delta_pp` means SPO+ has lower normalized gap than two-stage.
+Graph-level summaries use the mean or median of `delta_pp(g,s)` over
+`subset_seed = 0..49`.
+
+The descriptive graph labels are:
+
+```text
+helpful_graph:
+  median_delta_pp >= 10 OR strict_case_c_rate >= 0.5
+
+extreme_helpful_graph:
+  strict_case_c_rate == 1.0 OR median_delta_pp is in the all-400 top 5%
+
+harmful_graph:
+  median_delta_pp <= -10
+
+neutral_graph:
+  abs(median_delta_pp) <= 0.1 AND strict_case_c_rate == 0
+```
+
+These are diagnostic labels, not causal ground truth.
+
+### Prediction-Boundary Feature Definitions
+
+For a fixed graph `g` and seed `s`, Phase 4 computes two-stage top20 solutions
+with the no-good-cut replay. Let `K=20`, let rank 1 be the highest predicted
+score, and let `rank K` be the twentieth distinct candidate when it exists.
+
+Predicted margin from the best candidate:
+
+```text
+margin_{1,r}(g,s) = P_{2stage,1}(g,s) - P_{2stage,r}(g,s)
+```
+
+Normalized top20 margin:
+
+```text
+top1_top20_margin_pct(g,s) =
+  margin_{1,20}(g,s) / (abs(P_{2stage,1}(g,s)) + 1e-9)
+```
+
+Number of near-tie candidates inside top20:
+
+```text
+top20_within_tau_count(g,s) =
+  count{r in 1..20 : margin_{1,r}(g,s) /
+    (abs(P_{2stage,1}(g,s)) + 1e-9) <= tau}
+```
+
+The reported features use `tau = 0.01` and `tau = 0.05`, then average the count
+over all available subset seeds.
+
+Solution-overlap features use edge-set Jaccard:
+
+```text
+J(A,B) = |E(A) cap E(B)| / |E(A) cup E(B)|
+```
+
+Top20 diversity from rank1:
+
+```text
+diversity_from_rank1(g,s) =
+  1 - mean_{r=2..20} J(y_{2stage,1}(g,s), y_{2stage,r}(g,s))
+```
+
+Top20 pairwise diversity:
+
+```text
+pairwise_diversity(g,s) =
+  1 - mean_{1 <= i < j <= 20} J(y_{2stage,i}(g,s), y_{2stage,j}(g,s))
+```
+
+The composite top20 ambiguity score is implemented as a z-score composite over
+graphs with top20 coverage:
+
+```text
+ranking_ambiguity_top20_score =
+  - z(median_2stage_top1_top20_pred_margin_pct)
+  + z(mean_2stage_top20_within_1pct_count)
+  + z(median_2stage_top20_diversity_from_rank1)
+  + z(median_2stage_top20_pairwise_diversity)
+```
+
+Larger values mean smaller predicted margins, more near ties, and more diverse
+candidate solutions. Missing top20 coverage is assigned `NaN` for this score,
+so partially generated graphs do not receive misleading finite ambiguity values.
+
 ## Evidence Boundary
 
 Keep three feature classes separate.
