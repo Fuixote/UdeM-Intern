@@ -230,7 +230,7 @@
       \addplot[color=kepteal,mark=square*] coordinates {
         (1,0.0000) (2,0.0843) (4,0.8468) (8,4.7605)
       };
-      \addlegendentry{Step2b SPO+}
+      \addlegendentry{Step2b DFL}
 
       \addplot[color=keporange,mark=triangle*] coordinates {
         (1,3.8872) (2,3.8467) (4,4.4438) (8,8.4122)
@@ -240,7 +240,7 @@
       \addplot[color=kepred,mark=diamond*] coordinates {
         (1,3.9107) (2,3.8549) (4,4.2531) (8,7.4410)
       };
-      \addlegendentry{Step2c SPO+}
+      \addlegendentry{Step2c DFL}
     \end{axis}
   \end{tikzpicture}
 
@@ -255,7 +255,7 @@
     \begin{column}{0.48\textwidth}
       \begin{exampleblock}{Step2c}
         \centering
-        Multiplicative noise shifts the whole curve upward; SPO+ helps most at degree 8.
+        Multiplicative noise shifts the whole curve upward; DFL helps most at degree 8.
       \end{exampleblock}
     \end{column}
   \end{columns}
@@ -273,7 +273,7 @@
           \item Serial and coupled decision structure.
           \item One wrong segment can redirect the whole path.
           \item Ranking errors can create large regret.
-          \item Standard benchmark where SPO+ often helps strongly.
+          \item Standard benchmark where DFL often helps strongly.
         \end{itemize}
       \end{block}
 
@@ -427,7 +427,7 @@
     \end{column}
 
     \begin{column}{0.48\textwidth}
-      \begin{exampleblock}{SPO+ rank 2}
+      \begin{exampleblock}{DFL rank 2}
         \centering
         {\Large\textbf{6.32\%}}\\[-0.1em]
         {\scriptsize mean normalized oracle gap}
@@ -448,7 +448,7 @@
       height=0.25\textheight,
       ymin=0, ymax=65,
       ylabel={within 5\% rate},
-      symbolic x coords={2stage r1,2stage r2,SPO+ r1,SPO+ r2},
+      symbolic x coords={2stage r1,2stage r2,DFL r1,DFL r2},
       xtick=data,
       x tick label style={font=\scriptsize, align=center},
       yticklabel={\pgfmathprintnumber{\tick}\%},
@@ -463,7 +463,7 @@
       axis x line*=bottom,
     ]
       \addplot[fill=kepblue!35,draw=kepblue!85] coordinates {
-        (2stage r1,53.14) (2stage r2,45.19) (SPO+ r1,59.28) (SPO+ r2,47.97)
+        (2stage r1,53.14) (2stage r2,45.19) (DFL r1,59.28) (DFL r2,47.97)
       };
     \end{axis}
   \end{tikzpicture}
@@ -488,7 +488,7 @@
           Rank-2 gap & $K=3$ & $K=4$ & $K=5$ \\
           \midrule
           2stage & 7.04\% & 6.93\% & 6.88\% \\
-          SPO+   & 6.32\% & 6.20\% & 5.61\% \\
+          DFL   & 6.32\% & 6.20\% & 5.61\% \\
           \bottomrule
         \end{tabular}
 
@@ -541,11 +541,11 @@
     \end{column}
 
     \begin{column}{0.48\textwidth}
-      \textbf{SPO+ selected ranking}
+      \textbf{DFL selected ranking}
       \vspace{0.4em}
 
       \begin{tikzpicture}[x=1mm,y=1mm]
-        \node[draw=kepgreen!70,fill=kepgreen!7,rounded corners=2pt,minimum width=50mm,minimum height=7mm,align=left,font=\scriptsize] at (27,35) {rank 1\quad B: promoted by SPO+};
+        \node[draw=kepgreen!70,fill=kepgreen!7,rounded corners=2pt,minimum width=50mm,minimum height=7mm,align=left,font=\scriptsize] at (27,35) {rank 1\quad B: promoted by DFL};
         \draw[goodarr] (27,28) -- (27,20) node[midway,right,font=\scriptsize,align=left] {candidate\\promotion};
       \end{tikzpicture}
 
@@ -577,7 +577,7 @@
     ]{surrogate_experiment_results/decision_analysis/plots/case_topology/G-392_seed1_solution_overlay.png}}
 
   \vspace{0.35em}
-  {\scriptsize Two-stage selects a high-gap solution; SPO+ recovers the oracle solution in this seed.}
+  {\scriptsize Two-stage selects a high-gap solution; DFL recovers the oracle solution in this seed.}
 \end{frame}
 
 \begin{frame}{Case Evidence: G-1560 Near-Oracle Correction}
@@ -590,7 +590,7 @@
     ]{surrogate_experiment_results/decision_analysis/plots/case_topology/G-1560_seed30_solution_overlay.png}}
 
   \vspace{0.35em}
-  {\scriptsize SPO+ does not exactly match oracle here, but reduces the gap from 0.2923 to 0.0120.}
+  {\scriptsize DFL does not exactly match oracle here, but reduces the gap from 0.2923 to 0.0120.}
 \end{frame}
 
 \section{Graph-Level Diagnostics}
@@ -773,7 +773,7 @@
   \end{tikzpicture}
 
   \vspace{0.6em}
-  {\scriptsize Next step: turn this mechanism story into a conference paper, not only a benchmark comparison.}
+  {\scriptsize Next step: tell a good story, turn this into a conference paper.}
 \end{frame}
 
 \end{document}

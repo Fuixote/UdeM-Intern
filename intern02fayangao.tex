@@ -63,15 +63,11 @@
 \small
 \timing{20 seconds}
 
-Good afternoon everyone. My name is Weikang Fu. Today I will present the final report of my internship project: \kw{decision-focused learning for kidney exchange programs}.
+Hi everyone. Today I will present the final report of my internship project: \kw{decision-focused learning for kidney exchange programs}.
 
 \vspace{0.35em}
 The main question today is not only whether decision-focused learning can help. I want to focus on a more useful question: \kw{why does it help, and why is the gain limited in kidney exchange?}
 
-\vspace{0.35em}
-The short answer is: in kidney exchange, DFL is not a magic replacement for the two-stage method. It is better understood as a way to rerank candidate exchange plans.
-
-\tr{I will start by connecting this talk with my previous presentation.}
 \end{frame}
 
 % -----------------------------------------------------------------------------
@@ -88,7 +84,7 @@ At that time, the answer was promising, but still not fully clear. I had some po
 So for this final talk, I changed the question. I am not just asking, ``does DFL beat the two-stage method?'' Instead, I ask: \kw{when does DFL help, when does it fail, and when is it not really needed?}
 
 \vspace{0.35em}
-This is the main shift of the project: from a method comparison to a mechanism study. In other words, I want to explain the behavior, not only report the numbers.
+This is the main improvement of the project: from a method comparison to a mechanism study. In other words, I want to explain the behavior, not only report the numbers.
 
 \tr{Let me quickly recall the KEP decision problem.}
 \end{frame}
@@ -109,7 +105,7 @@ The decision is to select vertex-disjoint cycles and chains. Cycles and chains m
 \vspace{0.35em}
 The learning model predicts edge weights, and the optimizer uses these weights to choose the final exchange plan. So the final object we care about is not a single edge. It is the whole selected set of cycles and chains.
 
-\tr{Next I will show the main experimental setting behind the rest of the talk.}
+\tr{Next I will show the main experiment behind the rest of the talk.}
 \end{frame}
 
 % -----------------------------------------------------------------------------
@@ -117,18 +113,17 @@ The learning model predicts edge weights, and the optimizer uses these weights t
 \small
 \timing{50 seconds}
 
-This slide shows the main experimental backbone after the first talk.
+This page shows the main experimental results.
 
 \vspace{0.35em}
 Here I use the polynomial degree of the synthetic label as a simple way to control label difficulty. Degree one is close to a simple linear reward. Higher degree makes the reward harder for the model.
 
 \vspace{0.35em}
-There are two regimes here. \kw{Step2b} uses noiseless polynomial labels. As the degree increases, the gap becomes larger. \kw{Step2c} adds multiplicative noise, so the task becomes harder, and the whole curve moves upward.
-
+There are two regimes here. To make it simple, I call degree one to four the ``easy regime'', and degree five to eight the ``stress-test regime''. In the easy regime, DFL has a clear gain.
 \vspace{0.35em}
-The key point for the rest of the talk is this: degree eight, especially in Step2c, is the stress-test regime. The task is hard enough, and the SPO+ signal is visible. So I use this setting to study the mechanism.
+The key point for the rest of the talk is this: How can we interpret the gain pattern? Should we always switch to DFL, or only in some cases?
 
-\tr{Now I will explain why kidney exchange behaves differently from a standard shortest-path benchmark.}
+\tr{Now firstly I will make a comparison here.}
 \end{frame}
 
 % -----------------------------------------------------------------------------
@@ -136,13 +131,12 @@ The key point for the rest of the talk is this: degree eight, especially in Step
 \small
 \timing{55 seconds}
 
-Shortest path is a very common benchmark for decision-focused learning. It has a serial structure. If the model makes a wrong choice in one part of the path, the whole path can be redirected. So a ranking error can create a large decision gap.
+Shortest path is a very common benchmark for decision-focused learning. Like in the original SPO paper, they use shortest path as a standard problem to test their method. And the usage of the DFL gave them a lot of benefits in that cases. So it is natural to compare KEP with shortest path here.
+\vspace{0.35em}
+Kidney exchange is something different. It is more like a packing problem. A solution is made of several cycles and chains. Sometimes one cycle or one chain can be replaced by another one, and the rest of the plan stays almost the same.
 
 \vspace{0.35em}
-Kidney exchange is different. It is more like a packing problem. A solution is made of several cycles and chains. Sometimes one cycle or one chain can be replaced by another one, while the rest of the plan stays almost the same.
-
-\vspace{0.35em}
-This creates the main puzzle. DFL often improves shortest path a lot, but in KEP the average gain is more moderate. My explanation is that KEP has many close substitute plans.
+This creates the main puzzle. DFL often improves shortest path a lot, but in KEP the average gain is more moderate. How can we explain this phenomenon? 
 
 \tr{This leads to the key hypothesis of the project.}
 \end{frame}
@@ -158,7 +152,7 @@ The key hypothesis is that \kw{kidney exchange often contains many close substit
 What do I mean by close substitutes? Imagine the oracle plan uses Cycle A, Chain B, and Cycle C. The two-stage model may choose Cycle A, Chain B prime, and Cycle C. The plan is not exactly the same, but the value can still be close.
 
 \vspace{0.35em}
-This is important because it creates a simple ceiling. If the two-stage plan is already within epsilon of the oracle, then no method can improve by more than epsilon on that graph.
+This is important because it creates a simple upper bound for our improvement. If the two-stage plan is already within epsilon of the oracle, then no method can improve by more than epsilon on that graph.
 
 \vspace{0.35em}
 So DFL can only remove regret that is actually present. If the two-stage method already finds a close substitute, there may not be much left for DFL to improve.
@@ -174,12 +168,9 @@ So DFL can only remove regret that is actually present. If the two-stage method 
 The diagnostic idea is simple. If KEP has close substitutes, we should not only inspect the solution selected by the model.
 
 \vspace{0.35em}
-For each trained model and graph, I first solve for the best predicted KEP solution. Then I exclude that solution with a no-good cut. After that, I solve again to get rank 2, the next distinct candidate solution. Finally, I evaluate both rank 1 and rank 2 under the true reward.
+For each trained model and graph, I first solve for the best predicted KEP solution. Then I exclude that solution with a no-good cut. After that, I solve again to get the second-best solution. Finally, I evaluate both rank 1 and rank 2 under the true reward.
 
-\vspace{0.35em}
-The question is: after rank 1 is removed, does the quality collapse, or is rank 2 still close to the oracle?
-
-\tr{The answer is the first main finding.}
+\tr{And here comes the first main finding.}
 \end{frame}
 
 % -----------------------------------------------------------------------------
@@ -193,7 +184,7 @@ The first finding is that many second-best solutions are still good.
 For the two-stage model, rank 2 has a mean normalized oracle gap of \kw{7.04 percent}, and \kw{45.19 percent} of those rank-2 solutions are within 5 percent of the oracle.
 
 \vspace{0.35em}
-For SPO+, rank 2 is also close. The mean gap is \kw{6.32 percent}, and \kw{47.97 percent} are within 5 percent of the oracle.
+For DFL, rank 2 is also close. The mean gap is \kw{6.32 percent}, and \kw{47.97 percent} are within 5 percent of the oracle.
 
 \vspace{0.35em}
 So even when the best predicted solution is removed, the next predicted solution often remains near-oracle. This is strong evidence for the close-substitute hypothesis.
@@ -201,7 +192,7 @@ So even when the best predicted solution is removed, the next predicted solution
 \vspace{0.35em}
 It also helps explain why DFL gain is limited on average. The two-stage method may choose a different plan, but sometimes that different plan is already a good substitute.
 
-\tr{I also checked whether this pattern is stable when the feasible set changes.}
+\tr{I also checked whether this pattern is stable when something changes.}
 \end{frame}
 
 % -----------------------------------------------------------------------------
@@ -212,15 +203,14 @@ It also helps explain why DFL gain is limited on average. The two-stage method m
 This pattern is not only from one fixed setting.
 
 \vspace{0.35em}
-First, I changed the maximum cycle length from 3 to 4 and 5, while keeping the maximum chain length fixed. The rank-2 gap does not become worse. For two-stage, the rank-2 gap goes from 7.04 percent to 6.93 percent and 6.88 percent. For SPO+, it goes from 6.32 percent to 6.20 percent and 5.61 percent.
+First, I changed the maximum cycle length from 3 to 4 and 5. The rank-2 gap does not become worse. For two-stage, the rank-2 gap goes from 7.04 percent to 6.93 percent and 6.88 percent. For DFL, it goes from 6.32 percent to 6.20 percent and 5.61 percent.
 
 \vspace{0.35em}
-Second, I changed graph density by adding or removing arcs in selected cases. This does change the feasible landscape, and the exact mechanism becomes graph-dependent. But close alternatives often still appear.
-
+And secondly, I changed graph density by adding or removing arcs in selected cases. This does change the feasible landscape, and the exact mechanism becomes graph-dependent. But we see no huge flop in the gap here.
 \vspace{0.35em}
-So the safe reading is: this is not a simple topology law. It is better understood as a graph-instance and feasible-landscape effect.
+So it's safe to say this is a consistent pattern even though we change some key parameters.
 
-\tr{Now I move from average patterns to the mechanism of SPO+.}
+\tr{And after that comes the second main finding.}
 \end{frame}
 
 % -----------------------------------------------------------------------------
@@ -228,18 +218,18 @@ So the safe reading is: this is not a simple topology law. It is better understo
 \small
 \timing{55 seconds}
 
-The second finding is about how DFL helps. In many cases, SPO+ does not create a completely new kind of solution. Instead, it reranks candidate solutions.
+The second finding is about how DFL may help. In many cases, DFL does not create a completely new kind of solution. Instead, it reranks candidate solutions.
 
 \vspace{0.35em}
-Here is the idea. Under the two-stage predicted score, candidate A is ranked first, so two-stage selects A. But a near-oracle candidate B may already be in the two-stage top-20 list, just ranked lower, for example at rank 8.
+Here is the idea. Under the two-stage predicted score, candidate A is ranked first, so two-stage selects A. But a near-oracle candidate B may also great in the top-20 list, just ranked lower, for example at maybe rank 8.
 
 \vspace{0.35em}
-SPO+ changes the learned weights, and then B becomes rank 1. If B is near-oracle, this is successful reranking. If B is not near-oracle, then the same reranking move can hurt.
+DFL changes the weights, and then B becomes rank 1. If B is near-oracle, this is successful reranking. If B is not near-oracle, then the same reranking move can hurt.
 
 \vspace{0.35em}
 So the mechanism is the same. The difference is the quality of the promoted candidate.
 
-\tr{The next two slides show concrete cases.}
+\tr{The next two slides show some simple cases.}
 \end{frame}
 
 % -----------------------------------------------------------------------------
@@ -247,15 +237,15 @@ So the mechanism is the same. The difference is the quality of the promoted cand
 \small
 \timing{40 seconds}
 
-This slide shows one concrete graph, G-392.
+This slide shows one graph, G-392.
 
 \vspace{0.35em}
-Please do not focus on every single edge in the figure. The main point is the difference among the three plans. The green plan is the oracle, the red plan is the two-stage solution, and the blue plan is the SPO+ solution.
+Please do not focus on every single edge in the figure. The main point is the difference among the three plans. The green plan is the oracle, the red plan is the two-stage solution, and the blue plan is the DFL solution.
 
 \vspace{0.35em}
-In this seed, two-stage selects a high-gap solution. SPO+ recovers the oracle solution. In the mechanism audit, this is a clean correction case: the good candidate is already in the broader candidate list, but two-stage ranks it too low. SPO+ promotes it to the top.
+In this seed, two-stage selects a high-gap solution. DFL recovers the oracle solution. In the mechanism audit, this is a clean correction case: the good candidate is already in the broader candidate list, but two-stage ranks it too low. DFL promotes it to the top.
 
-\tr{The next case is similar, but SPO+ does not exactly match the oracle.}
+\tr{The next case is similar, but DFL does not exactly match the oracle.}
 \end{frame}
 
 % -----------------------------------------------------------------------------
@@ -266,10 +256,10 @@ In this seed, two-stage selects a high-gap solution. SPO+ recovers the oracle so
 This is another case, G-1560.
 
 \vspace{0.35em}
-Again, the green plan is the oracle, red is two-stage, and blue is SPO+. Here SPO+ does not exactly recover the oracle. But it moves much closer to it.
+Again, the green plan is the oracle, red is two-stage, and blue is DFL. Here DFL does not exactly recover the oracle. But it moves much closer to it.
 
 \vspace{0.35em}
-The gap drops from \kw{0.2923} for two-stage to \kw{0.0120} for SPO+. So this is not only a small numerical change. It is a large decision improvement on this graph.
+The gap drops from \kw{0.2923} for two-stage to \kw{0.0120} for DFL. So this is not only a small numerical change. It is a large decision improvement on this graph.
 
 \vspace{0.35em}
 Together with the harmful controls, these cases show the main lesson: DFL is useful when it promotes a near-oracle candidate. It is risky when it promotes the wrong candidate.
@@ -304,13 +294,13 @@ After true-label evaluation, we can use the oracle landscape and mechanism audit
 \small
 \timing{40 seconds}
 
-I started from features that are available before prediction: number of vertices and arcs, density, degree distribution, components, cycle counts, and feasible exchange geometry.
+I started from features that are available before prediction, I think it very natural to consider parameters like number of vertices and arcs, density, degree distribution, components, cycle counts, and feasible exchange geometry.
 
 \vspace{0.35em}
-The result is cautious. Single-feature correlations are weak. I do not find a simple rule like ``dense graphs are good for DFL''.
+The result is shows that single-feature correlations are weak. We can't find a simple rule like ``dense graphs are good for DFL''.
 
 \vspace{0.35em}
-But this does not mean graph structure is useless. With matched controls, selected helpful targets remain high relative to graphs with similar coarse topology, while harmful controls remain low.
+But this does not mean graph structure is useless. With matched controls, selected helpful targets remain high relative to graphs with similar topology, while harmful controls remain low.
 
 \vspace{0.35em}
 So topology shapes the feasible landscape, but it is not enough by itself. We need to look at the learned candidate boundary as well.
@@ -323,13 +313,9 @@ So topology shapes the feasible landscape, but it is not enough by itself. We ne
 \small
 \timing{50 seconds}
 
-In the final top-20 audit, I used 160 top20-covered graphs, with 50 seeds per graph. These include selected target graphs and matched controls.
+In the final top-20 audit, I used 160 top20-covered graphs, with 50 seeds per graph. To make it simple, we are defining some criteria to evaluate the best 20 solutions of each graph under the two-stage predicted score. 
 
-\vspace{0.35em}
 The helpful signal is the within-1 percent top20 count. In simple words, it asks: how many two-stage top20 candidates are almost tied with the rank-1 predicted value? This signal gives a helpful A-U-R-O-C of 0.752.
-
-\vspace{0.35em}
-The risk signal is ambiguity and diversity. The same broad candidate boundary also appears in harmful reranking controls, with harmful A-U-R-O-C around 0.81 to 0.823.
 
 \vspace{0.35em}
 So top20 ambiguity means DFL reranking can matter. But it does not tell us whether the reranking will be beneficial. It marks opportunity and risk at the same time.
