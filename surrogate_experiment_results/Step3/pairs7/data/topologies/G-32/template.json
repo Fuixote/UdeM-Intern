@@ -1,0 +1,116 @@
+{
+  "arc_order_hash": "65f56895ab04e58244efd8aecde599b8ba729b261b76667850974c6928653544",
+  "arcs": [
+    {
+      "edge_idx": 0,
+      "source": "0",
+      "source_match_position": 0,
+      "source_type": "Pair",
+      "target": "2",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 1,
+      "source": "5",
+      "source_match_position": 0,
+      "source_type": "Pair",
+      "target": "2",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 2,
+      "source": "8",
+      "source_match_position": 0,
+      "source_type": "NDD",
+      "target": "2",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 3,
+      "source": "9",
+      "source_match_position": 0,
+      "source_type": "NDD",
+      "target": "2",
+      "target_type": "Pair"
+    }
+  ],
+  "feasible_candidates": [
+    {
+      "edges": [
+        2
+      ],
+      "length": 1,
+      "nodes": [
+        "8",
+        "2"
+      ],
+      "signature": "chain:8->2",
+      "type": "chain"
+    },
+    {
+      "edges": [
+        3
+      ],
+      "length": 1,
+      "nodes": [
+        "9",
+        "2"
+      ],
+      "signature": "chain:9->2",
+      "type": "chain"
+    }
+  ],
+  "feasible_set_hash": "bfaad37237918eccda3ce004e42925fa9995214baa33b730941c3fd735322126",
+  "max_chain": 4,
+  "max_cycle": 3,
+  "num_2cycles": 0,
+  "num_3cycles": 0,
+  "num_arcs": 4,
+  "num_chains_total": 2,
+  "num_cycles_total": 0,
+  "num_feasible_candidates": 2,
+  "num_ndds": 2,
+  "num_pairs": 7,
+  "num_vertices": 9,
+  "source_path": "dataset/processed/step3_pairs7_step2c_poly_d8_mult_eps050_seed20260619/G-32.json",
+  "topology_hash": "3bd9f9679a17b284ebb7b702ce3fd8f109d1a9434eb1bea6f839ded1da298696",
+  "topology_id": "G-32",
+  "vertices": [
+    {
+      "id": "0",
+      "type": "Pair"
+    },
+    {
+      "id": "1",
+      "type": "Pair"
+    },
+    {
+      "id": "2",
+      "type": "Pair"
+    },
+    {
+      "id": "3",
+      "type": "Pair"
+    },
+    {
+      "id": "5",
+      "type": "Pair"
+    },
+    {
+      "id": "6",
+      "type": "Pair"
+    },
+    {
+      "id": "7",
+      "type": "Pair"
+    },
+    {
+      "id": "8",
+      "type": "NDD"
+    },
+    {
+      "id": "9",
+      "type": "NDD"
+    }
+  ]
+}

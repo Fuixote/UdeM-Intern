@@ -1,0 +1,108 @@
+{
+  "arc_order_hash": "3dcbe97d16bd729efa68f87aa3a5fbe2d50d7189274f1ff8c476eaae85633dc1",
+  "arcs": [
+    {
+      "edge_idx": 0,
+      "source": "3",
+      "source_match_position": 0,
+      "source_type": "Pair",
+      "target": "2",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 1,
+      "source": "7",
+      "source_match_position": 0,
+      "source_type": "NDD",
+      "target": "0",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 2,
+      "source": "8",
+      "source_match_position": 0,
+      "source_type": "NDD",
+      "target": "0",
+      "target_type": "Pair"
+    }
+  ],
+  "feasible_candidates": [
+    {
+      "edges": [
+        1
+      ],
+      "length": 1,
+      "nodes": [
+        "7",
+        "0"
+      ],
+      "signature": "chain:7->0",
+      "type": "chain"
+    },
+    {
+      "edges": [
+        2
+      ],
+      "length": 1,
+      "nodes": [
+        "8",
+        "0"
+      ],
+      "signature": "chain:8->0",
+      "type": "chain"
+    }
+  ],
+  "feasible_set_hash": "74c26a42eb11a48203cf5cbff83847a866d0c866ad2fe177198986e755c89a8e",
+  "max_chain": 4,
+  "max_cycle": 3,
+  "num_2cycles": 0,
+  "num_3cycles": 0,
+  "num_arcs": 3,
+  "num_chains_total": 2,
+  "num_cycles_total": 0,
+  "num_feasible_candidates": 2,
+  "num_ndds": 2,
+  "num_pairs": 7,
+  "num_vertices": 9,
+  "source_path": "dataset/processed/step3_pairs7_step2c_poly_d8_mult_eps050_seed20260619/G-40.json",
+  "topology_hash": "e19726c3eeae59824a38bf55c969480cea8963be547478a6ee20ba5b934ff104",
+  "topology_id": "G-40",
+  "vertices": [
+    {
+      "id": "0",
+      "type": "Pair"
+    },
+    {
+      "id": "1",
+      "type": "Pair"
+    },
+    {
+      "id": "2",
+      "type": "Pair"
+    },
+    {
+      "id": "3",
+      "type": "Pair"
+    },
+    {
+      "id": "4",
+      "type": "Pair"
+    },
+    {
+      "id": "5",
+      "type": "Pair"
+    },
+    {
+      "id": "6",
+      "type": "Pair"
+    },
+    {
+      "id": "7",
+      "type": "NDD"
+    },
+    {
+      "id": "8",
+      "type": "NDD"
+    }
+  ]
+}

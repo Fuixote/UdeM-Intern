@@ -1,0 +1,422 @@
+{
+  "audit": {
+    "expected_pair_count": 7,
+    "graph_count": 50,
+    "max_arc_count": 13,
+    "max_ndd_count": 2,
+    "mean_arc_count": 6.22,
+    "mean_ndd_count": 2.0,
+    "min_arc_count": 2,
+    "min_ndd_count": 2,
+    "processed_dir": "/home/weikang/projects/UdeM-Intern/Exps/dataset/processed/step3_pairs7_step2c_poly_d8_mult_eps050_seed20260619",
+    "rows": [
+      {
+        "arc_count": 8,
+        "graph_file": "G-0.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 6,
+        "graph_file": "G-1.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 8,
+        "graph_file": "G-10.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 5,
+        "graph_file": "G-11.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 4,
+        "graph_file": "G-12.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 5,
+        "graph_file": "G-13.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 6,
+        "graph_file": "G-14.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 4,
+        "graph_file": "G-15.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 6,
+        "graph_file": "G-16.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 6,
+        "graph_file": "G-17.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 7,
+        "graph_file": "G-18.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 4,
+        "graph_file": "G-19.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 9,
+        "graph_file": "G-2.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 2,
+        "graph_file": "G-20.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 6,
+        "graph_file": "G-21.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 7,
+        "graph_file": "G-22.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 5,
+        "graph_file": "G-23.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 8,
+        "graph_file": "G-24.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 3,
+        "graph_file": "G-25.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 3,
+        "graph_file": "G-26.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 5,
+        "graph_file": "G-27.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 13,
+        "graph_file": "G-28.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 6,
+        "graph_file": "G-29.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 7,
+        "graph_file": "G-3.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 10,
+        "graph_file": "G-30.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 10,
+        "graph_file": "G-31.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 4,
+        "graph_file": "G-32.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 7,
+        "graph_file": "G-33.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 8,
+        "graph_file": "G-34.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 7,
+        "graph_file": "G-35.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 4,
+        "graph_file": "G-36.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 6,
+        "graph_file": "G-37.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 12,
+        "graph_file": "G-38.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 12,
+        "graph_file": "G-39.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 7,
+        "graph_file": "G-4.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 3,
+        "graph_file": "G-40.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 10,
+        "graph_file": "G-41.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 2,
+        "graph_file": "G-42.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 4,
+        "graph_file": "G-43.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 5,
+        "graph_file": "G-44.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 5,
+        "graph_file": "G-45.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 10,
+        "graph_file": "G-46.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 6,
+        "graph_file": "G-47.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 8,
+        "graph_file": "G-48.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 9,
+        "graph_file": "G-49.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 3,
+        "graph_file": "G-5.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 3,
+        "graph_file": "G-6.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 4,
+        "graph_file": "G-7.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 4,
+        "graph_file": "G-8.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      },
+      {
+        "arc_count": 5,
+        "graph_file": "G-9.json",
+        "ndd_count": 2,
+        "pair_count": 7,
+        "total_vertices": 9
+      }
+    ]
+  },
+  "commands": {
+    "process": [
+      "/home/weikang/miniconda3/envs/KEPs/bin/python",
+      "/home/weikang/projects/UdeM-Intern/Exps/surrogate_experiment_results/Step2/Step2c_polynomial_degree_multiplicative_noise/data-processing.py",
+      "/home/weikang/projects/UdeM-Intern/Exps/dataset/raw/step3_pairs7_raw_seed20260619/2026-06-19_000000__step3_pairs7_raw_seed20260619",
+      "/home/weikang/projects/UdeM-Intern/Exps/dataset/processed/step3_pairs7_step2c_poly_d8_mult_eps050_seed20260619",
+      "--all",
+      "--force",
+      "--label_mode",
+      "step2c_polynomial_degree_multiplicative_noise",
+      "--step2c_degree",
+      "8",
+      "--step2c_kappa",
+      "3",
+      "--step2c_delta",
+      "1e-12",
+      "--step2c_epsilon_bar",
+      "0.5",
+      "--label_seed",
+      "20260619",
+      "--output_as_batch_dir"
+    ],
+    "raw": [
+      "/home/weikang/miniconda3/envs/KEPs/bin/python",
+      "/home/weikang/projects/UdeM-Intern/Exps/0-data-generation.py",
+      "--instances",
+      "50",
+      "--patients",
+      "7",
+      "--prob_ndd",
+      "0.2",
+      "--seed",
+      "20260619",
+      "--output_dir",
+      "/home/weikang/projects/UdeM-Intern/Exps/dataset/raw/step3_pairs7_raw_seed20260619/2026-06-19_000000__step3_pairs7_raw_seed20260619",
+      "--no_tune",
+      "--force"
+    ]
+  },
+  "config": {
+    "instances": 50,
+    "label_mode": "step2c_polynomial_degree_multiplicative_noise",
+    "label_seed": 20260619,
+    "patients": 7,
+    "prob_ndd": 0.2,
+    "processed_output_dir": "/home/weikang/projects/UdeM-Intern/Exps/dataset/processed/step3_pairs7_step2c_poly_d8_mult_eps050_seed20260619",
+    "raw_batch_dir": "/home/weikang/projects/UdeM-Intern/Exps/dataset/raw/step3_pairs7_raw_seed20260619/2026-06-19_000000__step3_pairs7_raw_seed20260619",
+    "raw_output_dir": "/home/weikang/projects/UdeM-Intern/Exps/dataset/raw/step3_pairs7_raw_seed20260619",
+    "seed": 20260619,
+    "step2c_degree": 8,
+    "step2c_delta": 1e-12,
+    "step2c_epsilon_bar": 0.5,
+    "step2c_kappa": 3.0
+  },
+  "dry_run": false,
+  "experiment": "step3_pairs7_step2c_poly_d8_mult_eps050",
+  "generated_at": "2026-06-19T04:47:25"
+}
