@@ -44,6 +44,7 @@ surrogate_experiment_results/Step3/scripts/materialize_phase_b_step2c_datasets.p
 surrogate_experiment_results/Step3/scripts/audit_phase_b_materialized_datasets.py
 surrogate_experiment_results/Step3/scripts/run_phase_b_training.py
 surrogate_experiment_results/Step3/scripts/aggregate_phase_b_results.py
+surrogate_experiment_results/Step3/scripts/audit_phase_c_candidates.py
 ```
 
 The current processed data and topology banks are:
@@ -670,6 +671,93 @@ launching the full 1000-seed confirmation protocol, inspect the candidate rows
 and decide whether to keep the strongest automatic picks or manually swap in
 additional diversity from the helpful, harmful, neutral, control, or mixed
 outcome pools.
+
+Phase-C review topology preflight audit:
+
+```text
+script:
+    surrogate_experiment_results/Step3/scripts/audit_phase_c_candidates.py
+
+input:
+    automatic Phase-C candidates:
+        G-810, G-269, G-14, G-103, G-934, G-206, G-9, G-21, G-31, G-59
+
+    seed-sensitive review additions:
+        G-47, G-79, G-72
+
+output:
+    surrogate_experiment_results/Step3/pairs20_ndd2/phase_c/preflight/phase_c_review_topology_audit.csv
+    surrogate_experiment_results/Step3/pairs20_ndd2/phase_c/preflight/phase_c_review_seed_audit.csv
+    surrogate_experiment_results/Step3/pairs20_ndd2/phase_c/preflight/phase_c_review_audit_summary.json
+    surrogate_experiment_results/Step3/pairs20_ndd2/phase_c/preflight/phase_c_review_topology_ids.txt
+
+audited rows:
+    review topologies = 13
+    seed rows = 650
+```
+
+The audit is read-only over Phase-B artifacts. It checks train label-hash
+diversity, theta diversity, selected epochs, test gap signatures, raw and
+normalized improvement distributions, normal confidence intervals for mean
+improvement, and Wilson intervals for better/worse seed fractions. Current
+evaluation artifacts do not store full selected feasible-solution IDs, so the
+reported `test_gap_signature` fields are objective/gap signatures, not full
+candidate-set decision signatures.
+
+Audit result:
+
+```text
+stable_helpful_saturated = 4
+stable_harmful_saturated = 2
+exact_tie_saturated = 4
+variable_helpful = 2
+variable_harmful = 1
+
+different_labels_and_theta_same_test_outcome = 10
+seed_sensitive_test_outcome = 3
+```
+
+This confirms that the automatically selected 10 topologies are not data or
+weight duplicates: each has 2000 unique train label hashes and 50 unique theta
+values for both methods. Their zero seed variance is therefore best interpreted
+as decision-region saturation under the Phase-B fixed-X / relabel-y setting.
+The three added review topologies provide the seed-sensitive cases:
+
+```text
+G-47:
+    variable helpful
+    better = 0.84, tie = 0.16, worse = 0.00
+    Wilson lower bound for better fraction = 0.715
+    unique SPO+ test gap signatures = 2
+
+G-79:
+    variable harmful
+    worse = 0.80, tie = 0.20, better = 0.00
+    Wilson lower bound for worse fraction = 0.670
+    unique SPO+ test gap signatures = 2
+
+G-72:
+    mixed / variable helpful
+    better = 0.46, tie = 0.54, worse = 0.00
+    Wilson lower bound for better fraction = 0.330
+    unique SPO+ test gap signatures = 2
+```
+
+The selected epoch audit flags a convergence preflight issue. For all 13 review
+topologies, 2stage selects epoch 100 for every seed. The automatic 10 topologies
+also select SPO+ epoch 100 for every seed. The seed-sensitive additions select
+earlier SPO+ epochs for some seeds, but still frequently hit epoch 100:
+
+```text
+G-47 SPO+ selected epochs: 80, 90, 100; epoch-100 fraction = 0.94
+G-79 SPO+ selected epochs: 90, 100; epoch-100 fraction = 0.94
+G-72 SPO+ selected epochs: 50, 60, 70, 80, 90, 100; epoch-100 fraction = 0.46
+```
+
+Before locking Phase-C, run a convergence check on the review set, at least
+`epochs = 100` versus `epochs = 500`, and decide whether the final confirmation
+protocol should keep the current fixed-X / relabel-y data model or implement
+true fixed-topology `(X, y)` resampling.
 
 ---
 

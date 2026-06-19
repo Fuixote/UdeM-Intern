@@ -1,0 +1,31 @@
+{
+  "audit_interpretation_counts": {
+    "different_labels_and_theta_same_test_outcome": 10,
+    "seed_sensitive_test_outcome": 3
+  },
+  "audit_pattern_counts": {
+    "exact_tie_saturated": 4,
+    "stable_harmful_saturated": 2,
+    "stable_helpful_saturated": 4,
+    "variable_harmful": 1,
+    "variable_helpful": 2
+  },
+  "generated_at": "2026-06-19T20:54:51Z",
+  "num_review_topologies": 13,
+  "num_seed_rows": 650,
+  "topology_ids": [
+    "G-810",
+    "G-269",
+    "G-14",
+    "G-103",
+    "G-934",
+    "G-206",
+    "G-9",
+    "G-21",
+    "G-31",
+    "G-59",
+    "G-47",
+    "G-79",
+    "G-72"
+  ]
+}
