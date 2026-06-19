@@ -1,0 +1,226 @@
+{
+  "arc_order_hash": "af8b05e8e27036057ef03909898bb0ed1d2324b0e5862ffd74614db44920d5b6",
+  "arcs": [
+    {
+      "edge_idx": 0,
+      "source": "1",
+      "source_match_position": 0,
+      "source_type": "Pair",
+      "target": "8",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 1,
+      "source": "4",
+      "source_match_position": 0,
+      "source_type": "Pair",
+      "target": "3",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 2,
+      "source": "5",
+      "source_match_position": 0,
+      "source_type": "Pair",
+      "target": "3",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 3,
+      "source": "6",
+      "source_match_position": 0,
+      "source_type": "Pair",
+      "target": "1",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 4,
+      "source": "7",
+      "source_match_position": 0,
+      "source_type": "Pair",
+      "target": "3",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 5,
+      "source": "10",
+      "source_match_position": 0,
+      "source_type": "NDD",
+      "target": "6",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 6,
+      "source": "10",
+      "source_match_position": 1,
+      "source_type": "NDD",
+      "target": "9",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 7,
+      "source": "11",
+      "source_match_position": 0,
+      "source_type": "NDD",
+      "target": "3",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 8,
+      "source": "12",
+      "source_match_position": 0,
+      "source_type": "NDD",
+      "target": "3",
+      "target_type": "Pair"
+    }
+  ],
+  "feasible_candidates": [
+    {
+      "edges": [
+        5
+      ],
+      "length": 1,
+      "nodes": [
+        "10",
+        "6"
+      ],
+      "signature": "chain:10->6",
+      "type": "chain"
+    },
+    {
+      "edges": [
+        5,
+        3
+      ],
+      "length": 2,
+      "nodes": [
+        "10",
+        "6",
+        "1"
+      ],
+      "signature": "chain:10->6->1",
+      "type": "chain"
+    },
+    {
+      "edges": [
+        5,
+        3,
+        0
+      ],
+      "length": 3,
+      "nodes": [
+        "10",
+        "6",
+        "1",
+        "8"
+      ],
+      "signature": "chain:10->6->1->8",
+      "type": "chain"
+    },
+    {
+      "edges": [
+        6
+      ],
+      "length": 1,
+      "nodes": [
+        "10",
+        "9"
+      ],
+      "signature": "chain:10->9",
+      "type": "chain"
+    },
+    {
+      "edges": [
+        7
+      ],
+      "length": 1,
+      "nodes": [
+        "11",
+        "3"
+      ],
+      "signature": "chain:11->3",
+      "type": "chain"
+    },
+    {
+      "edges": [
+        8
+      ],
+      "length": 1,
+      "nodes": [
+        "12",
+        "3"
+      ],
+      "signature": "chain:12->3",
+      "type": "chain"
+    }
+  ],
+  "feasible_set_hash": "6f0ab6a3e6271dd8b6a604366d9f75a475ef1ee03e190fb102e66578905e9b42",
+  "max_chain": 4,
+  "max_cycle": 3,
+  "num_2cycles": 0,
+  "num_3cycles": 0,
+  "num_arcs": 9,
+  "num_chains_total": 6,
+  "num_cycles_total": 0,
+  "num_feasible_candidates": 6,
+  "num_ndds": 3,
+  "num_pairs": 10,
+  "num_vertices": 13,
+  "source_path": "dataset/processed/step3_pairs10_step2c_poly_d8_mult_eps050_seed20260619/G-40.json",
+  "topology_hash": "11458ff4ce8d99c23447560da21e70f525bf6d60e742ab4329684bc21f620e00",
+  "topology_id": "G-40",
+  "vertices": [
+    {
+      "id": "0",
+      "type": "Pair"
+    },
+    {
+      "id": "1",
+      "type": "Pair"
+    },
+    {
+      "id": "2",
+      "type": "Pair"
+    },
+    {
+      "id": "3",
+      "type": "Pair"
+    },
+    {
+      "id": "4",
+      "type": "Pair"
+    },
+    {
+      "id": "5",
+      "type": "Pair"
+    },
+    {
+      "id": "6",
+      "type": "Pair"
+    },
+    {
+      "id": "7",
+      "type": "Pair"
+    },
+    {
+      "id": "8",
+      "type": "Pair"
+    },
+    {
+      "id": "9",
+      "type": "Pair"
+    },
+    {
+      "id": "10",
+      "type": "NDD"
+    },
+    {
+      "id": "11",
+      "type": "NDD"
+    },
+    {
+      "id": "12",
+      "type": "NDD"
+    }
+  ]
+}

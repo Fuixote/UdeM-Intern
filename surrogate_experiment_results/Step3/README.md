@@ -10,17 +10,18 @@ This experiment treats the KEP topology as an outer experimental block. For each
 
 ---
 
-## Current pairs7 bootstrap implementation
+## Current bootstrap implementation and size smoke
 
-The current implementation starts with an isolated small-graph bootstrap:
+The current implementation starts with isolated small-graph topology banks:
 
 ```text
-subexperiment = pairs7
-patients_per_instance = 7
+subexperiments = pairs7, pairs10, pairs15, pairs20
+patients_per_instance = 7, 10, 15, 20
 prob_ndd = 0.20
 primary label regime = Step2c d8 eps050
 seed = 20260619
 label_seed = 20260619
+graphs per smoke = 50
 ```
 
 Implemented scripts:
@@ -30,26 +31,40 @@ surrogate_experiment_results/Step3/scripts/generate_pairs7_step2c_dataset.py
 surrogate_experiment_results/Step3/scripts/build_topology_bank.py
 ```
 
-The smoke run generated two processed graphs and built a topology bank:
+The current processed data and topology banks are:
 
 ```text
 dataset/processed/step3_pairs7_step2c_poly_d8_mult_eps050_seed20260619/
+dataset/processed/step3_pairs10_step2c_poly_d8_mult_eps050_seed20260619/
+dataset/processed/step3_pairs15_step2c_poly_d8_mult_eps050_seed20260619/
+dataset/processed/step3_pairs20_step2c_poly_d8_mult_eps050_seed20260619/
 surrogate_experiment_results/Step3/pairs7/data/topologies/
+surrogate_experiment_results/Step3/pairs10/data/topologies/
+surrogate_experiment_results/Step3/pairs15/data/topologies/
+surrogate_experiment_results/Step3/pairs20/data/topologies/
 ```
 
-The smoke bank accepted 2 of 2 input graphs with:
+All four smoke banks accepted 50 of 50 input graphs with:
 
 ```text
-expected_pairs = 7
 max_cycle = 3
 max_chain = 4
-accepted = 2
 rejected = 0
 ```
 
-This is only a plumbing smoke. The two generated graphs are sparse and should not
-be interpreted scientifically. The next substantive run should generate a larger
-pairs7 graph bank before screening for fixed-topology confirmation candidates.
+Observed topology-bank statistics:
+
+| subexperiment | vertices | pairs | NDDs | mean arcs | any cycle | 2-cycle | 3-cycle | mean feasible candidates | median feasible candidates | max feasible candidates |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| pairs7 | 9 | 7 | 2 | 6.22 | 2/50 | 2/50 | 1/50 | 3.64 | 3.0 | 19 |
+| pairs10 | 13 | 10 | 3 | 11.46 | 7/50 | 7/50 | 0/50 | 7.92 | 6.0 | 30 |
+| pairs15 | 19 | 15 | 4 | 24.00 | 11/50 | 11/50 | 1/50 | 16.90 | 14.5 | 57 |
+| pairs20 | 25 | 20 | 5 | 42.08 | 26/50 | 24/50 | 13/50 | 48.34 | 35.5 | 194 |
+
+This remains a topology-generation smoke, not a training result. Under the
+current generator defaults, pairs7 and pairs10 are very sparse, pairs15 is still
+cycle-light, and pairs20 is the first tested size where cycles and feasible-set
+diversity become common enough to consider as a fixed-topology screening bank.
 
 ---
 
