@@ -1,0 +1,7079 @@
+{
+  "audit": {
+    "expected_ndd_count": 2,
+    "expected_pair_count": 20,
+    "graph_count": 1000,
+    "max_arc_count": 85,
+    "max_ndd_count": 2,
+    "mean_arc_count": 36.144,
+    "mean_ndd_count": 2.0,
+    "min_arc_count": 9,
+    "min_ndd_count": 2,
+    "processed_dir": "/home/weikang/projects/UdeM-Intern/Exps/dataset/processed/step3_pairs20_ndd2_step2c_poly_d8_mult_eps050_seed20260619",
+    "rows": [
+      {
+        "arc_count": 28,
+        "graph_file": "G-0.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 35,
+        "graph_file": "G-1.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 28,
+        "graph_file": "G-10.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 48,
+        "graph_file": "G-100.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 39,
+        "graph_file": "G-101.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 37,
+        "graph_file": "G-102.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 32,
+        "graph_file": "G-103.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 36,
+        "graph_file": "G-104.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 65,
+        "graph_file": "G-105.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 36,
+        "graph_file": "G-106.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 39,
+        "graph_file": "G-107.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 34,
+        "graph_file": "G-108.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 23,
+        "graph_file": "G-109.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 46,
+        "graph_file": "G-11.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 41,
+        "graph_file": "G-110.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 28,
+        "graph_file": "G-111.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 38,
+        "graph_file": "G-112.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 46,
+        "graph_file": "G-113.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 43,
+        "graph_file": "G-114.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 36,
+        "graph_file": "G-115.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 30,
+        "graph_file": "G-116.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 51,
+        "graph_file": "G-117.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 34,
+        "graph_file": "G-118.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 57,
+        "graph_file": "G-119.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 22,
+        "graph_file": "G-12.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 18,
+        "graph_file": "G-120.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 26,
+        "graph_file": "G-121.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 49,
+        "graph_file": "G-122.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 36,
+        "graph_file": "G-123.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 40,
+        "graph_file": "G-124.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 26,
+        "graph_file": "G-125.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 43,
+        "graph_file": "G-126.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 30,
+        "graph_file": "G-127.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 18,
+        "graph_file": "G-128.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 36,
+        "graph_file": "G-129.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 41,
+        "graph_file": "G-13.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 27,
+        "graph_file": "G-130.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 20,
+        "graph_file": "G-131.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 47,
+        "graph_file": "G-132.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 22,
+        "graph_file": "G-133.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 40,
+        "graph_file": "G-134.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 51,
+        "graph_file": "G-135.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 19,
+        "graph_file": "G-136.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 45,
+        "graph_file": "G-137.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 31,
+        "graph_file": "G-138.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 18,
+        "graph_file": "G-139.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 62,
+        "graph_file": "G-14.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 39,
+        "graph_file": "G-140.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 34,
+        "graph_file": "G-141.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 28,
+        "graph_file": "G-142.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 14,
+        "graph_file": "G-143.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 31,
+        "graph_file": "G-144.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 13,
+        "graph_file": "G-145.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 41,
+        "graph_file": "G-146.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 51,
+        "graph_file": "G-147.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 32,
+        "graph_file": "G-148.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 46,
+        "graph_file": "G-149.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 32,
+        "graph_file": "G-15.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 50,
+        "graph_file": "G-150.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 24,
+        "graph_file": "G-151.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 29,
+        "graph_file": "G-152.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 21,
+        "graph_file": "G-153.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 32,
+        "graph_file": "G-154.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 33,
+        "graph_file": "G-155.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 22,
+        "graph_file": "G-156.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 47,
+        "graph_file": "G-157.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 19,
+        "graph_file": "G-158.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 44,
+        "graph_file": "G-159.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 21,
+        "graph_file": "G-16.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 39,
+        "graph_file": "G-160.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 31,
+        "graph_file": "G-161.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 44,
+        "graph_file": "G-162.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 32,
+        "graph_file": "G-163.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 52,
+        "graph_file": "G-164.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 36,
+        "graph_file": "G-165.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 23,
+        "graph_file": "G-166.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 52,
+        "graph_file": "G-167.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 42,
+        "graph_file": "G-168.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 34,
+        "graph_file": "G-169.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 48,
+        "graph_file": "G-17.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 26,
+        "graph_file": "G-170.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 38,
+        "graph_file": "G-171.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 41,
+        "graph_file": "G-172.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 24,
+        "graph_file": "G-173.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 28,
+        "graph_file": "G-174.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 19,
+        "graph_file": "G-175.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 40,
+        "graph_file": "G-176.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 22,
+        "graph_file": "G-177.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 30,
+        "graph_file": "G-178.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 31,
+        "graph_file": "G-179.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 23,
+        "graph_file": "G-18.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 38,
+        "graph_file": "G-180.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 28,
+        "graph_file": "G-181.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 26,
+        "graph_file": "G-182.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 52,
+        "graph_file": "G-183.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 51,
+        "graph_file": "G-184.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 41,
+        "graph_file": "G-185.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 28,
+        "graph_file": "G-186.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 40,
+        "graph_file": "G-187.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 52,
+        "graph_file": "G-188.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 34,
+        "graph_file": "G-189.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 22,
+        "graph_file": "G-19.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 47,
+        "graph_file": "G-190.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 27,
+        "graph_file": "G-191.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 50,
+        "graph_file": "G-192.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 17,
+        "graph_file": "G-193.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 21,
+        "graph_file": "G-194.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 41,
+        "graph_file": "G-195.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 31,
+        "graph_file": "G-196.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 28,
+        "graph_file": "G-197.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 46,
+        "graph_file": "G-198.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 59,
+        "graph_file": "G-199.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 29,
+        "graph_file": "G-2.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 48,
+        "graph_file": "G-20.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 36,
+        "graph_file": "G-200.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 24,
+        "graph_file": "G-201.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 32,
+        "graph_file": "G-202.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 43,
+        "graph_file": "G-203.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 38,
+        "graph_file": "G-204.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 50,
+        "graph_file": "G-205.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 51,
+        "graph_file": "G-206.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 32,
+        "graph_file": "G-207.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 25,
+        "graph_file": "G-208.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 40,
+        "graph_file": "G-209.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 37,
+        "graph_file": "G-21.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 12,
+        "graph_file": "G-210.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 31,
+        "graph_file": "G-211.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 40,
+        "graph_file": "G-212.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 35,
+        "graph_file": "G-213.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 32,
+        "graph_file": "G-214.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 20,
+        "graph_file": "G-215.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 28,
+        "graph_file": "G-216.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 41,
+        "graph_file": "G-217.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 40,
+        "graph_file": "G-218.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 39,
+        "graph_file": "G-219.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 36,
+        "graph_file": "G-22.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 27,
+        "graph_file": "G-220.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 59,
+        "graph_file": "G-221.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 32,
+        "graph_file": "G-222.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 44,
+        "graph_file": "G-223.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 35,
+        "graph_file": "G-224.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 43,
+        "graph_file": "G-225.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 29,
+        "graph_file": "G-226.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 39,
+        "graph_file": "G-227.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 37,
+        "graph_file": "G-228.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 24,
+        "graph_file": "G-229.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 24,
+        "graph_file": "G-23.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 25,
+        "graph_file": "G-230.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 45,
+        "graph_file": "G-231.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 21,
+        "graph_file": "G-232.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 34,
+        "graph_file": "G-233.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 27,
+        "graph_file": "G-234.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 32,
+        "graph_file": "G-235.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 33,
+        "graph_file": "G-236.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 49,
+        "graph_file": "G-237.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 51,
+        "graph_file": "G-238.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 33,
+        "graph_file": "G-239.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 25,
+        "graph_file": "G-24.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 52,
+        "graph_file": "G-240.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 24,
+        "graph_file": "G-241.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 22,
+        "graph_file": "G-242.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 37,
+        "graph_file": "G-243.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 31,
+        "graph_file": "G-244.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 32,
+        "graph_file": "G-245.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 29,
+        "graph_file": "G-246.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 37,
+        "graph_file": "G-247.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 47,
+        "graph_file": "G-248.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 32,
+        "graph_file": "G-249.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 34,
+        "graph_file": "G-25.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 44,
+        "graph_file": "G-250.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 59,
+        "graph_file": "G-251.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 57,
+        "graph_file": "G-252.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 32,
+        "graph_file": "G-253.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 38,
+        "graph_file": "G-254.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 37,
+        "graph_file": "G-255.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 55,
+        "graph_file": "G-256.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 48,
+        "graph_file": "G-257.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 23,
+        "graph_file": "G-258.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 38,
+        "graph_file": "G-259.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 40,
+        "graph_file": "G-26.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 22,
+        "graph_file": "G-260.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 36,
+        "graph_file": "G-261.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 41,
+        "graph_file": "G-262.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 16,
+        "graph_file": "G-263.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 17,
+        "graph_file": "G-264.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 37,
+        "graph_file": "G-265.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 39,
+        "graph_file": "G-266.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 42,
+        "graph_file": "G-267.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 18,
+        "graph_file": "G-268.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 41,
+        "graph_file": "G-269.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 23,
+        "graph_file": "G-27.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 20,
+        "graph_file": "G-270.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 14,
+        "graph_file": "G-271.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 31,
+        "graph_file": "G-272.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 16,
+        "graph_file": "G-273.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 42,
+        "graph_file": "G-274.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 28,
+        "graph_file": "G-275.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 43,
+        "graph_file": "G-276.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 29,
+        "graph_file": "G-277.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 38,
+        "graph_file": "G-278.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 34,
+        "graph_file": "G-279.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 30,
+        "graph_file": "G-28.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 24,
+        "graph_file": "G-280.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 47,
+        "graph_file": "G-281.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 30,
+        "graph_file": "G-282.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 40,
+        "graph_file": "G-283.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 39,
+        "graph_file": "G-284.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 45,
+        "graph_file": "G-285.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 38,
+        "graph_file": "G-286.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 29,
+        "graph_file": "G-287.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 38,
+        "graph_file": "G-288.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 29,
+        "graph_file": "G-289.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 39,
+        "graph_file": "G-29.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 17,
+        "graph_file": "G-290.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 30,
+        "graph_file": "G-291.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 28,
+        "graph_file": "G-292.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 45,
+        "graph_file": "G-293.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 19,
+        "graph_file": "G-294.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 37,
+        "graph_file": "G-295.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 43,
+        "graph_file": "G-296.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 33,
+        "graph_file": "G-297.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 36,
+        "graph_file": "G-298.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 43,
+        "graph_file": "G-299.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 37,
+        "graph_file": "G-3.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 34,
+        "graph_file": "G-30.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 30,
+        "graph_file": "G-300.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 41,
+        "graph_file": "G-301.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 32,
+        "graph_file": "G-302.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 37,
+        "graph_file": "G-303.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 38,
+        "graph_file": "G-304.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 39,
+        "graph_file": "G-305.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 27,
+        "graph_file": "G-306.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 45,
+        "graph_file": "G-307.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 39,
+        "graph_file": "G-308.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 27,
+        "graph_file": "G-309.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 44,
+        "graph_file": "G-31.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 44,
+        "graph_file": "G-310.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 29,
+        "graph_file": "G-311.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 11,
+        "graph_file": "G-312.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 34,
+        "graph_file": "G-313.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 48,
+        "graph_file": "G-314.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 55,
+        "graph_file": "G-315.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 22,
+        "graph_file": "G-316.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 58,
+        "graph_file": "G-317.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 45,
+        "graph_file": "G-318.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 23,
+        "graph_file": "G-319.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 27,
+        "graph_file": "G-32.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 22,
+        "graph_file": "G-320.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 42,
+        "graph_file": "G-321.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 47,
+        "graph_file": "G-322.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 51,
+        "graph_file": "G-323.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 47,
+        "graph_file": "G-324.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 22,
+        "graph_file": "G-325.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 22,
+        "graph_file": "G-326.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 21,
+        "graph_file": "G-327.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 33,
+        "graph_file": "G-328.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 26,
+        "graph_file": "G-329.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 46,
+        "graph_file": "G-33.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 42,
+        "graph_file": "G-330.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 16,
+        "graph_file": "G-331.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 35,
+        "graph_file": "G-332.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 31,
+        "graph_file": "G-333.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 57,
+        "graph_file": "G-334.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 27,
+        "graph_file": "G-335.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 43,
+        "graph_file": "G-336.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 23,
+        "graph_file": "G-337.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 26,
+        "graph_file": "G-338.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 48,
+        "graph_file": "G-339.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 36,
+        "graph_file": "G-34.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 34,
+        "graph_file": "G-340.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 47,
+        "graph_file": "G-341.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 25,
+        "graph_file": "G-342.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 41,
+        "graph_file": "G-343.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 49,
+        "graph_file": "G-344.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 39,
+        "graph_file": "G-345.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 24,
+        "graph_file": "G-346.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 39,
+        "graph_file": "G-347.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 35,
+        "graph_file": "G-348.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 31,
+        "graph_file": "G-349.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 22,
+        "graph_file": "G-35.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 29,
+        "graph_file": "G-350.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 26,
+        "graph_file": "G-351.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 44,
+        "graph_file": "G-352.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 37,
+        "graph_file": "G-353.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 39,
+        "graph_file": "G-354.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 22,
+        "graph_file": "G-355.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 43,
+        "graph_file": "G-356.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 26,
+        "graph_file": "G-357.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 51,
+        "graph_file": "G-358.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 51,
+        "graph_file": "G-359.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 30,
+        "graph_file": "G-36.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 35,
+        "graph_file": "G-360.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 62,
+        "graph_file": "G-361.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 25,
+        "graph_file": "G-362.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 33,
+        "graph_file": "G-363.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 26,
+        "graph_file": "G-364.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 36,
+        "graph_file": "G-365.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 28,
+        "graph_file": "G-366.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 25,
+        "graph_file": "G-367.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 32,
+        "graph_file": "G-368.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 41,
+        "graph_file": "G-369.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 54,
+        "graph_file": "G-37.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 29,
+        "graph_file": "G-370.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 50,
+        "graph_file": "G-371.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 32,
+        "graph_file": "G-372.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 21,
+        "graph_file": "G-373.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 24,
+        "graph_file": "G-374.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 44,
+        "graph_file": "G-375.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 36,
+        "graph_file": "G-376.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 39,
+        "graph_file": "G-377.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 30,
+        "graph_file": "G-378.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 24,
+        "graph_file": "G-379.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 45,
+        "graph_file": "G-38.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 27,
+        "graph_file": "G-380.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 45,
+        "graph_file": "G-381.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 39,
+        "graph_file": "G-382.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 38,
+        "graph_file": "G-383.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 54,
+        "graph_file": "G-384.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 85,
+        "graph_file": "G-385.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 35,
+        "graph_file": "G-386.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 40,
+        "graph_file": "G-387.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 58,
+        "graph_file": "G-388.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 10,
+        "graph_file": "G-389.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 27,
+        "graph_file": "G-39.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 27,
+        "graph_file": "G-390.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 43,
+        "graph_file": "G-391.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 25,
+        "graph_file": "G-392.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 20,
+        "graph_file": "G-393.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 34,
+        "graph_file": "G-394.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 44,
+        "graph_file": "G-395.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 65,
+        "graph_file": "G-396.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 24,
+        "graph_file": "G-397.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 32,
+        "graph_file": "G-398.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 41,
+        "graph_file": "G-399.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 39,
+        "graph_file": "G-4.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 37,
+        "graph_file": "G-40.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 63,
+        "graph_file": "G-400.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 30,
+        "graph_file": "G-401.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 43,
+        "graph_file": "G-402.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 36,
+        "graph_file": "G-403.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 11,
+        "graph_file": "G-404.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 25,
+        "graph_file": "G-405.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 45,
+        "graph_file": "G-406.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 59,
+        "graph_file": "G-407.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 23,
+        "graph_file": "G-408.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 20,
+        "graph_file": "G-409.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 33,
+        "graph_file": "G-41.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 25,
+        "graph_file": "G-410.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 21,
+        "graph_file": "G-411.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 26,
+        "graph_file": "G-412.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 27,
+        "graph_file": "G-413.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 28,
+        "graph_file": "G-414.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 32,
+        "graph_file": "G-415.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 33,
+        "graph_file": "G-416.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 43,
+        "graph_file": "G-417.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 34,
+        "graph_file": "G-418.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 44,
+        "graph_file": "G-419.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 35,
+        "graph_file": "G-42.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 45,
+        "graph_file": "G-420.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 37,
+        "graph_file": "G-421.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 41,
+        "graph_file": "G-422.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 14,
+        "graph_file": "G-423.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 25,
+        "graph_file": "G-424.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 22,
+        "graph_file": "G-425.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 44,
+        "graph_file": "G-426.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 16,
+        "graph_file": "G-427.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 42,
+        "graph_file": "G-428.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 27,
+        "graph_file": "G-429.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 40,
+        "graph_file": "G-43.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 41,
+        "graph_file": "G-430.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 42,
+        "graph_file": "G-431.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 35,
+        "graph_file": "G-432.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 15,
+        "graph_file": "G-433.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 23,
+        "graph_file": "G-434.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 36,
+        "graph_file": "G-435.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 32,
+        "graph_file": "G-436.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 33,
+        "graph_file": "G-437.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 30,
+        "graph_file": "G-438.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 23,
+        "graph_file": "G-439.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 40,
+        "graph_file": "G-44.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 33,
+        "graph_file": "G-440.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 47,
+        "graph_file": "G-441.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 42,
+        "graph_file": "G-442.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 38,
+        "graph_file": "G-443.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 31,
+        "graph_file": "G-444.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 36,
+        "graph_file": "G-445.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 32,
+        "graph_file": "G-446.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 26,
+        "graph_file": "G-447.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 51,
+        "graph_file": "G-448.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 16,
+        "graph_file": "G-449.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 32,
+        "graph_file": "G-45.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 44,
+        "graph_file": "G-450.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 30,
+        "graph_file": "G-451.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 33,
+        "graph_file": "G-452.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 53,
+        "graph_file": "G-453.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 39,
+        "graph_file": "G-454.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 49,
+        "graph_file": "G-455.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 60,
+        "graph_file": "G-456.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 24,
+        "graph_file": "G-457.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 31,
+        "graph_file": "G-458.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 37,
+        "graph_file": "G-459.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 20,
+        "graph_file": "G-46.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 29,
+        "graph_file": "G-460.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 36,
+        "graph_file": "G-461.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 53,
+        "graph_file": "G-462.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 42,
+        "graph_file": "G-463.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 41,
+        "graph_file": "G-464.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 34,
+        "graph_file": "G-465.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 41,
+        "graph_file": "G-466.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 24,
+        "graph_file": "G-467.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 28,
+        "graph_file": "G-468.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 45,
+        "graph_file": "G-469.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 31,
+        "graph_file": "G-47.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 39,
+        "graph_file": "G-470.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 36,
+        "graph_file": "G-471.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 43,
+        "graph_file": "G-472.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 50,
+        "graph_file": "G-473.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 45,
+        "graph_file": "G-474.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 42,
+        "graph_file": "G-475.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 63,
+        "graph_file": "G-476.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 42,
+        "graph_file": "G-477.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 45,
+        "graph_file": "G-478.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 51,
+        "graph_file": "G-479.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 39,
+        "graph_file": "G-48.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 41,
+        "graph_file": "G-480.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 45,
+        "graph_file": "G-481.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 40,
+        "graph_file": "G-482.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 25,
+        "graph_file": "G-483.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 18,
+        "graph_file": "G-484.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 43,
+        "graph_file": "G-485.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 28,
+        "graph_file": "G-486.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 55,
+        "graph_file": "G-487.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 20,
+        "graph_file": "G-488.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 42,
+        "graph_file": "G-489.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 40,
+        "graph_file": "G-49.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 47,
+        "graph_file": "G-490.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 42,
+        "graph_file": "G-491.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 33,
+        "graph_file": "G-492.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 44,
+        "graph_file": "G-493.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 37,
+        "graph_file": "G-494.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 43,
+        "graph_file": "G-495.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 31,
+        "graph_file": "G-496.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 34,
+        "graph_file": "G-497.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 29,
+        "graph_file": "G-498.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 41,
+        "graph_file": "G-499.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 45,
+        "graph_file": "G-5.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 49,
+        "graph_file": "G-50.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 53,
+        "graph_file": "G-500.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 30,
+        "graph_file": "G-501.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 23,
+        "graph_file": "G-502.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 24,
+        "graph_file": "G-503.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 34,
+        "graph_file": "G-504.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 41,
+        "graph_file": "G-505.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 51,
+        "graph_file": "G-506.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 40,
+        "graph_file": "G-507.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 43,
+        "graph_file": "G-508.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 44,
+        "graph_file": "G-509.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 40,
+        "graph_file": "G-51.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 58,
+        "graph_file": "G-510.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 35,
+        "graph_file": "G-511.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 24,
+        "graph_file": "G-512.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 43,
+        "graph_file": "G-513.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 37,
+        "graph_file": "G-514.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 33,
+        "graph_file": "G-515.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 35,
+        "graph_file": "G-516.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 33,
+        "graph_file": "G-517.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 17,
+        "graph_file": "G-518.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 26,
+        "graph_file": "G-519.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 16,
+        "graph_file": "G-52.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 52,
+        "graph_file": "G-520.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 52,
+        "graph_file": "G-521.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 42,
+        "graph_file": "G-522.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 27,
+        "graph_file": "G-523.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 39,
+        "graph_file": "G-524.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 30,
+        "graph_file": "G-525.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 37,
+        "graph_file": "G-526.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 13,
+        "graph_file": "G-527.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 36,
+        "graph_file": "G-528.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 50,
+        "graph_file": "G-529.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 34,
+        "graph_file": "G-53.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 45,
+        "graph_file": "G-530.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 41,
+        "graph_file": "G-531.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 26,
+        "graph_file": "G-532.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 49,
+        "graph_file": "G-533.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 45,
+        "graph_file": "G-534.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 23,
+        "graph_file": "G-535.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 31,
+        "graph_file": "G-536.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 23,
+        "graph_file": "G-537.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 29,
+        "graph_file": "G-538.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 46,
+        "graph_file": "G-539.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 43,
+        "graph_file": "G-54.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 42,
+        "graph_file": "G-540.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 25,
+        "graph_file": "G-541.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 27,
+        "graph_file": "G-542.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 34,
+        "graph_file": "G-543.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 45,
+        "graph_file": "G-544.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 47,
+        "graph_file": "G-545.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 44,
+        "graph_file": "G-546.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 53,
+        "graph_file": "G-547.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 47,
+        "graph_file": "G-548.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 35,
+        "graph_file": "G-549.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 29,
+        "graph_file": "G-55.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 30,
+        "graph_file": "G-550.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 33,
+        "graph_file": "G-551.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 39,
+        "graph_file": "G-552.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 41,
+        "graph_file": "G-553.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 31,
+        "graph_file": "G-554.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 32,
+        "graph_file": "G-555.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 42,
+        "graph_file": "G-556.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 25,
+        "graph_file": "G-557.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 48,
+        "graph_file": "G-558.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 26,
+        "graph_file": "G-559.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 31,
+        "graph_file": "G-56.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 34,
+        "graph_file": "G-560.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 29,
+        "graph_file": "G-561.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 25,
+        "graph_file": "G-562.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 39,
+        "graph_file": "G-563.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 53,
+        "graph_file": "G-564.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 27,
+        "graph_file": "G-565.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 18,
+        "graph_file": "G-566.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 18,
+        "graph_file": "G-567.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 55,
+        "graph_file": "G-568.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 37,
+        "graph_file": "G-569.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 45,
+        "graph_file": "G-57.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 57,
+        "graph_file": "G-570.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 26,
+        "graph_file": "G-571.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 35,
+        "graph_file": "G-572.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 26,
+        "graph_file": "G-573.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 43,
+        "graph_file": "G-574.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 21,
+        "graph_file": "G-575.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 64,
+        "graph_file": "G-576.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 44,
+        "graph_file": "G-577.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 49,
+        "graph_file": "G-578.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 35,
+        "graph_file": "G-579.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 41,
+        "graph_file": "G-58.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 38,
+        "graph_file": "G-580.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 48,
+        "graph_file": "G-581.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 48,
+        "graph_file": "G-582.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 33,
+        "graph_file": "G-583.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 50,
+        "graph_file": "G-584.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 37,
+        "graph_file": "G-585.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 17,
+        "graph_file": "G-586.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 40,
+        "graph_file": "G-587.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 25,
+        "graph_file": "G-588.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 39,
+        "graph_file": "G-589.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 46,
+        "graph_file": "G-59.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 41,
+        "graph_file": "G-590.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 39,
+        "graph_file": "G-591.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 16,
+        "graph_file": "G-592.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 33,
+        "graph_file": "G-593.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 16,
+        "graph_file": "G-594.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 48,
+        "graph_file": "G-595.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 60,
+        "graph_file": "G-596.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 55,
+        "graph_file": "G-597.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 42,
+        "graph_file": "G-598.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 52,
+        "graph_file": "G-599.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 26,
+        "graph_file": "G-6.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 41,
+        "graph_file": "G-60.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 40,
+        "graph_file": "G-600.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 38,
+        "graph_file": "G-601.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 28,
+        "graph_file": "G-602.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 36,
+        "graph_file": "G-603.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 35,
+        "graph_file": "G-604.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 25,
+        "graph_file": "G-605.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 28,
+        "graph_file": "G-606.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 31,
+        "graph_file": "G-607.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 18,
+        "graph_file": "G-608.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 25,
+        "graph_file": "G-609.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 29,
+        "graph_file": "G-61.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 46,
+        "graph_file": "G-610.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 34,
+        "graph_file": "G-611.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 43,
+        "graph_file": "G-612.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 34,
+        "graph_file": "G-613.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 12,
+        "graph_file": "G-614.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 62,
+        "graph_file": "G-615.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 59,
+        "graph_file": "G-616.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 26,
+        "graph_file": "G-617.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 28,
+        "graph_file": "G-618.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 43,
+        "graph_file": "G-619.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 36,
+        "graph_file": "G-62.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 40,
+        "graph_file": "G-620.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 37,
+        "graph_file": "G-621.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 30,
+        "graph_file": "G-622.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 39,
+        "graph_file": "G-623.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 32,
+        "graph_file": "G-624.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 36,
+        "graph_file": "G-625.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 54,
+        "graph_file": "G-626.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 49,
+        "graph_file": "G-627.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 30,
+        "graph_file": "G-628.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 32,
+        "graph_file": "G-629.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 33,
+        "graph_file": "G-63.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 37,
+        "graph_file": "G-630.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 26,
+        "graph_file": "G-631.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 51,
+        "graph_file": "G-632.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 47,
+        "graph_file": "G-633.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 29,
+        "graph_file": "G-634.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 46,
+        "graph_file": "G-635.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 40,
+        "graph_file": "G-636.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 31,
+        "graph_file": "G-637.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 26,
+        "graph_file": "G-638.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 46,
+        "graph_file": "G-639.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 37,
+        "graph_file": "G-64.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 38,
+        "graph_file": "G-640.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 28,
+        "graph_file": "G-641.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 46,
+        "graph_file": "G-642.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 41,
+        "graph_file": "G-643.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 23,
+        "graph_file": "G-644.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 24,
+        "graph_file": "G-645.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 49,
+        "graph_file": "G-646.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 30,
+        "graph_file": "G-647.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 20,
+        "graph_file": "G-648.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 26,
+        "graph_file": "G-649.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 34,
+        "graph_file": "G-65.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 23,
+        "graph_file": "G-650.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 36,
+        "graph_file": "G-651.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 41,
+        "graph_file": "G-652.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 48,
+        "graph_file": "G-653.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 29,
+        "graph_file": "G-654.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 19,
+        "graph_file": "G-655.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 33,
+        "graph_file": "G-656.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 52,
+        "graph_file": "G-657.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 36,
+        "graph_file": "G-658.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 40,
+        "graph_file": "G-659.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 37,
+        "graph_file": "G-66.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 28,
+        "graph_file": "G-660.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 40,
+        "graph_file": "G-661.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 39,
+        "graph_file": "G-662.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 56,
+        "graph_file": "G-663.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 23,
+        "graph_file": "G-664.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 31,
+        "graph_file": "G-665.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 42,
+        "graph_file": "G-666.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 57,
+        "graph_file": "G-667.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 44,
+        "graph_file": "G-668.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 39,
+        "graph_file": "G-669.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 53,
+        "graph_file": "G-67.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 36,
+        "graph_file": "G-670.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 35,
+        "graph_file": "G-671.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 46,
+        "graph_file": "G-672.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 29,
+        "graph_file": "G-673.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 35,
+        "graph_file": "G-674.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 47,
+        "graph_file": "G-675.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 43,
+        "graph_file": "G-676.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 29,
+        "graph_file": "G-677.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 16,
+        "graph_file": "G-678.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 53,
+        "graph_file": "G-679.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 31,
+        "graph_file": "G-68.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 32,
+        "graph_file": "G-680.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 23,
+        "graph_file": "G-681.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 50,
+        "graph_file": "G-682.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 33,
+        "graph_file": "G-683.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 34,
+        "graph_file": "G-684.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 20,
+        "graph_file": "G-685.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 33,
+        "graph_file": "G-686.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 49,
+        "graph_file": "G-687.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 35,
+        "graph_file": "G-688.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 49,
+        "graph_file": "G-689.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 11,
+        "graph_file": "G-69.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 23,
+        "graph_file": "G-690.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 22,
+        "graph_file": "G-691.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 52,
+        "graph_file": "G-692.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 36,
+        "graph_file": "G-693.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 24,
+        "graph_file": "G-694.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 45,
+        "graph_file": "G-695.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 49,
+        "graph_file": "G-696.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 35,
+        "graph_file": "G-697.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 32,
+        "graph_file": "G-698.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 43,
+        "graph_file": "G-699.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 19,
+        "graph_file": "G-7.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 49,
+        "graph_file": "G-70.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 58,
+        "graph_file": "G-700.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 60,
+        "graph_file": "G-701.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 26,
+        "graph_file": "G-702.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 32,
+        "graph_file": "G-703.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 19,
+        "graph_file": "G-704.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 30,
+        "graph_file": "G-705.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 32,
+        "graph_file": "G-706.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 30,
+        "graph_file": "G-707.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 40,
+        "graph_file": "G-708.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 30,
+        "graph_file": "G-709.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 30,
+        "graph_file": "G-71.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 46,
+        "graph_file": "G-710.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 42,
+        "graph_file": "G-711.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 32,
+        "graph_file": "G-712.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 40,
+        "graph_file": "G-713.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 27,
+        "graph_file": "G-714.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 35,
+        "graph_file": "G-715.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 42,
+        "graph_file": "G-716.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 34,
+        "graph_file": "G-717.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 35,
+        "graph_file": "G-718.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 22,
+        "graph_file": "G-719.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 45,
+        "graph_file": "G-72.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 34,
+        "graph_file": "G-720.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 22,
+        "graph_file": "G-721.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 36,
+        "graph_file": "G-722.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 41,
+        "graph_file": "G-723.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 34,
+        "graph_file": "G-724.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 57,
+        "graph_file": "G-725.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 46,
+        "graph_file": "G-726.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 27,
+        "graph_file": "G-727.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 16,
+        "graph_file": "G-728.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 33,
+        "graph_file": "G-729.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 44,
+        "graph_file": "G-73.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 55,
+        "graph_file": "G-730.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 55,
+        "graph_file": "G-731.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 36,
+        "graph_file": "G-732.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 40,
+        "graph_file": "G-733.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 26,
+        "graph_file": "G-734.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 30,
+        "graph_file": "G-735.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 21,
+        "graph_file": "G-736.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 25,
+        "graph_file": "G-737.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 42,
+        "graph_file": "G-738.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 40,
+        "graph_file": "G-739.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 45,
+        "graph_file": "G-74.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 53,
+        "graph_file": "G-740.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 22,
+        "graph_file": "G-741.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 48,
+        "graph_file": "G-742.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 31,
+        "graph_file": "G-743.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 52,
+        "graph_file": "G-744.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 25,
+        "graph_file": "G-745.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 30,
+        "graph_file": "G-746.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 50,
+        "graph_file": "G-747.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 37,
+        "graph_file": "G-748.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 41,
+        "graph_file": "G-749.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 23,
+        "graph_file": "G-75.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 46,
+        "graph_file": "G-750.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 9,
+        "graph_file": "G-751.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 40,
+        "graph_file": "G-752.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 38,
+        "graph_file": "G-753.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 44,
+        "graph_file": "G-754.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 33,
+        "graph_file": "G-755.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 32,
+        "graph_file": "G-756.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 54,
+        "graph_file": "G-757.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 33,
+        "graph_file": "G-758.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 47,
+        "graph_file": "G-759.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 23,
+        "graph_file": "G-76.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 43,
+        "graph_file": "G-760.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 31,
+        "graph_file": "G-761.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 34,
+        "graph_file": "G-762.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 34,
+        "graph_file": "G-763.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 33,
+        "graph_file": "G-764.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 77,
+        "graph_file": "G-765.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 48,
+        "graph_file": "G-766.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 42,
+        "graph_file": "G-767.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 37,
+        "graph_file": "G-768.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 42,
+        "graph_file": "G-769.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 30,
+        "graph_file": "G-77.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 23,
+        "graph_file": "G-770.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 21,
+        "graph_file": "G-771.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 45,
+        "graph_file": "G-772.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 44,
+        "graph_file": "G-773.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 28,
+        "graph_file": "G-774.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 48,
+        "graph_file": "G-775.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 35,
+        "graph_file": "G-776.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 28,
+        "graph_file": "G-777.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 42,
+        "graph_file": "G-778.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 29,
+        "graph_file": "G-779.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 41,
+        "graph_file": "G-78.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 30,
+        "graph_file": "G-780.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 16,
+        "graph_file": "G-781.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 43,
+        "graph_file": "G-782.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 28,
+        "graph_file": "G-783.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 57,
+        "graph_file": "G-784.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 28,
+        "graph_file": "G-785.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 26,
+        "graph_file": "G-786.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 39,
+        "graph_file": "G-787.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 37,
+        "graph_file": "G-788.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 32,
+        "graph_file": "G-789.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 34,
+        "graph_file": "G-79.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 47,
+        "graph_file": "G-790.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 55,
+        "graph_file": "G-791.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 49,
+        "graph_file": "G-792.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 34,
+        "graph_file": "G-793.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 36,
+        "graph_file": "G-794.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 30,
+        "graph_file": "G-795.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 31,
+        "graph_file": "G-796.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 35,
+        "graph_file": "G-797.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 47,
+        "graph_file": "G-798.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 44,
+        "graph_file": "G-799.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 48,
+        "graph_file": "G-8.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 47,
+        "graph_file": "G-80.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 53,
+        "graph_file": "G-800.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 43,
+        "graph_file": "G-801.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 43,
+        "graph_file": "G-802.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 29,
+        "graph_file": "G-803.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 28,
+        "graph_file": "G-804.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 31,
+        "graph_file": "G-805.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 38,
+        "graph_file": "G-806.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 35,
+        "graph_file": "G-807.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 53,
+        "graph_file": "G-808.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 43,
+        "graph_file": "G-809.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 30,
+        "graph_file": "G-81.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 57,
+        "graph_file": "G-810.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 54,
+        "graph_file": "G-811.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 26,
+        "graph_file": "G-812.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 40,
+        "graph_file": "G-813.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 21,
+        "graph_file": "G-814.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 21,
+        "graph_file": "G-815.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 26,
+        "graph_file": "G-816.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 38,
+        "graph_file": "G-817.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 35,
+        "graph_file": "G-818.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 25,
+        "graph_file": "G-819.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 39,
+        "graph_file": "G-82.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 24,
+        "graph_file": "G-820.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 44,
+        "graph_file": "G-821.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 41,
+        "graph_file": "G-822.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 41,
+        "graph_file": "G-823.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 19,
+        "graph_file": "G-824.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 54,
+        "graph_file": "G-825.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 41,
+        "graph_file": "G-826.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 27,
+        "graph_file": "G-827.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 40,
+        "graph_file": "G-828.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 46,
+        "graph_file": "G-829.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 49,
+        "graph_file": "G-83.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 42,
+        "graph_file": "G-830.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 31,
+        "graph_file": "G-831.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 39,
+        "graph_file": "G-832.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 41,
+        "graph_file": "G-833.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 28,
+        "graph_file": "G-834.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 25,
+        "graph_file": "G-835.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 58,
+        "graph_file": "G-836.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 21,
+        "graph_file": "G-837.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 51,
+        "graph_file": "G-838.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 25,
+        "graph_file": "G-839.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 43,
+        "graph_file": "G-84.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 31,
+        "graph_file": "G-840.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 39,
+        "graph_file": "G-841.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 19,
+        "graph_file": "G-842.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 33,
+        "graph_file": "G-843.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 27,
+        "graph_file": "G-844.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 22,
+        "graph_file": "G-845.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 33,
+        "graph_file": "G-846.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 45,
+        "graph_file": "G-847.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 28,
+        "graph_file": "G-848.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 46,
+        "graph_file": "G-849.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 21,
+        "graph_file": "G-85.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 38,
+        "graph_file": "G-850.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 44,
+        "graph_file": "G-851.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 26,
+        "graph_file": "G-852.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 21,
+        "graph_file": "G-853.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 36,
+        "graph_file": "G-854.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 29,
+        "graph_file": "G-855.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 31,
+        "graph_file": "G-856.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 26,
+        "graph_file": "G-857.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 29,
+        "graph_file": "G-858.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 26,
+        "graph_file": "G-859.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 44,
+        "graph_file": "G-86.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 42,
+        "graph_file": "G-860.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 42,
+        "graph_file": "G-861.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 40,
+        "graph_file": "G-862.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 24,
+        "graph_file": "G-863.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 32,
+        "graph_file": "G-864.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 30,
+        "graph_file": "G-865.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 33,
+        "graph_file": "G-866.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 51,
+        "graph_file": "G-867.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 34,
+        "graph_file": "G-868.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 52,
+        "graph_file": "G-869.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 37,
+        "graph_file": "G-87.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 34,
+        "graph_file": "G-870.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 37,
+        "graph_file": "G-871.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 36,
+        "graph_file": "G-872.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 55,
+        "graph_file": "G-873.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 36,
+        "graph_file": "G-874.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 27,
+        "graph_file": "G-875.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 54,
+        "graph_file": "G-876.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 30,
+        "graph_file": "G-877.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 41,
+        "graph_file": "G-878.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 54,
+        "graph_file": "G-879.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 32,
+        "graph_file": "G-88.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 42,
+        "graph_file": "G-880.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 54,
+        "graph_file": "G-881.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 29,
+        "graph_file": "G-882.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 25,
+        "graph_file": "G-883.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 41,
+        "graph_file": "G-884.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 43,
+        "graph_file": "G-885.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 38,
+        "graph_file": "G-886.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 50,
+        "graph_file": "G-887.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 41,
+        "graph_file": "G-888.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 40,
+        "graph_file": "G-889.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 53,
+        "graph_file": "G-89.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 47,
+        "graph_file": "G-890.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 23,
+        "graph_file": "G-891.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 34,
+        "graph_file": "G-892.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 25,
+        "graph_file": "G-893.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 25,
+        "graph_file": "G-894.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 43,
+        "graph_file": "G-895.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 46,
+        "graph_file": "G-896.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 48,
+        "graph_file": "G-897.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 36,
+        "graph_file": "G-898.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 44,
+        "graph_file": "G-899.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 49,
+        "graph_file": "G-9.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 48,
+        "graph_file": "G-90.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 36,
+        "graph_file": "G-900.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 48,
+        "graph_file": "G-901.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 49,
+        "graph_file": "G-902.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 35,
+        "graph_file": "G-903.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 40,
+        "graph_file": "G-904.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 27,
+        "graph_file": "G-905.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 32,
+        "graph_file": "G-906.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 44,
+        "graph_file": "G-907.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 29,
+        "graph_file": "G-908.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 27,
+        "graph_file": "G-909.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 34,
+        "graph_file": "G-91.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 35,
+        "graph_file": "G-910.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 44,
+        "graph_file": "G-911.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 51,
+        "graph_file": "G-912.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 43,
+        "graph_file": "G-913.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 31,
+        "graph_file": "G-914.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 33,
+        "graph_file": "G-915.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 41,
+        "graph_file": "G-916.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 49,
+        "graph_file": "G-917.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 29,
+        "graph_file": "G-918.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 59,
+        "graph_file": "G-919.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 28,
+        "graph_file": "G-92.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 25,
+        "graph_file": "G-920.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 50,
+        "graph_file": "G-921.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 29,
+        "graph_file": "G-922.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 27,
+        "graph_file": "G-923.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 21,
+        "graph_file": "G-924.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 55,
+        "graph_file": "G-925.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 19,
+        "graph_file": "G-926.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 34,
+        "graph_file": "G-927.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 27,
+        "graph_file": "G-928.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 36,
+        "graph_file": "G-929.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 40,
+        "graph_file": "G-93.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 26,
+        "graph_file": "G-930.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 36,
+        "graph_file": "G-931.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 51,
+        "graph_file": "G-932.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 24,
+        "graph_file": "G-933.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 53,
+        "graph_file": "G-934.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 41,
+        "graph_file": "G-935.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 22,
+        "graph_file": "G-936.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 16,
+        "graph_file": "G-937.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 49,
+        "graph_file": "G-938.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 39,
+        "graph_file": "G-939.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 35,
+        "graph_file": "G-94.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 49,
+        "graph_file": "G-940.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 19,
+        "graph_file": "G-941.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 28,
+        "graph_file": "G-942.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 34,
+        "graph_file": "G-943.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 10,
+        "graph_file": "G-944.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 44,
+        "graph_file": "G-945.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 50,
+        "graph_file": "G-946.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 31,
+        "graph_file": "G-947.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 29,
+        "graph_file": "G-948.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 32,
+        "graph_file": "G-949.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 43,
+        "graph_file": "G-95.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 50,
+        "graph_file": "G-950.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 12,
+        "graph_file": "G-951.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 51,
+        "graph_file": "G-952.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 24,
+        "graph_file": "G-953.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 17,
+        "graph_file": "G-954.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 38,
+        "graph_file": "G-955.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 30,
+        "graph_file": "G-956.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 37,
+        "graph_file": "G-957.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 35,
+        "graph_file": "G-958.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 49,
+        "graph_file": "G-959.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 31,
+        "graph_file": "G-96.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 25,
+        "graph_file": "G-960.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 29,
+        "graph_file": "G-961.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 21,
+        "graph_file": "G-962.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 23,
+        "graph_file": "G-963.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 54,
+        "graph_file": "G-964.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 21,
+        "graph_file": "G-965.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 48,
+        "graph_file": "G-966.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 26,
+        "graph_file": "G-967.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 30,
+        "graph_file": "G-968.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 26,
+        "graph_file": "G-969.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 55,
+        "graph_file": "G-97.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 53,
+        "graph_file": "G-970.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 46,
+        "graph_file": "G-971.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 29,
+        "graph_file": "G-972.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 39,
+        "graph_file": "G-973.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 37,
+        "graph_file": "G-974.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 52,
+        "graph_file": "G-975.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 22,
+        "graph_file": "G-976.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 36,
+        "graph_file": "G-977.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 37,
+        "graph_file": "G-978.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 30,
+        "graph_file": "G-979.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 32,
+        "graph_file": "G-98.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 42,
+        "graph_file": "G-980.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 31,
+        "graph_file": "G-981.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 78,
+        "graph_file": "G-982.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 17,
+        "graph_file": "G-983.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 36,
+        "graph_file": "G-984.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 24,
+        "graph_file": "G-985.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 36,
+        "graph_file": "G-986.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 45,
+        "graph_file": "G-987.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 38,
+        "graph_file": "G-988.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 33,
+        "graph_file": "G-989.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 30,
+        "graph_file": "G-99.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 24,
+        "graph_file": "G-990.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 28,
+        "graph_file": "G-991.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 44,
+        "graph_file": "G-992.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 69,
+        "graph_file": "G-993.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 34,
+        "graph_file": "G-994.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 62,
+        "graph_file": "G-995.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 47,
+        "graph_file": "G-996.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 57,
+        "graph_file": "G-997.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 37,
+        "graph_file": "G-998.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      },
+      {
+        "arc_count": 40,
+        "graph_file": "G-999.json",
+        "ndd_count": 2,
+        "pair_count": 20,
+        "total_vertices": 22
+      }
+    ]
+  },
+  "commands": {
+    "process": [
+      "/home/weikang/miniconda3/envs/KEPs/bin/python",
+      "/home/weikang/projects/UdeM-Intern/Exps/surrogate_experiment_results/Step2/Step2c_polynomial_degree_multiplicative_noise/data-processing.py",
+      "/home/weikang/projects/UdeM-Intern/Exps/dataset/raw/step3_pairs20_ndd2_raw_seed20260619/2026-06-19_000000__step3_pairs20_ndd2_raw_seed20260619",
+      "/home/weikang/projects/UdeM-Intern/Exps/dataset/processed/step3_pairs20_ndd2_step2c_poly_d8_mult_eps050_seed20260619",
+      "--all",
+      "--force",
+      "--label_mode",
+      "step2c_polynomial_degree_multiplicative_noise",
+      "--step2c_degree",
+      "8",
+      "--step2c_kappa",
+      "3",
+      "--step2c_delta",
+      "1e-12",
+      "--step2c_epsilon_bar",
+      "0.5",
+      "--label_seed",
+      "20260619",
+      "--output_as_batch_dir"
+    ],
+    "raw": [
+      "/home/weikang/miniconda3/envs/KEPs/bin/python",
+      "/home/weikang/projects/UdeM-Intern/Exps/0-data-generation.py",
+      "--instances",
+      "1000",
+      "--patients",
+      "20",
+      "--prob_ndd",
+      "0.0909091",
+      "--seed",
+      "20260619",
+      "--output_dir",
+      "/home/weikang/projects/UdeM-Intern/Exps/dataset/raw/step3_pairs20_ndd2_raw_seed20260619/2026-06-19_000000__step3_pairs20_ndd2_raw_seed20260619",
+      "--no_tune",
+      "--force"
+    ]
+  },
+  "config": {
+    "instances": 1000,
+    "label_mode": "step2c_polynomial_degree_multiplicative_noise",
+    "label_seed": 20260619,
+    "max_chain": 4,
+    "max_cycle": 3,
+    "num_ndds": 2,
+    "output_root": "/home/weikang/projects/UdeM-Intern/Exps/surrogate_experiment_results/Step3/pairs20_ndd2",
+    "pairs": 20,
+    "patients": 20,
+    "prob_ndd": 0.09090909090909091,
+    "processed_output_dir": "/home/weikang/projects/UdeM-Intern/Exps/dataset/processed/step3_pairs20_ndd2_step2c_poly_d8_mult_eps050_seed20260619",
+    "raw_batch_dir": "/home/weikang/projects/UdeM-Intern/Exps/dataset/raw/step3_pairs20_ndd2_raw_seed20260619/2026-06-19_000000__step3_pairs20_ndd2_raw_seed20260619",
+    "raw_output_dir": "/home/weikang/projects/UdeM-Intern/Exps/dataset/raw/step3_pairs20_ndd2_raw_seed20260619",
+    "seed": 20260619,
+    "step2c_degree": 8,
+    "step2c_delta": 1e-12,
+    "step2c_epsilon_bar": 0.5,
+    "step2c_kappa": 3.0,
+    "subexperiment": "pairs20_ndd2"
+  },
+  "dry_run": false,
+  "experiment": "step3_pairs20_ndd2_step2c_poly_d8_mult_eps050",
+  "generated_at": "2026-06-19T05:38:49"
+}

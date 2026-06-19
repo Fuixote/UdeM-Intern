@@ -1,0 +1,21 @@
+{
+  "instances": 1000,
+  "label_mode": "step2c_polynomial_degree_multiplicative_noise",
+  "label_seed": 20260619,
+  "max_chain": 4,
+  "max_cycle": 3,
+  "num_ndds": 2,
+  "output_root": "/home/weikang/projects/UdeM-Intern/Exps/surrogate_experiment_results/Step3/pairs20_ndd2",
+  "pairs": 20,
+  "patients": 20,
+  "prob_ndd": 0.09090909090909091,
+  "processed_output_dir": "/home/weikang/projects/UdeM-Intern/Exps/dataset/processed/step3_pairs20_ndd2_step2c_poly_d8_mult_eps050_seed20260619",
+  "raw_batch_dir": "/home/weikang/projects/UdeM-Intern/Exps/dataset/raw/step3_pairs20_ndd2_raw_seed20260619/2026-06-19_000000__step3_pairs20_ndd2_raw_seed20260619",
+  "raw_output_dir": "/home/weikang/projects/UdeM-Intern/Exps/dataset/raw/step3_pairs20_ndd2_raw_seed20260619",
+  "seed": 20260619,
+  "step2c_degree": 8,
+  "step2c_delta": 1e-12,
+  "step2c_epsilon_bar": 0.5,
+  "step2c_kappa": 3.0,
+  "subexperiment": "pairs20_ndd2"
+}

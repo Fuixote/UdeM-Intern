@@ -1,0 +1,11 @@
+{
+  "accepted": 1000,
+  "expected_pairs": 20,
+  "input_graphs": 1000,
+  "max_chain": 4,
+  "max_cycle": 3,
+  "min_candidates": 1,
+  "output_dir": "surrogate_experiment_results/Step3/pairs20_ndd2/data/topologies",
+  "rejected": 0,
+  "source_dir": "dataset/processed/step3_pairs20_ndd2_step2c_poly_d8_mult_eps050_seed20260619"
+}

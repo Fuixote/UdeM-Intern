@@ -12,21 +12,30 @@ This experiment treats the KEP topology as an outer experimental block. For each
 
 ## Current bootstrap implementation and size smoke
 
-The current implementation starts with isolated small-graph topology banks:
+The current implementation starts with isolated small-graph topology banks and
+one explicit-NDD pilot:
 
 ```text
-subexperiments = pairs7, pairs10, pairs15, pairs20
-patients_per_instance = 7, 10, 15, 20
-prob_ndd = 0.20
+size-smoke subexperiments = pairs7, pairs10, pairs15, pairs20
+size-smoke patients_per_instance = 7, 10, 15, 20
+size-smoke prob_ndd = 0.20
+size-smoke graphs = 50
+
+explicit-NDD pilot = pairs20_ndd2
+explicit-NDD patients_per_instance = 20
+explicit-NDD num_ndds = 2
+explicit-NDD prob_ndd = 2 / (20 + 2) = 0.0909091
+explicit-NDD graphs = 1000
+
 primary label regime = Step2c d8 eps050
 seed = 20260619
 label_seed = 20260619
-graphs per smoke = 50
 ```
 
 Implemented scripts:
 
 ```text
+surrogate_experiment_results/Step3/scripts/generate_step3_topology_dataset.py
 surrogate_experiment_results/Step3/scripts/generate_pairs7_step2c_dataset.py
 surrogate_experiment_results/Step3/scripts/build_topology_bank.py
 ```
@@ -38,13 +47,15 @@ dataset/processed/step3_pairs7_step2c_poly_d8_mult_eps050_seed20260619/
 dataset/processed/step3_pairs10_step2c_poly_d8_mult_eps050_seed20260619/
 dataset/processed/step3_pairs15_step2c_poly_d8_mult_eps050_seed20260619/
 dataset/processed/step3_pairs20_step2c_poly_d8_mult_eps050_seed20260619/
+dataset/processed/step3_pairs20_ndd2_step2c_poly_d8_mult_eps050_seed20260619/
 surrogate_experiment_results/Step3/pairs7/data/topologies/
 surrogate_experiment_results/Step3/pairs10/data/topologies/
 surrogate_experiment_results/Step3/pairs15/data/topologies/
 surrogate_experiment_results/Step3/pairs20/data/topologies/
+surrogate_experiment_results/Step3/pairs20_ndd2/data/topologies/
 ```
 
-All four smoke banks accepted 50 of 50 input graphs with:
+All topology banks accepted every input graph with:
 
 ```text
 max_cycle = 3
@@ -60,11 +71,65 @@ Observed topology-bank statistics:
 | pairs10 | 13 | 10 | 3 | 11.46 | 7/50 | 7/50 | 0/50 | 7.92 | 6.0 | 30 |
 | pairs15 | 19 | 15 | 4 | 24.00 | 11/50 | 11/50 | 1/50 | 16.90 | 14.5 | 57 |
 | pairs20 | 25 | 20 | 5 | 42.08 | 26/50 | 24/50 | 13/50 | 48.34 | 35.5 | 194 |
+| pairs20_ndd2 | 22 | 20 | 2 | 36.14 | 429/1000 | 377/1000 | 216/1000 | 18.47 | 11.0 | 269 |
 
 This remains a topology-generation smoke, not a training result. Under the
 current generator defaults, pairs7 and pairs10 are very sparse, pairs15 is still
 cycle-light, and pairs20 is the first tested size where cycles and feasible-set
 diversity become common enough to consider as a fixed-topology screening bank.
+The explicit-NDD `pairs20_ndd2` pilot keeps pair count fixed at 20 while reducing
+NDD roots from 5 to 2. The 1000-graph bank accepted all input graphs and produced
+1000 unique topology hashes. Relative to `pairs20` with 5 NDDs, the median
+exchange-candidate count is much lower, confirming that the earlier `pairs20`
+richness was partly driven by chain-root multiplicity rather than pair-pool size
+alone. It is the cleaner candidate for the next fixed-topology screening step.
+
+Current structural-setting decision:
+
+```text
+Primary topology-generation setting:
+    pairs = 20
+    num_ndds = 2
+    max_cycle = 3
+    max_chain = 4
+    label regime = Step2c poly d8 mult eps050
+
+Role:
+    mother distribution for large topology-bank generation and screening
+    not the final confirmation topology set
+```
+
+Interpretation of tested settings:
+
+```text
+pairs7 / pairs10:
+    pipeline smoke and sparse/simple controls
+
+pairs15:
+    medium-complexity auxiliary setting
+
+pairs20 with prob_ndd = 0.20, observed 5 NDD:
+    chain-rich stress setting
+    not the primary default because chain-root multiplicity dominates candidates
+
+pairs20_ndd2:
+    current primary structural setting for topology screening
+```
+
+Recommended next order before any full training run:
+
+```text
+1. Extend topology-bank descriptors beyond raw exchange-candidate count:
+   chain length distribution, cycle counts, candidate conflicts, and vertex coverage.
+2. Run a label-landscape probe on screened topologies without training.
+3. Select a stratified K = 8 to 12 topology set for a small training pilot.
+4. Decide the final confirmation set only after the structural and landscape screens.
+```
+
+The confirmation set should be stratified rather than selected only for high
+candidate count. Useful strata include sparse/simple controls, medium chain-only
+graphs, medium cycle-chain graphs, rich cycle-chain graphs, and extreme
+chain-rich stress cases.
 
 ---
 

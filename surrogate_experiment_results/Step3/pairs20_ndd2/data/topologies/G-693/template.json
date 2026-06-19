@@ -1,0 +1,776 @@
+{
+  "arc_order_hash": "88f468c3984bd6e60838b8bb8b655714a31de6340ce127c770b1d2a1806767d2",
+  "arcs": [
+    {
+      "edge_idx": 0,
+      "source": "0",
+      "source_match_position": 0,
+      "source_type": "Pair",
+      "target": "20",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 1,
+      "source": "2",
+      "source_match_position": 0,
+      "source_type": "Pair",
+      "target": "19",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 2,
+      "source": "2",
+      "source_match_position": 1,
+      "source_type": "Pair",
+      "target": "20",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 3,
+      "source": "3",
+      "source_match_position": 0,
+      "source_type": "Pair",
+      "target": "17",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 4,
+      "source": "3",
+      "source_match_position": 1,
+      "source_type": "Pair",
+      "target": "19",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 5,
+      "source": "3",
+      "source_match_position": 2,
+      "source_type": "Pair",
+      "target": "20",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 6,
+      "source": "4",
+      "source_match_position": 0,
+      "source_type": "Pair",
+      "target": "17",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 7,
+      "source": "4",
+      "source_match_position": 1,
+      "source_type": "Pair",
+      "target": "20",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 8,
+      "source": "5",
+      "source_match_position": 0,
+      "source_type": "Pair",
+      "target": "11",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 9,
+      "source": "5",
+      "source_match_position": 1,
+      "source_type": "Pair",
+      "target": "17",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 10,
+      "source": "5",
+      "source_match_position": 2,
+      "source_type": "Pair",
+      "target": "19",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 11,
+      "source": "5",
+      "source_match_position": 3,
+      "source_type": "Pair",
+      "target": "20",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 12,
+      "source": "6",
+      "source_match_position": 0,
+      "source_type": "Pair",
+      "target": "18",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 13,
+      "source": "6",
+      "source_match_position": 1,
+      "source_type": "Pair",
+      "target": "19",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 14,
+      "source": "8",
+      "source_match_position": 0,
+      "source_type": "Pair",
+      "target": "19",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 15,
+      "source": "8",
+      "source_match_position": 1,
+      "source_type": "Pair",
+      "target": "20",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 16,
+      "source": "9",
+      "source_match_position": 0,
+      "source_type": "Pair",
+      "target": "19",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 17,
+      "source": "9",
+      "source_match_position": 1,
+      "source_type": "Pair",
+      "target": "20",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 18,
+      "source": "12",
+      "source_match_position": 0,
+      "source_type": "Pair",
+      "target": "20",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 19,
+      "source": "13",
+      "source_match_position": 0,
+      "source_type": "Pair",
+      "target": "17",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 20,
+      "source": "13",
+      "source_match_position": 1,
+      "source_type": "Pair",
+      "target": "19",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 21,
+      "source": "13",
+      "source_match_position": 2,
+      "source_type": "Pair",
+      "target": "20",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 22,
+      "source": "15",
+      "source_match_position": 0,
+      "source_type": "Pair",
+      "target": "20",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 23,
+      "source": "16",
+      "source_match_position": 0,
+      "source_type": "Pair",
+      "target": "0",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 24,
+      "source": "16",
+      "source_match_position": 1,
+      "source_type": "Pair",
+      "target": "19",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 25,
+      "source": "16",
+      "source_match_position": 2,
+      "source_type": "Pair",
+      "target": "20",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 26,
+      "source": "18",
+      "source_match_position": 0,
+      "source_type": "Pair",
+      "target": "19",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 27,
+      "source": "18",
+      "source_match_position": 1,
+      "source_type": "Pair",
+      "target": "20",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 28,
+      "source": "19",
+      "source_match_position": 0,
+      "source_type": "Pair",
+      "target": "20",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 29,
+      "source": "20",
+      "source_match_position": 0,
+      "source_type": "Pair",
+      "target": "3",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 30,
+      "source": "20",
+      "source_match_position": 1,
+      "source_type": "Pair",
+      "target": "17",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 31,
+      "source": "21",
+      "source_match_position": 0,
+      "source_type": "Pair",
+      "target": "20",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 32,
+      "source": "22",
+      "source_match_position": 0,
+      "source_type": "NDD",
+      "target": "5",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 33,
+      "source": "22",
+      "source_match_position": 1,
+      "source_type": "NDD",
+      "target": "17",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 34,
+      "source": "22",
+      "source_match_position": 2,
+      "source_type": "NDD",
+      "target": "19",
+      "target_type": "Pair"
+    },
+    {
+      "edge_idx": 35,
+      "source": "23",
+      "source_match_position": 0,
+      "source_type": "NDD",
+      "target": "20",
+      "target_type": "Pair"
+    }
+  ],
+  "feasible_candidates": [
+    {
+      "edges": [
+        4,
+        28,
+        29
+      ],
+      "length": 3,
+      "nodes": [
+        "3",
+        "19",
+        "20"
+      ],
+      "signature": "cycle:3->19->20->3",
+      "type": "cycle"
+    },
+    {
+      "edges": [
+        5,
+        29
+      ],
+      "length": 2,
+      "nodes": [
+        "3",
+        "20"
+      ],
+      "signature": "cycle:3->20->3",
+      "type": "cycle"
+    },
+    {
+      "edges": [
+        33
+      ],
+      "length": 1,
+      "nodes": [
+        "22",
+        "17"
+      ],
+      "signature": "chain:22->17",
+      "type": "chain"
+    },
+    {
+      "edges": [
+        34
+      ],
+      "length": 1,
+      "nodes": [
+        "22",
+        "19"
+      ],
+      "signature": "chain:22->19",
+      "type": "chain"
+    },
+    {
+      "edges": [
+        34,
+        28
+      ],
+      "length": 2,
+      "nodes": [
+        "22",
+        "19",
+        "20"
+      ],
+      "signature": "chain:22->19->20",
+      "type": "chain"
+    },
+    {
+      "edges": [
+        34,
+        28,
+        30
+      ],
+      "length": 3,
+      "nodes": [
+        "22",
+        "19",
+        "20",
+        "17"
+      ],
+      "signature": "chain:22->19->20->17",
+      "type": "chain"
+    },
+    {
+      "edges": [
+        34,
+        28,
+        29
+      ],
+      "length": 3,
+      "nodes": [
+        "22",
+        "19",
+        "20",
+        "3"
+      ],
+      "signature": "chain:22->19->20->3",
+      "type": "chain"
+    },
+    {
+      "edges": [
+        34,
+        28,
+        29,
+        3
+      ],
+      "length": 4,
+      "nodes": [
+        "22",
+        "19",
+        "20",
+        "3",
+        "17"
+      ],
+      "signature": "chain:22->19->20->3->17",
+      "type": "chain"
+    },
+    {
+      "edges": [
+        32
+      ],
+      "length": 1,
+      "nodes": [
+        "22",
+        "5"
+      ],
+      "signature": "chain:22->5",
+      "type": "chain"
+    },
+    {
+      "edges": [
+        32,
+        8
+      ],
+      "length": 2,
+      "nodes": [
+        "22",
+        "5",
+        "11"
+      ],
+      "signature": "chain:22->5->11",
+      "type": "chain"
+    },
+    {
+      "edges": [
+        32,
+        9
+      ],
+      "length": 2,
+      "nodes": [
+        "22",
+        "5",
+        "17"
+      ],
+      "signature": "chain:22->5->17",
+      "type": "chain"
+    },
+    {
+      "edges": [
+        32,
+        10
+      ],
+      "length": 2,
+      "nodes": [
+        "22",
+        "5",
+        "19"
+      ],
+      "signature": "chain:22->5->19",
+      "type": "chain"
+    },
+    {
+      "edges": [
+        32,
+        10,
+        28
+      ],
+      "length": 3,
+      "nodes": [
+        "22",
+        "5",
+        "19",
+        "20"
+      ],
+      "signature": "chain:22->5->19->20",
+      "type": "chain"
+    },
+    {
+      "edges": [
+        32,
+        10,
+        28,
+        30
+      ],
+      "length": 4,
+      "nodes": [
+        "22",
+        "5",
+        "19",
+        "20",
+        "17"
+      ],
+      "signature": "chain:22->5->19->20->17",
+      "type": "chain"
+    },
+    {
+      "edges": [
+        32,
+        10,
+        28,
+        29
+      ],
+      "length": 4,
+      "nodes": [
+        "22",
+        "5",
+        "19",
+        "20",
+        "3"
+      ],
+      "signature": "chain:22->5->19->20->3",
+      "type": "chain"
+    },
+    {
+      "edges": [
+        32,
+        11
+      ],
+      "length": 2,
+      "nodes": [
+        "22",
+        "5",
+        "20"
+      ],
+      "signature": "chain:22->5->20",
+      "type": "chain"
+    },
+    {
+      "edges": [
+        32,
+        11,
+        30
+      ],
+      "length": 3,
+      "nodes": [
+        "22",
+        "5",
+        "20",
+        "17"
+      ],
+      "signature": "chain:22->5->20->17",
+      "type": "chain"
+    },
+    {
+      "edges": [
+        32,
+        11,
+        29
+      ],
+      "length": 3,
+      "nodes": [
+        "22",
+        "5",
+        "20",
+        "3"
+      ],
+      "signature": "chain:22->5->20->3",
+      "type": "chain"
+    },
+    {
+      "edges": [
+        32,
+        11,
+        29,
+        3
+      ],
+      "length": 4,
+      "nodes": [
+        "22",
+        "5",
+        "20",
+        "3",
+        "17"
+      ],
+      "signature": "chain:22->5->20->3->17",
+      "type": "chain"
+    },
+    {
+      "edges": [
+        32,
+        11,
+        29,
+        4
+      ],
+      "length": 4,
+      "nodes": [
+        "22",
+        "5",
+        "20",
+        "3",
+        "19"
+      ],
+      "signature": "chain:22->5->20->3->19",
+      "type": "chain"
+    },
+    {
+      "edges": [
+        35
+      ],
+      "length": 1,
+      "nodes": [
+        "23",
+        "20"
+      ],
+      "signature": "chain:23->20",
+      "type": "chain"
+    },
+    {
+      "edges": [
+        35,
+        30
+      ],
+      "length": 2,
+      "nodes": [
+        "23",
+        "20",
+        "17"
+      ],
+      "signature": "chain:23->20->17",
+      "type": "chain"
+    },
+    {
+      "edges": [
+        35,
+        29
+      ],
+      "length": 2,
+      "nodes": [
+        "23",
+        "20",
+        "3"
+      ],
+      "signature": "chain:23->20->3",
+      "type": "chain"
+    },
+    {
+      "edges": [
+        35,
+        29,
+        3
+      ],
+      "length": 3,
+      "nodes": [
+        "23",
+        "20",
+        "3",
+        "17"
+      ],
+      "signature": "chain:23->20->3->17",
+      "type": "chain"
+    },
+    {
+      "edges": [
+        35,
+        29,
+        4
+      ],
+      "length": 3,
+      "nodes": [
+        "23",
+        "20",
+        "3",
+        "19"
+      ],
+      "signature": "chain:23->20->3->19",
+      "type": "chain"
+    }
+  ],
+  "feasible_set_hash": "9e7a0f8030a91b75a56d4252507d7727cb9e474be123b51ee594229b80ef4a14",
+  "max_chain": 4,
+  "max_cycle": 3,
+  "num_2cycles": 1,
+  "num_3cycles": 1,
+  "num_arcs": 36,
+  "num_chains_total": 23,
+  "num_cycles_total": 2,
+  "num_feasible_candidates": 25,
+  "num_ndds": 2,
+  "num_pairs": 20,
+  "num_vertices": 22,
+  "source_path": "dataset/processed/step3_pairs20_ndd2_step2c_poly_d8_mult_eps050_seed20260619/G-693.json",
+  "topology_hash": "11060e2fa8c6f1fb1f0d2e296a246bfc2e2ef062b46bb73b753ca3d6ec78efc0",
+  "topology_id": "G-693",
+  "vertices": [
+    {
+      "id": "0",
+      "type": "Pair"
+    },
+    {
+      "id": "2",
+      "type": "Pair"
+    },
+    {
+      "id": "3",
+      "type": "Pair"
+    },
+    {
+      "id": "4",
+      "type": "Pair"
+    },
+    {
+      "id": "5",
+      "type": "Pair"
+    },
+    {
+      "id": "6",
+      "type": "Pair"
+    },
+    {
+      "id": "7",
+      "type": "Pair"
+    },
+    {
+      "id": "8",
+      "type": "Pair"
+    },
+    {
+      "id": "9",
+      "type": "Pair"
+    },
+    {
+      "id": "11",
+      "type": "Pair"
+    },
+    {
+      "id": "12",
+      "type": "Pair"
+    },
+    {
+      "id": "13",
+      "type": "Pair"
+    },
+    {
+      "id": "14",
+      "type": "Pair"
+    },
+    {
+      "id": "15",
+      "type": "Pair"
+    },
+    {
+      "id": "16",
+      "type": "Pair"
+    },
+    {
+      "id": "17",
+      "type": "Pair"
+    },
+    {
+      "id": "18",
+      "type": "Pair"
+    },
+    {
+      "id": "19",
+      "type": "Pair"
+    },
+    {
+      "id": "20",
+      "type": "Pair"
+    },
+    {
+      "id": "21",
+      "type": "Pair"
+    },
+    {
+      "id": "22",
+      "type": "NDD"
+    },
+    {
+      "id": "23",
+      "type": "NDD"
+    }
+  ]
+}
