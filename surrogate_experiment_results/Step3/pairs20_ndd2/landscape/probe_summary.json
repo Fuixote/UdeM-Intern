@@ -1,0 +1,11 @@
+{
+  "mean_distinct_oracle_solutions": 2.822,
+  "mean_dominant_oracle_solution_fraction": 0.7977,
+  "mean_fraction_linear_proxy_differs_from_oracle": 0.29316,
+  "mean_linear_proxy_gap_to_oracle": 1.731362272,
+  "mean_linear_proxy_normalized_gap_to_oracle": 0.036992360414855624,
+  "mean_oracle_solution_entropy": 0.5002431500598757,
+  "median_distinct_oracle_solutions": 2.0,
+  "num_samples": 100000,
+  "num_topologies": 1000
+}

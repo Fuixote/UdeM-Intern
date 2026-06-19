@@ -1,0 +1,19 @@
+{
+  "clean_linear_cpra_weight": 5.0,
+  "clean_linear_utility_weight": 10.0,
+  "gurobi_seed": 20260619,
+  "label_seed_start": 2026061900,
+  "num_label_seeds": 3,
+  "num_topologies": 2,
+  "output_dir": "surrogate_experiment_results/Step3/pairs20_ndd2/landscape_smoke",
+  "probe_boundary": "fixed topology and fixed edge utility/cpra; only Step2c multiplicative label noise is resampled over label seeds; no model training",
+  "processed_dir": "/local1/fuweik/UdeM-Intern/dataset/processed/step3_pairs20_ndd2_step2c_poly_d8_mult_eps050_seed20260619",
+  "raw_batch_name": "2026-06-19_000000__step3_pairs20_ndd2_raw_seed20260619",
+  "step2c_degree": 8,
+  "step2c_delta": 1e-12,
+  "step2c_epsilon_bar": 0.5,
+  "step2c_kappa": 3.0,
+  "threads": 1,
+  "top_k": 5,
+  "topology_dir": "/local1/fuweik/UdeM-Intern/surrogate_experiment_results/Step3/pairs20_ndd2/data/topologies"
+}

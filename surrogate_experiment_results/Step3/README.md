@@ -38,6 +38,7 @@ Implemented scripts:
 surrogate_experiment_results/Step3/scripts/generate_step3_topology_dataset.py
 surrogate_experiment_results/Step3/scripts/generate_pairs7_step2c_dataset.py
 surrogate_experiment_results/Step3/scripts/build_topology_bank.py
+surrogate_experiment_results/Step3/scripts/probe_label_landscape.py
 ```
 
 The current processed data and topology banks are:
@@ -155,6 +156,92 @@ largest_conflict_component_fraction: mean 0.952, median 1.000
 fraction_vertices_in_any_candidate: mean 0.375, median 0.364, max 0.818
 mean_candidates_per_vertex: mean 2.823, median 1.455, max 53.227
 max_candidates_per_vertex: mean 13.687, median 9, max 199
+```
+
+Oracle-only label-landscape probe implementation:
+
+```text
+script:
+    surrogate_experiment_results/Step3/scripts/probe_label_landscape.py
+
+default topology bank:
+    surrogate_experiment_results/Step3/pairs20_ndd2/data/topologies/
+
+default processed graph source:
+    dataset/processed/step3_pairs20_ndd2_step2c_poly_d8_mult_eps050_seed20260619/
+
+default output:
+    surrogate_experiment_results/Step3/pairs20_ndd2/landscape/
+```
+
+The probe fixes topology and edge features, resamples only the Step2c
+multiplicative label noise over label seeds, solves the true oracle decision,
+and compares it to the clean-linear proxy decision. It does not train any model
+and should not be interpreted as full context resampling.
+
+The first garnet smoke synchronized the Step3 folder and `pairs20_ndd2`
+processed data to `/local1/fuweik/UdeM-Intern`, then ran:
+
+```text
+max_topologies = 2
+num_label_seeds = 3
+top_k = 5
+output = surrogate_experiment_results/Step3/pairs20_ndd2/landscape_smoke/
+```
+
+Garnet smoke result:
+
+```text
+processed graphs on garnet = 1000
+topology templates on garnet = 1000
+Gurobi TokenServer = licences.gerad.lan
+num_topologies = 2
+num_samples = 6
+mean distinct oracle solutions = 2.0
+mean oracle solution entropy = 0.5493
+mean fraction linear proxy differs from oracle = 0.3333
+mean linear proxy gap to oracle = 1.2600
+mean normalized linear proxy gap to oracle = 0.0325
+```
+
+Full garnet oracle-only probe:
+
+```text
+tmux session:
+    step3_landscape_full
+
+notification watcher:
+    notify_step3_landscape_full
+
+log files:
+    surrogate_experiment_results/Step3/pairs20_ndd2/logs/landscape_full_1000x100.log
+    surrogate_experiment_results/Step3/pairs20_ndd2/logs/notify_landscape_full.log
+
+output:
+    surrogate_experiment_results/Step3/pairs20_ndd2/landscape/
+
+num_topologies = 1000
+num_label_seeds = 100
+top_k = 5
+num_samples = 100000
+```
+
+Full probe aggregate result:
+
+```text
+mean distinct oracle solutions = 2.822
+median distinct oracle solutions = 2.0
+mean oracle solution entropy = 0.5002
+mean dominant oracle solution fraction = 0.7977
+mean fraction linear proxy differs from oracle = 0.2932
+mean linear proxy gap to oracle = 1.7314
+mean normalized linear proxy gap to oracle = 0.0370
+```
+
+The Brevo completion watcher sent successfully after the full probe:
+
+```text
+Brevo notification sent: HTTP 201
 ```
 
 Recommended next order before any full training run:
