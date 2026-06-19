@@ -1,0 +1,31 @@
+{
+  "complexity_counts": {
+    "extreme": 18,
+    "low_medium": 35,
+    "medium_rich": 45,
+    "rich": 37,
+    "sparse_simple": 25
+  },
+  "generated_at": "2026-06-19T10:19:39Z",
+  "input_path": "/home/weikang/projects/UdeM-Intern/Exps/surrogate_experiment_results/Step3/pairs20_ndd2/landscape/topology_landscape_summary.csv",
+  "landscape_counts": {
+    "easy_control": 20,
+    "high_variance": 37,
+    "neutral": 27,
+    "proxy_aligned": 27,
+    "proxy_hard": 49
+  },
+  "num_selected": 160,
+  "strata_count": 40,
+  "structural_counts": {
+    "chain_only": 58,
+    "cycle_chain": 102
+  },
+  "target_quotas": {
+    "extreme": 18,
+    "low_medium": 35,
+    "medium_rich": 45,
+    "rich": 37,
+    "sparse_simple": 25
+  }
+}

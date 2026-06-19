@@ -94,6 +94,15 @@ surrogate_experiment_results/Step2/**/remote_results/**
 surrogate_experiment_results/Step2/**/*per_graph*.csv
 surrogate_experiment_results/Step2/**/*per_graph*.json
 
+# Step3 generated fixed-topology datasets and training outputs stay on garnet.
+surrogate_experiment_results/Step3/**/phase_b/datasets/
+surrogate_experiment_results/Step3/**/phase_b/runs/
+surrogate_experiment_results/Step3/**/phase_b/logs/
+surrogate_experiment_results/Step3/**/phase_b/tmp/
+surrogate_experiment_results/Step3/**/phase_b/splits/
+surrogate_experiment_results/Step3/**/phase_b/smoke_runs*/
+surrogate_experiment_results/Step3/**/phase_b/smoke_splits*/
+
 # Third-party dependencies
 generator_webapp/bower_components/
 

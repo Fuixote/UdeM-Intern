@@ -39,6 +39,10 @@ surrogate_experiment_results/Step3/scripts/generate_step3_topology_dataset.py
 surrogate_experiment_results/Step3/scripts/generate_pairs7_step2c_dataset.py
 surrogate_experiment_results/Step3/scripts/build_topology_bank.py
 surrogate_experiment_results/Step3/scripts/probe_label_landscape.py
+surrogate_experiment_results/Step3/scripts/select_phase_b_topologies.py
+surrogate_experiment_results/Step3/scripts/materialize_phase_b_step2c_datasets.py
+surrogate_experiment_results/Step3/scripts/audit_phase_b_materialized_datasets.py
+surrogate_experiment_results/Step3/scripts/run_phase_b_training.py
 ```
 
 The current processed data and topology banks are:
@@ -244,12 +248,54 @@ The Brevo completion watcher sent successfully after the full probe:
 Brevo notification sent: HTTP 201
 ```
 
+Phase-B topology screening set:
+
+```text
+script:
+    surrogate_experiment_results/Step3/scripts/select_phase_b_topologies.py
+
+input:
+    surrogate_experiment_results/Step3/pairs20_ndd2/landscape/topology_landscape_summary.csv
+
+output:
+    surrogate_experiment_results/Step3/pairs20_ndd2/screening/
+
+selected topologies = 160
+```
+
+The selector follows the staged protocol by reducing the 1000-topology Phase-A
+source bank to a stratified Phase-B training-screening set. It does not train
+models. Selection is deterministic and stratifies first by exchange-candidate
+complexity, then balances cycle-chain versus chain-only structure and easy /
+neutral / proxy-hard / high-variance label-landscape regimes within each
+complexity layer.
+
+Default Phase-B complexity quotas:
+
+```text
+sparse_simple, <=8 exchange candidates:    25
+low_medium, 9-20 exchange candidates:      35
+medium_rich, 21-40 exchange candidates:    45
+rich, 41-80 exchange candidates:           37
+extreme, >80 exchange candidates:          18
+```
+
+Observed Phase-B landscape composition:
+
+```text
+easy_control: 20
+proxy_aligned: 27
+neutral: 27
+high_variance: 37
+proxy_hard: 49
+```
+
 Recommended next order before any full training run:
 
 ```text
-1. Run a label-landscape probe on screened topologies without training.
+1. Use the selected 160-topology Phase-B set for cheap DFL screening.
 2. Select a stratified K = 8 to 12 topology set for a small training pilot.
-3. Decide the final confirmation set only after the structural and landscape screens.
+3. Decide the final confirmation set only after Phase-B screening.
 ```
 
 The confirmation set should be stratified rather than selected only for high
@@ -305,10 +351,12 @@ Phase A: structural descriptors + oracle-only label-landscape probe
     no model training
 
 Phase B: cheap DFL screening
-    select about 100 to 200 topologies from Phase A
-    train_size = 50
+    selected topologies = 160 from Phase A
+    training_size budget = 50
+    train/validation split = 40/10
     train_seeds = 20 to 50
     methods = 2stage, SPO+
+    fixed unseen test set per topology = 1000 Step2c relabel samples
 
 Phase C: formal confirmation
     lock K = 8 to 12 topologies
@@ -321,6 +369,154 @@ The final K-set should include helpful, neutral, harmful, and control cases. A
 reasonable target composition is sparse/simple controls, low-medium cases,
 medium-rich cycle-chain cases, rich mechanism candidates, harmful candidates,
 and neutral candidates.
+
+Phase-B dataset materialization protocol:
+
+```text
+script:
+    surrogate_experiment_results/Step3/scripts/materialize_phase_b_step2c_datasets.py
+
+default output:
+    surrogate_experiment_results/Step3/pairs20_ndd2/phase_b/datasets/
+
+label generation:
+    fixed topology
+    Step2c polynomial degree 8
+    multiplicative eps050 relabel
+
+training_size = 50 means:
+    40 train samples
+    10 validation samples
+
+test set:
+    1000 unseen samples per topology
+    fixed across all train seeds and both methods
+
+train seeds:
+    default 1..50 for Phase B
+    each train seed gets its own 40-sample train directory
+    validation and test directories are shared across train seeds
+```
+
+The materialized tree is:
+
+```text
+pairs20_ndd2/phase_b/datasets/
+    G-47/
+        validation/
+        test/
+        train_seed=000001/train/
+        train_seed=000002/train/
+        ...
+        samples.csv
+        dataset_manifest.json
+    phase_b_dataset_index.csv
+    phase_b_dataset_manifest.json
+```
+
+Full Phase-B materialization on garnet completed successfully:
+
+```text
+tmux session:
+    step3_phase_b_materialize
+
+log:
+    surrogate_experiment_results/Step3/pairs20_ndd2/phase_b/logs/materialize_160x50_test1000.log
+
+materialization time:
+    real 3590.60 sec
+
+generated output:
+    topologies = 160
+    train seeds per topology = 50
+    train samples per seed = 40
+    validation samples per topology = 10
+    unseen test samples per topology = 1000
+    samples per topology = 3010
+    total JSON samples = 481600
+```
+
+Materialized dataset audit:
+
+```text
+script:
+    surrogate_experiment_results/Step3/scripts/audit_phase_b_materialized_datasets.py
+
+output:
+    surrogate_experiment_results/Step3/pairs20_ndd2/phase_b/audit/
+
+audit result:
+    passed = true
+    num_topologies = 160
+    num_failed_topologies = 0
+    total_json_files = 481600
+    expected_total_json_files = 481600
+    root_manifest_status = materialized
+```
+
+The label-seed namespaces for train, validation, and test are disjoint, so the
+1000-sample test set is unseen relative to every training and validation set.
+The topology hash is checked after every relabel sample; only labels are allowed
+to change.
+
+Phase-B training runner:
+
+```text
+script:
+    surrogate_experiment_results/Step3/scripts/run_phase_b_training.py
+
+input:
+    surrogate_experiment_results/Step3/pairs20_ndd2/phase_b/datasets/
+
+default output:
+    surrogate_experiment_results/Step3/pairs20_ndd2/phase_b/runs/
+    surrogate_experiment_results/Step3/pairs20_ndd2/phase_b/splits/
+    surrogate_experiment_results/Step3/pairs20_ndd2/phase_b/results/
+
+per job:
+    one fixed topology G
+    one train_seed
+    train on G/train_seed=xxxxxx/train/ using 40 samples
+    checkpoint/select on G/validation/ using the fixed 10 samples
+    evaluate on G/test/ using the fixed 1000 unseen samples
+
+primary reported methods:
+    2stage selected by validation_mse_loss
+    SPO+ selected by validation_spoplus_loss
+```
+
+The runner reuses the existing linear-probe 2stage and SPO+ training scripts
+but writes Step3-specific job configs, splits, logs, status rows, and timing
+fields. The theta and Gurobi seeds are fixed by default (`42`); the Phase-B
+`train_seed` changes only the already-materialized Step2c training sample set.
+
+Phase-B training smoke on garnet:
+
+```text
+1 x 1 smoke:
+    topology = G-47
+    train_seed = 1
+    epochs = 2 for both methods
+    validation_limit = 5
+    test_limit = 20
+    status = success
+    elapsed = 15.62 sec
+
+2 x 2 smoke:
+    topologies = G-47, G-364
+    train_seeds = 1, 2
+    jobs = 4
+    epochs = 2 for both methods
+    validation_limit = 5
+    test_limit = 20
+    failed jobs = 0
+    wall time = 54.79 sec
+    per-job elapsed range = 13.43 to 13.88 sec
+
+status files:
+    surrogate_experiment_results/Step3/pairs20_ndd2/phase_b/results/smoke_training_status.csv
+    surrogate_experiment_results/Step3/pairs20_ndd2/phase_b/results/smoke_training_status_2x2.csv
+```
 
 ---
 

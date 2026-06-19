@@ -1,7 +1,0 @@
-topology_id,label_seed,num_exchange_candidates,oracle_solution_signature,oracle_solution_size,oracle_objective,num_oracle_top_k_solutions,oracle_top1_top2_margin,oracle_top1_top5_margin,linear_proxy_solution_signature,linear_proxy_solution_size,linear_proxy_objective_under_true,linear_proxy_gap_to_oracle,linear_proxy_normalized_gap_to_oracle,linear_proxy_differs_from_oracle,linear_proxy_jaccard_with_oracle
-G-0,2026061900,4,6|26,2,11.6234,5,3.8207000000000004,11.6234,6|26,2,11.6234,0.0,0.0,False,1.0
-G-0,2026061901,4,6|26,2,16.3126,5,2.7456999999999994,16.3126,6|26,2,16.3126,0.0,0.0,False,1.0
-G-0,2026061902,4,6|26,2,13.7259,5,2.872399999999999,13.7259,6|26,2,13.7259,0.0,0.0,False,1.0
-G-1,2026061900,14,21|24|31|34,4,42.0146,5,5.546100000000003,11.709799999999998,21|25|31|34,4,35.8509,6.163699999999999,0.14670376488173156,True,0.6
-G-1,2026061901,14,21|25|31|34,4,48.1354,5,2.4091999999999985,9.857599999999998,21|25|31|34,4,48.1354,0.0,0.0,False,1.0
-G-1,2026061902,14,20|31|34,3,28.9685,5,1.3963999999999999,5.215299999999999,21|25|31|34,4,27.5721,1.3963999999999999,0.04820408374613804,True,0.4

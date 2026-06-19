@@ -1,0 +1,15 @@
+{
+  "dataset_dir": "surrogate_experiment_results/Step3/pairs20_ndd2/phase_b/datasets",
+  "expected_total_json_files": 481600,
+  "generated_at": "2026-06-19T11:58:33Z",
+  "num_failed_topologies": 0,
+  "num_topologies": 160,
+  "passed": true,
+  "root_manifest_status": "materialized",
+  "samples_per_topology": 3010,
+  "test_sample_count": 1000,
+  "total_json_files": 481600,
+  "train_sample_count": 40,
+  "train_seed_count": 50,
+  "validation_sample_count": 10
+}
