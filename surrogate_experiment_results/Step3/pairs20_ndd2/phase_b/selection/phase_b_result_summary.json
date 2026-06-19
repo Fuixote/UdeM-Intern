@@ -1,0 +1,44 @@
+{
+  "classification_thresholds": {
+    "harmful_fraction_worse": 0.5,
+    "harmful_max_fraction_better": 0.1,
+    "harmful_mean_gap": -0.5,
+    "helpful_fraction_better": 0.5,
+    "helpful_max_fraction_worse": 0.1,
+    "helpful_mean_gap": 0.5,
+    "neutral_abs_mean_gap": 0.1,
+    "neutral_max_abs_gap": 0.5,
+    "neutral_max_fraction_better": 0.1,
+    "neutral_max_fraction_worse": 0.1,
+    "neutral_mean_abs_gap": 0.1,
+    "tolerance": 1e-09
+  },
+  "fraction_harmful_topologies": 0.025,
+  "fraction_helpful_topologies": 0.11875,
+  "generated_at": "2026-06-19T20:07:23Z",
+  "mean_spoplus_improvement_gap": 0.8210489833433032,
+  "median_spoplus_improvement_gap": 0.0,
+  "num_phase_c_candidates": 10,
+  "num_topologies": 160,
+  "outcome_counts": {
+    "control": 57,
+    "harmful": 4,
+    "helpful": 19,
+    "mixed": 9,
+    "neutral": 71
+  },
+  "phase_b_topologies_csv": "/home/weikang/projects/UdeM-Intern/Exps/surrogate_experiment_results/Step3/pairs20_ndd2/screening/phase_b_topologies.csv",
+  "selected_outcome_counts": {
+    "control": 2,
+    "harmful": 2,
+    "helpful": 4,
+    "neutral": 2
+  },
+  "selection_quotas": {
+    "control": 2,
+    "harmful": 2,
+    "helpful": 4,
+    "neutral": 2
+  },
+  "status_csv": "/home/weikang/projects/UdeM-Intern/Exps/surrogate_experiment_results/Step3/pairs20_ndd2/phase_b/results/phase_b_training_status_e100.csv"
+}

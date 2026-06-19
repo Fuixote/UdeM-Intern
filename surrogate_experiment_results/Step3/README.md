@@ -43,6 +43,7 @@ surrogate_experiment_results/Step3/scripts/select_phase_b_topologies.py
 surrogate_experiment_results/Step3/scripts/materialize_phase_b_step2c_datasets.py
 surrogate_experiment_results/Step3/scripts/audit_phase_b_materialized_datasets.py
 surrogate_experiment_results/Step3/scripts/run_phase_b_training.py
+surrogate_experiment_results/Step3/scripts/aggregate_phase_b_results.py
 ```
 
 The current processed data and topology banks are:
@@ -517,6 +518,158 @@ status files:
     surrogate_experiment_results/Step3/pairs20_ndd2/phase_b/results/smoke_training_status.csv
     surrogate_experiment_results/Step3/pairs20_ndd2/phase_b/results/smoke_training_status_2x2.csv
 ```
+
+Phase-B full screening run:
+
+```text
+status:
+    completed successfully on garnet
+
+tmux session:
+    step3_phase_b_train_e100_w8
+
+notification watcher:
+    notify_step3_phase_b_train_e100_w8
+
+configuration:
+    topologies = 160
+    train_seeds per topology = 50
+    jobs = 8000
+    epochs_2stage = 100
+    epochs_spoplus = 100
+    metric_stride = 10
+    bootstrap_samples = 100
+    workers = 8
+    validation = full 10 samples
+    test = full 1000 unseen samples
+
+output:
+    surrogate_experiment_results/Step3/pairs20_ndd2/phase_b/runs_e100/
+    surrogate_experiment_results/Step3/pairs20_ndd2/phase_b/splits_e100/
+    surrogate_experiment_results/Step3/pairs20_ndd2/phase_b/results/phase_b_training_status_e100.csv
+    surrogate_experiment_results/Step3/pairs20_ndd2/phase_b/results/phase_b_training_manifest_e100.csv
+    surrogate_experiment_results/Step3/pairs20_ndd2/phase_b/results/phase_b_training_summary_e100.json
+    surrogate_experiment_results/Step3/pairs20_ndd2/phase_b/logs/phase_b_train_e100_w8.log
+
+completion:
+    rows = 8000 / 8000
+    success = 7962
+    skipped = 38
+    failed = 0
+    finished topologies = 160
+    real time = 25320.26 sec
+    mean successful job elapsed = 25.44 sec
+    median successful job elapsed = 23.14 sec
+    max successful job elapsed = 46.38 sec
+
+initial aggregate:
+    mean SPO+ improvement gap = 0.8210
+    median SPO+ improvement gap = 0.0
+    fraction SPO+ better = 0.12575
+    fraction SPO+ worse = 0.028375
+    fraction tied = 0.845875
+```
+
+Phase-B result aggregation and candidate topology selection:
+
+```text
+script:
+    surrogate_experiment_results/Step3/scripts/aggregate_phase_b_results.py
+
+input:
+    surrogate_experiment_results/Step3/pairs20_ndd2/phase_b/results/phase_b_training_status_e100.csv
+    surrogate_experiment_results/Step3/pairs20_ndd2/screening/phase_b_topologies.csv
+
+output:
+    surrogate_experiment_results/Step3/pairs20_ndd2/phase_b/selection/phase_b_topology_training_summary.csv
+    surrogate_experiment_results/Step3/pairs20_ndd2/phase_b/selection/phase_b_outcome_counts.json
+    surrogate_experiment_results/Step3/pairs20_ndd2/phase_b/selection/phase_b_result_summary.json
+    surrogate_experiment_results/Step3/pairs20_ndd2/phase_b/selection/phase_c_candidate_topologies.csv
+    surrogate_experiment_results/Step3/pairs20_ndd2/phase_b/selection/phase_c_topology_ids.txt
+
+jobs aggregated:
+    8000 status rows
+    160 topologies
+    50 train seeds per topology
+
+completed rows:
+    success = 7962
+    skipped = 38
+    failed = 0
+```
+
+The aggregation treats `skipped` rows as completed rows because they are restart
+hits with existing artifacts and already include evaluation metrics. Rows with a
+non-completed status are counted but excluded from mean/median improvement
+metrics.
+
+Outcome classification thresholds:
+
+```text
+helpful:
+    mean SPO+ improvement gap >= 0.5
+    fraction SPO+ better >= 0.5
+    fraction SPO+ worse <= 0.1
+
+harmful:
+    mean SPO+ improvement gap <= -0.5
+    fraction SPO+ worse >= 0.5
+    fraction SPO+ better <= 0.1
+
+neutral:
+    abs(mean SPO+ improvement gap) <= 0.1
+    fraction SPO+ better <= 0.1
+    fraction SPO+ worse <= 0.1
+    mean absolute improvement gap <= 0.1
+    max absolute improvement gap <= 0.5
+
+control:
+    neutral-like result
+    plus sparse_simple complexity, easy_control landscape, or proxy_aligned landscape
+
+mixed:
+    everything else
+```
+
+Aggregated Phase-B topology outcomes:
+
+```text
+helpful = 19
+harmful = 4
+neutral = 71
+control = 57
+mixed = 9
+```
+
+Default Phase-C candidate quotas:
+
+```text
+helpful = 4
+harmful = 2
+neutral = 2
+control = 2
+```
+
+Current automatic Phase-C candidate list:
+
+| rank | topology | outcome | mean improvement gap | better fraction | worse fraction | complexity | landscape |
+|---:|---|---|---:|---:|---:|---|---|
+| 1 | G-810 | helpful | 21.8568 | 1.00 | 0.00 | extreme | high_variance |
+| 2 | G-269 | helpful | 15.4881 | 1.00 | 0.00 | medium_rich | proxy_aligned |
+| 3 | G-14 | helpful | 14.0773 | 1.00 | 0.00 | extreme | proxy_hard |
+| 4 | G-103 | helpful | 11.6672 | 1.00 | 0.00 | low_medium | proxy_hard |
+| 5 | G-934 | harmful | -2.1003 | 0.00 | 1.00 | rich | proxy_hard |
+| 6 | G-206 | harmful | -1.4465 | 0.00 | 1.00 | medium_rich | proxy_hard |
+| 7 | G-9 | neutral | 0.0000 | 0.00 | 0.00 | rich | proxy_hard |
+| 8 | G-21 | neutral | 0.0000 | 0.00 | 0.00 | medium_rich | high_variance |
+| 9 | G-31 | control | 0.0000 | 0.00 | 0.00 | medium_rich | proxy_aligned |
+| 10 | G-59 | control | 0.0000 | 0.00 | 0.00 | sparse_simple | easy_control |
+
+This list is a Phase-C candidate set, not a locked confirmation set. Before
+launching the full 1000-seed confirmation protocol, inspect the candidate rows
+and decide whether to keep the strongest automatic picks or manually swap in
+additional diversity from the helpful, harmful, neutral, control, or mixed
+outcome pools.
 
 ---
 
