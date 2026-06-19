@@ -458,6 +458,8 @@
       "target_type": "Pair"
     }
   ],
+  "candidate_conflict_density": 0.8584392014519057,
+  "candidate_conflict_edges": 1419,
   "feasible_candidates": [
     {
       "edges": [
@@ -1369,17 +1371,30 @@
     }
   ],
   "feasible_set_hash": "9f63d0ff57f048b1104472fb7c7e2d75c5fbc458a3fe9e15b9a730fc1f1e4912",
+  "fraction_vertices_in_any_candidate": 0.5909090909090909,
+  "largest_conflict_component_fraction": 1.0,
+  "max_candidates_per_vertex": 41,
   "max_chain": 4,
+  "max_conflict_degree": 56,
   "max_cycle": 3,
+  "mean_candidates_per_vertex": 9.818181818181818,
+  "mean_conflict_degree": 48.93103448275862,
   "num_2cycles": 6,
   "num_3cycles": 6,
   "num_arcs": 57,
+  "num_chains_len1": 5,
+  "num_chains_len2": 6,
+  "num_chains_len3": 17,
+  "num_chains_len4": 18,
   "num_chains_total": 46,
+  "num_conflict_components": 1,
   "num_cycles_total": 12,
+  "num_exchange_candidates": 58,
   "num_feasible_candidates": 58,
   "num_ndds": 2,
   "num_pairs": 20,
   "num_vertices": 22,
+  "num_vertices_in_any_candidate": 13,
   "source_path": "dataset/processed/step3_pairs20_ndd2_step2c_poly_d8_mult_eps050_seed20260619/G-784.json",
   "topology_hash": "91f491c5926831e2b8b0d97703674df866db5eed39b562f502344c7bd17b6fdd",
   "topology_id": "G-784",

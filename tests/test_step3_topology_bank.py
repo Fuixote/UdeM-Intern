@@ -122,6 +122,28 @@ class Step3TopologyBankTest(unittest.TestCase):
         self.assertEqual(short_chain["num_chains_total"], 1)
         self.assertEqual(long_chain["num_chains_total"], 2)
 
+    def test_template_includes_candidate_structure_descriptors(self):
+        module = load_builder()
+        graph = sample_graph()
+
+        template = module.build_topology_template("G-0", graph, max_cycle=3, max_chain=4)
+
+        self.assertEqual(template["num_exchange_candidates"], 4)
+        self.assertEqual(template["num_chains_len1"], 1)
+        self.assertEqual(template["num_chains_len2"], 1)
+        self.assertEqual(template["num_chains_len3"], 0)
+        self.assertEqual(template["num_chains_len4"], 0)
+        self.assertEqual(template["candidate_conflict_edges"], 2)
+        self.assertAlmostEqual(template["candidate_conflict_density"], 2 / 6)
+        self.assertAlmostEqual(template["mean_conflict_degree"], 1.0)
+        self.assertEqual(template["max_conflict_degree"], 1)
+        self.assertEqual(template["num_conflict_components"], 2)
+        self.assertAlmostEqual(template["largest_conflict_component_fraction"], 0.5)
+        self.assertEqual(template["num_vertices_in_any_candidate"], 6)
+        self.assertAlmostEqual(template["fraction_vertices_in_any_candidate"], 6 / 8)
+        self.assertAlmostEqual(template["mean_candidates_per_vertex"], 10 / 8)
+        self.assertEqual(template["max_candidates_per_vertex"], 2)
+
     def test_build_topology_bank_writes_templates_and_csvs(self):
         module = load_builder()
         with tempfile.TemporaryDirectory() as tmp:
@@ -160,6 +182,10 @@ class Step3TopologyBankTest(unittest.TestCase):
             self.assertEqual(rows[0]["topology_id"], "G-0")
             self.assertEqual(rows[0]["num_pairs"], "7")
             self.assertEqual(rows[0]["num_chains_total"], "2")
+            self.assertEqual(rows[0]["num_exchange_candidates"], "4")
+            self.assertEqual(rows[0]["num_chains_len1"], "1")
+            self.assertEqual(rows[0]["candidate_conflict_edges"], "2")
+            self.assertEqual(rows[0]["num_vertices_in_any_candidate"], "6")
 
 
 if __name__ == "__main__":

@@ -116,20 +116,124 @@ pairs20_ndd2:
     current primary structural setting for topology screening
 ```
 
+Structural descriptors now implemented in `topology_bank.csv` and each
+`template.json`:
+
+```text
+chain length distribution:
+    num_chains_len1, num_chains_len2, num_chains_len3, num_chains_len4
+
+exchange candidate count:
+    num_exchange_candidates
+    num_feasible_candidates remains as a backward-compatible alias
+
+candidate conflict graph:
+    candidate_conflict_edges
+    candidate_conflict_density
+    mean_conflict_degree
+    max_conflict_degree
+    num_conflict_components
+    largest_conflict_component_fraction
+
+vertex coverage:
+    num_vertices_in_any_candidate
+    fraction_vertices_in_any_candidate
+    mean_candidates_per_vertex
+    max_candidates_per_vertex
+```
+
+Observed structural-descriptor aggregates on the 1000-graph `pairs20_ndd2` bank:
+
+```text
+num_chains_len1: mean 4.76, median 4, max 15
+num_chains_len2: mean 4.62, median 4, max 29
+num_chains_len3: mean 4.32, median 2, max 67
+num_chains_len4: mean 3.86, median 0, max 155
+
+candidate_conflict_density: mean 0.706, median 0.746, max 1.000
+largest_conflict_component_fraction: mean 0.952, median 1.000
+fraction_vertices_in_any_candidate: mean 0.375, median 0.364, max 0.818
+mean_candidates_per_vertex: mean 2.823, median 1.455, max 53.227
+max_candidates_per_vertex: mean 13.687, median 9, max 199
+```
+
 Recommended next order before any full training run:
 
 ```text
-1. Extend topology-bank descriptors beyond raw exchange-candidate count:
-   chain length distribution, cycle counts, candidate conflicts, and vertex coverage.
-2. Run a label-landscape probe on screened topologies without training.
-3. Select a stratified K = 8 to 12 topology set for a small training pilot.
-4. Decide the final confirmation set only after the structural and landscape screens.
+1. Run a label-landscape probe on screened topologies without training.
+2. Select a stratified K = 8 to 12 topology set for a small training pilot.
+3. Decide the final confirmation set only after the structural and landscape screens.
 ```
 
 The confirmation set should be stratified rather than selected only for high
 candidate count. Useful strata include sparse/simple controls, medium chain-only
 graphs, medium cycle-chain graphs, rich cycle-chain graphs, and extreme
 chain-rich stress cases.
+
+Use of the 1000-topology bank:
+
+```text
+1000 G topology bank:
+    source bank / screening universe
+    not a full 1000-seed confirmation set
+
+formal confirmation:
+    select K = 8 to 12 locked topologies after screening
+    then run train_sizes = {50, 100, 500}
+    then run 1000 train seeds per selected topology
+```
+
+Do not interpret the advisor-facing 1000-seed fixed-topology protocol as:
+
+```text
+1000 topologies x 3 train sizes x 1000 seeds x 2 methods
+```
+
+The intended interpretation is:
+
+```text
+for each selected topology in the final K-set:
+    run 1000 training seeds
+```
+
+The 1000-bank candidate-count distribution supports stratified screening:
+
+```text
+<=8 exchange candidates:   383 sparse/simple controls
+9-20 exchange candidates:  333 low-medium cases
+21-40 exchange candidates: 184 medium-rich cases
+41-80 exchange candidates: 82 rich cases
+>80 exchange candidates:   18 extreme stress cases
+```
+
+Top-20 rank-reversal or candidate-basin analysis should focus mainly on graphs
+with more than 20 exchange candidates. The lower-candidate strata remain useful
+as simple controls, not as the main mechanism-analysis pool.
+
+Current staged path:
+
+```text
+Phase A: structural descriptors + oracle-only label-landscape probe
+    topologies = all 1000
+    no model training
+
+Phase B: cheap DFL screening
+    select about 100 to 200 topologies from Phase A
+    train_size = 50
+    train_seeds = 20 to 50
+    methods = 2stage, SPO+
+
+Phase C: formal confirmation
+    lock K = 8 to 12 topologies
+    train_sizes = {50, 100, 500}
+    train_seeds = 1..1000
+    fixed validation/test set per topology
+```
+
+The final K-set should include helpful, neutral, harmful, and control cases. A
+reasonable target composition is sparse/simple controls, low-medium cases,
+medium-rich cycle-chain cases, rich mechanism candidates, harmful candidates,
+and neutral candidates.
 
 ---
 

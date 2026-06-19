@@ -36,6 +36,21 @@ BANK_FIELDS = [
     "num_cycles_total",
     "num_chains_total",
     "num_feasible_candidates",
+    "num_exchange_candidates",
+    "num_chains_len1",
+    "num_chains_len2",
+    "num_chains_len3",
+    "num_chains_len4",
+    "candidate_conflict_edges",
+    "candidate_conflict_density",
+    "mean_conflict_degree",
+    "max_conflict_degree",
+    "num_conflict_components",
+    "largest_conflict_component_fraction",
+    "num_vertices_in_any_candidate",
+    "fraction_vertices_in_any_candidate",
+    "mean_candidates_per_vertex",
+    "max_candidates_per_vertex",
     "topology_hash",
     "arc_order_hash",
     "feasible_set_hash",
@@ -222,6 +237,99 @@ def feasible_candidates(
     return cycles + chains
 
 
+def candidate_structure_descriptors(
+    vertices: list[dict[str, str]],
+    candidates: list[dict[str, Any]],
+) -> dict[str, Any]:
+    candidate_node_sets = [set(candidate["nodes"]) for candidate in candidates]
+    num_candidates = len(candidate_node_sets)
+
+    degrees = [0 for _ in candidate_node_sets]
+    conflict_adjacency: list[set[int]] = [set() for _ in candidate_node_sets]
+    conflict_edges = 0
+    for left in range(num_candidates):
+        for right in range(left + 1, num_candidates):
+            if candidate_node_sets[left] & candidate_node_sets[right]:
+                conflict_edges += 1
+                degrees[left] += 1
+                degrees[right] += 1
+                conflict_adjacency[left].add(right)
+                conflict_adjacency[right].add(left)
+
+    possible_conflict_edges = num_candidates * (num_candidates - 1) / 2
+    conflict_density = (
+        conflict_edges / possible_conflict_edges if possible_conflict_edges else 0.0
+    )
+    mean_conflict_degree = sum(degrees) / num_candidates if num_candidates else 0.0
+    max_conflict_degree = max(degrees) if degrees else 0
+
+    seen: set[int] = set()
+    component_sizes: list[int] = []
+    for start in range(num_candidates):
+        if start in seen:
+            continue
+        stack = [start]
+        seen.add(start)
+        size = 0
+        while stack:
+            current = stack.pop()
+            size += 1
+            for neighbor in conflict_adjacency[current]:
+                if neighbor not in seen:
+                    seen.add(neighbor)
+                    stack.append(neighbor)
+        component_sizes.append(size)
+
+    largest_component_fraction = (
+        max(component_sizes) / num_candidates if component_sizes else 0.0
+    )
+
+    vertex_ids = [vertex["id"] for vertex in vertices]
+    candidates_per_vertex = {vertex_id: 0 for vertex_id in vertex_ids}
+    for node_set in candidate_node_sets:
+        for node in node_set:
+            candidates_per_vertex.setdefault(node, 0)
+            candidates_per_vertex[node] += 1
+
+    covered_vertices = [
+        vertex_id for vertex_id in vertex_ids if candidates_per_vertex.get(vertex_id, 0) > 0
+    ]
+    num_vertices = len(vertex_ids)
+    total_candidate_vertex_incidence = sum(candidates_per_vertex.get(vertex_id, 0) for vertex_id in vertex_ids)
+
+    return {
+        "num_exchange_candidates": num_candidates,
+        "num_chains_len1": sum(
+            1 for candidate in candidates if candidate["type"] == "chain" and candidate["length"] == 1
+        ),
+        "num_chains_len2": sum(
+            1 for candidate in candidates if candidate["type"] == "chain" and candidate["length"] == 2
+        ),
+        "num_chains_len3": sum(
+            1 for candidate in candidates if candidate["type"] == "chain" and candidate["length"] == 3
+        ),
+        "num_chains_len4": sum(
+            1 for candidate in candidates if candidate["type"] == "chain" and candidate["length"] == 4
+        ),
+        "candidate_conflict_edges": conflict_edges,
+        "candidate_conflict_density": conflict_density,
+        "mean_conflict_degree": mean_conflict_degree,
+        "max_conflict_degree": max_conflict_degree,
+        "num_conflict_components": len(component_sizes),
+        "largest_conflict_component_fraction": largest_component_fraction,
+        "num_vertices_in_any_candidate": len(covered_vertices),
+        "fraction_vertices_in_any_candidate": (
+            len(covered_vertices) / num_vertices if num_vertices else 0.0
+        ),
+        "mean_candidates_per_vertex": (
+            total_candidate_vertex_incidence / num_vertices if num_vertices else 0.0
+        ),
+        "max_candidates_per_vertex": (
+            max((candidates_per_vertex.get(vertex_id, 0) for vertex_id in vertex_ids), default=0)
+        ),
+    }
+
+
 def build_topology_template(
     topology_id: str,
     graph_json: dict[str, Any],
@@ -255,6 +363,7 @@ def build_topology_template(
     num_3cycles = sum(1 for candidate in candidates if candidate["type"] == "cycle" and candidate["length"] == 3)
     num_chains = sum(1 for candidate in candidates if candidate["type"] == "chain")
     num_cycles = sum(1 for candidate in candidates if candidate["type"] == "cycle")
+    descriptors = candidate_structure_descriptors(vertices, candidates)
 
     return {
         "topology_id": topology_id,
@@ -273,6 +382,7 @@ def build_topology_template(
         "num_cycles_total": num_cycles,
         "num_chains_total": num_chains,
         "num_feasible_candidates": len(candidates),
+        **descriptors,
         "topology_hash": stable_hash(topology_payload),
         "arc_order_hash": stable_hash(arc_order_payload),
         "feasible_set_hash": stable_hash(feasible_payload),
@@ -294,6 +404,21 @@ def template_bank_row(template: dict[str, Any], template_path: Path) -> dict[str
         "num_cycles_total": template["num_cycles_total"],
         "num_chains_total": template["num_chains_total"],
         "num_feasible_candidates": template["num_feasible_candidates"],
+        "num_exchange_candidates": template["num_exchange_candidates"],
+        "num_chains_len1": template["num_chains_len1"],
+        "num_chains_len2": template["num_chains_len2"],
+        "num_chains_len3": template["num_chains_len3"],
+        "num_chains_len4": template["num_chains_len4"],
+        "candidate_conflict_edges": template["candidate_conflict_edges"],
+        "candidate_conflict_density": template["candidate_conflict_density"],
+        "mean_conflict_degree": template["mean_conflict_degree"],
+        "max_conflict_degree": template["max_conflict_degree"],
+        "num_conflict_components": template["num_conflict_components"],
+        "largest_conflict_component_fraction": template["largest_conflict_component_fraction"],
+        "num_vertices_in_any_candidate": template["num_vertices_in_any_candidate"],
+        "fraction_vertices_in_any_candidate": template["fraction_vertices_in_any_candidate"],
+        "mean_candidates_per_vertex": template["mean_candidates_per_vertex"],
+        "max_candidates_per_vertex": template["max_candidates_per_vertex"],
         "topology_hash": template["topology_hash"],
         "arc_order_hash": template["arc_order_hash"],
         "feasible_set_hash": template["feasible_set_hash"],
