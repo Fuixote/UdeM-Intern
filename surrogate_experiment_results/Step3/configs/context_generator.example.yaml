@@ -1,0 +1,18 @@
+status: pilot_not_locked
+generator_version: fixed_topology_context_v1_example
+method: bounded_additive_uniform
+
+# Pilot-only example values. These are not formal confirmation parameters.
+recipient_cpra:
+  lower: 0.0
+  upper: 1.0
+  half_width: 0.05
+
+# Pilot-only example values. Do not describe this file as a locked generator.
+utility:
+  lower: 0.0
+  upper: 100.0
+  half_width: 5.0
+
+label:
+  epsilon_bar: 0.5
