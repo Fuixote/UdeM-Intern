@@ -19,6 +19,14 @@ import sample_fixed_topology_context as context_sampler  # noqa: E402
 import sample_fixed_topology_xy as xy_sampler  # noqa: E402
 
 
+def eval_namespaces_for_protocol(protocol: str) -> tuple[str, str]:
+    if protocol == "confirm":
+        return "confirm_validation", "confirm_test"
+    if protocol == "screen":
+        return "screen_validation", "screen_test"
+    raise ValueError("protocol must be screen or confirm")
+
+
 def expected_eval_manifest(
     *,
     topology_template: dict[str, Any],
@@ -26,6 +34,9 @@ def expected_eval_manifest(
     regime: str,
     validation_size: int,
     test_size: int,
+    protocol: str,
+    validation_namespace: str,
+    test_namespace: str,
     experiment_version: str,
     master_label_seed: int,
     generator_config: dict[str, Any],
@@ -35,8 +46,9 @@ def expected_eval_manifest(
         "regime": str(regime),
         "validation_size": int(validation_size),
         "test_size": int(test_size),
-        "validation_namespace": "confirm_validation",
-        "test_namespace": "confirm_test",
+        "protocol": str(protocol),
+        "validation_namespace": str(validation_namespace),
+        "test_namespace": str(test_namespace),
         "train_seed_sentinel": common.EVAL_TRAIN_SEED_SENTINEL,
         "experiment_version": str(experiment_version),
         "master_label_seed": int(master_label_seed),
@@ -55,6 +67,7 @@ def compatible_existing_manifest(path: Path, expected: dict[str, Any]) -> bool:
         "regime",
         "validation_size",
         "test_size",
+        "protocol",
         "validation_namespace",
         "test_namespace",
         "train_seed_sentinel",
@@ -65,7 +78,13 @@ def compatible_existing_manifest(path: Path, expected: dict[str, Any]) -> bool:
         "arc_order_hash",
         "feasible_set_hash",
     ]
-    return all(existing.get(key) == expected.get(key) for key in checked_keys)
+    for key in checked_keys:
+        existing_value = existing.get(key)
+        if key == "protocol":
+            existing_value = existing.get(key, "confirm")
+        if existing_value != expected.get(key):
+            return False
+    return True
 
 
 def build_fixed_eval_sets_for_topology(
@@ -82,8 +101,10 @@ def build_fixed_eval_sets_for_topology(
     generator_config: dict[str, Any],
     force: bool = False,
     dry_run: bool = False,
+    protocol: str = "confirm",
 ) -> dict[str, Any]:
     output_dir = Path(output_dir)
+    validation_namespace, test_namespace = eval_namespaces_for_protocol(protocol)
     validation_path = output_dir / "validation.npz"
     test_path = output_dir / "test.npz"
     manifest_path = output_dir / "eval_manifest.json"
@@ -93,6 +114,9 @@ def build_fixed_eval_sets_for_topology(
         regime=regime,
         validation_size=validation_size,
         test_size=test_size,
+        protocol=protocol,
+        validation_namespace=validation_namespace,
+        test_namespace=test_namespace,
         experiment_version=experiment_version,
         master_label_seed=master_label_seed,
         generator_config=generator_config,
@@ -125,7 +149,7 @@ def build_fixed_eval_sets_for_topology(
         base_payload=base_payload,
         topology_id=topology_id,
         regime=regime,
-        split_namespace="confirm_validation",
+        split_namespace=validation_namespace,
         train_seed=None,
         num_samples=int(validation_size),
         experiment_version=experiment_version,
@@ -137,7 +161,7 @@ def build_fixed_eval_sets_for_topology(
         base_payload=base_payload,
         topology_id=topology_id,
         regime=regime,
-        split_namespace="confirm_test",
+        split_namespace=test_namespace,
         train_seed=None,
         num_samples=int(test_size),
         experiment_version=experiment_version,
@@ -149,7 +173,7 @@ def build_fixed_eval_sets_for_topology(
         samples=validation_samples,
         topology_id=topology_id,
         regime=regime,
-        split_namespace="confirm_validation",
+        split_namespace=validation_namespace,
         train_seed=None,
         experiment_version=experiment_version,
         master_label_seed=int(master_label_seed),
@@ -160,7 +184,7 @@ def build_fixed_eval_sets_for_topology(
         samples=test_samples,
         topology_id=topology_id,
         regime=regime,
-        split_namespace="confirm_test",
+        split_namespace=test_namespace,
         train_seed=None,
         experiment_version=experiment_version,
         master_label_seed=int(master_label_seed),
@@ -195,6 +219,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--base-payload", type=Path, required=True)
     parser.add_argument("--topology-id", required=True)
     parser.add_argument("--regime", default=xy_sampler.DEFAULT_REGIME)
+    parser.add_argument("--protocol", choices=("screen", "confirm"), default="confirm")
     parser.add_argument("--validation-size", type=int, required=True)
     parser.add_argument("--test-size", type=int, required=True)
     parser.add_argument("--experiment-version", required=True)
@@ -217,6 +242,7 @@ def main(argv: list[str] | None = None) -> int:
         output_dir=args.output_dir,
         topology_id=args.topology_id,
         regime=args.regime,
+        protocol=args.protocol,
         validation_size=args.validation_size,
         test_size=args.test_size,
         experiment_version=args.experiment_version,

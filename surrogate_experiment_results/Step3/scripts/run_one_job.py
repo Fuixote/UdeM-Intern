@@ -51,6 +51,7 @@ def prepare_paired_job_manifest(
     metric_stride: int = DEFAULT_METRIC_STRIDE,
     early_stop_patience: int = DEFAULT_EARLY_STOP_PATIENCE,
     early_stop_min_delta: float = DEFAULT_EARLY_STOP_MIN_DELTA,
+    protocol: str = "confirm",
 ) -> dict[str, Any]:
     prefix_hashes = train_bank_manifest.get("prefix_hashes", {})
     key = str(int(train_size))
@@ -68,6 +69,7 @@ def prepare_paired_job_manifest(
         "job_id": f"{topology_id}|{regime}|seed={int(train_seed):06d}|n={int(train_size)}",
         "topology_id": str(topology_id),
         "regime": str(regime),
+        "protocol": str(protocol),
         "train_seed": int(train_seed),
         "train_size": int(train_size),
         "train_bank_hash": train_bank_manifest["bank_hash"],
@@ -262,6 +264,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--eval-manifest", type=Path, required=True)
     parser.add_argument("--topology-id", required=True)
     parser.add_argument("--regime", required=True)
+    parser.add_argument("--protocol", choices=("screen", "confirm"), default="confirm")
     parser.add_argument("--train-seed", type=int, required=True)
     parser.add_argument("--train-size", type=int, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
@@ -286,6 +289,7 @@ def main(argv: list[str] | None = None) -> int:
         regime=args.regime,
         train_seed=args.train_seed,
         train_size=args.train_size,
+        protocol=args.protocol,
         train_bank_manifest=train_bank["manifest"],
         eval_manifest=eval_manifest,
         output_dir=args.output_dir,

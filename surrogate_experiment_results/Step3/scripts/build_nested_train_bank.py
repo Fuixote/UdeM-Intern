@@ -19,6 +19,14 @@ import sample_fixed_topology_context as context_sampler  # noqa: E402
 import sample_fixed_topology_xy as xy_sampler  # noqa: E402
 
 
+def train_namespace_for_protocol(protocol: str) -> str:
+    if protocol == "confirm":
+        return "confirm_train"
+    if protocol == "screen":
+        return "screen_train"
+    raise ValueError("protocol must be screen or confirm")
+
+
 def validate_prefix_sizes(prefix_sizes: tuple[int, ...] | list[int], max_train_size: int) -> list[int]:
     sizes = [int(size) for size in prefix_sizes]
     if not sizes:
@@ -41,6 +49,8 @@ def build_manifest(
     topology_id: str,
     regime: str,
     train_seed: int,
+    protocol: str,
+    split_namespace: str,
     max_train_size: int,
     prefix_sizes: list[int],
     experiment_version: str,
@@ -56,7 +66,8 @@ def build_manifest(
     return {
         "topology_id": str(topology_id),
         "regime": str(regime),
-        "split_namespace": "confirm_train",
+        "protocol": str(protocol),
+        "split_namespace": str(split_namespace),
         "train_seed": int(train_seed),
         "experiment_version": str(experiment_version),
         "master_label_seed": int(master_label_seed),
@@ -102,16 +113,18 @@ def build_nested_train_bank(
     master_label_seed: int,
     generator_config: dict[str, Any],
     mode: str = "materialized",
+    protocol: str = "confirm",
 ) -> dict[str, Any]:
     if mode not in {"materialized", "lazy", "cache_on_first_use"}:
         raise ValueError("mode must be materialized, lazy, or cache_on_first_use")
+    split_namespace = train_namespace_for_protocol(protocol)
     sizes = validate_prefix_sizes(prefix_sizes, max_train_size)
     samples = xy_sampler.generate_samples(
         topology_template=topology_template,
         base_payload=base_payload,
         topology_id=topology_id,
         regime=regime,
-        split_namespace="confirm_train",
+        split_namespace=split_namespace,
         train_seed=int(train_seed),
         num_samples=int(max_train_size),
         experiment_version=experiment_version,
@@ -124,6 +137,8 @@ def build_nested_train_bank(
         topology_id=topology_id,
         regime=regime,
         train_seed=int(train_seed),
+        protocol=protocol,
+        split_namespace=split_namespace,
         max_train_size=int(max_train_size),
         prefix_sizes=sizes,
         experiment_version=experiment_version,
@@ -153,6 +168,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--topology-id", required=True)
     parser.add_argument("--regime", default=xy_sampler.DEFAULT_REGIME)
     parser.add_argument("--train-seed", type=int, required=True)
+    parser.add_argument("--protocol", choices=("screen", "confirm"), default="confirm")
     parser.add_argument("--max-train-size", type=int, default=500)
     parser.add_argument("--prefix-sizes", default="50,100,500")
     parser.add_argument("--experiment-version", required=True)
@@ -175,6 +191,7 @@ def main(argv: list[str] | None = None) -> int:
         topology_id=args.topology_id,
         regime=args.regime,
         train_seed=args.train_seed,
+        protocol=args.protocol,
         max_train_size=args.max_train_size,
         prefix_sizes=parse_prefix_sizes(args.prefix_sizes),
         experiment_version=args.experiment_version,

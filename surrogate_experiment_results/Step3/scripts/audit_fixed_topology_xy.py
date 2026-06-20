@@ -19,6 +19,31 @@ import sample_fixed_topology_context as context_sampler  # noqa: E402
 import sample_fixed_topology_xy as xy_sampler  # noqa: E402
 
 
+def namespaces_for_protocol(protocol: str) -> dict[str, str]:
+    if protocol == "confirm":
+        return {
+            "train": "confirm_train",
+            "validation": "confirm_validation",
+            "test": "confirm_test",
+        }
+    if protocol == "screen":
+        return {
+            "train": "screen_train",
+            "validation": "screen_validation",
+            "test": "screen_test",
+        }
+    raise ValueError("protocol must be screen or confirm")
+
+
+def namespace_protocol(namespace: Any) -> str | None:
+    text = str(namespace)
+    if text.startswith("screen_"):
+        return "screen"
+    if text.startswith("confirm_"):
+        return "confirm"
+    return None
+
+
 def assert_formal_config_locked(generator_config: dict[str, Any]) -> None:
     if generator_config.get("status") != "locked":
         raise ValueError("formal confirmation requires generator_config status='locked'")
@@ -114,7 +139,9 @@ def audit_train_bank(
     topology_template: dict[str, Any],
     base_payload: dict[str, Any],
     generator_config: dict[str, Any],
+    protocol: str = "confirm",
 ) -> dict[str, Any]:
+    expected_namespace = namespaces_for_protocol(protocol)["train"]
     dataset = common.read_npz_dataset(train_bank_path)
     manifest = dataset["manifest"]
     sample_rows = list(manifest.get("samples", []))
@@ -135,10 +162,14 @@ def audit_train_bank(
         _append_failure(failures, "bank_hash_mismatch")
     if any(str(row.get("split_namespace")) not in common.TRAIN_NAMESPACES for row in sample_rows):
         _append_failure(failures, "train_bank_namespace_invalid")
-    if manifest.get("split_namespace") != "confirm_train":
+    if manifest.get("split_namespace") != expected_namespace:
         _append_failure(failures, "train_bank_namespace_invalid")
-    if any(str(row.get("split_namespace")) != "confirm_train" for row in sample_rows):
+    if any(str(row.get("split_namespace")) != expected_namespace for row in sample_rows):
         _append_failure(failures, "train_bank_namespace_invalid")
+    if manifest.get("protocol", protocol) != protocol:
+        _append_failure(failures, "protocol_namespace_mismatch")
+    if any(namespace_protocol(row.get("split_namespace")) != protocol for row in sample_rows):
+        _append_failure(failures, "protocol_namespace_mismatch")
     return {
         "passed": not failures,
         "failures": failures,
@@ -218,16 +249,18 @@ def audit_eval_manifest(
     topology_template: dict[str, Any],
     base_payload: dict[str, Any],
     generator_config: dict[str, Any],
+    protocol: str = "confirm",
 ) -> dict[str, Any]:
+    expected = namespaces_for_protocol(protocol)
     manifest = json.loads(Path(eval_manifest_path).read_text(encoding="utf-8"))
     failures: list[str] = []
     validation_rows = manifest.get("validation_samples", [])
     test_rows = manifest.get("test_samples", [])
     if any(row.get("train_seed") is not None for row in validation_rows + test_rows):
         _append_failure(failures, "eval_train_seed_varies")
-    if {row.get("split_namespace") for row in validation_rows} != {"confirm_validation"}:
+    if {row.get("split_namespace") for row in validation_rows} != {expected["validation"]}:
         _append_failure(failures, "validation_namespace_invalid")
-    if {row.get("split_namespace") for row in test_rows} != {"confirm_test"}:
+    if {row.get("split_namespace") for row in test_rows} != {expected["test"]}:
         _append_failure(failures, "test_namespace_invalid")
     train_keys = {
         (row.get("split_namespace"), row.get("train_seed"), row.get("sample_index"))
@@ -235,10 +268,14 @@ def audit_eval_manifest(
     }
     if len(train_keys) != len(validation_rows) + len(test_rows):
         _append_failure(failures, "eval_namespace_overlap")
-    if manifest.get("validation_namespace") != "confirm_validation":
+    if manifest.get("validation_namespace") != expected["validation"]:
         _append_failure(failures, "validation_namespace_invalid")
-    if manifest.get("test_namespace") != "confirm_test":
+    if manifest.get("test_namespace") != expected["test"]:
         _append_failure(failures, "test_namespace_invalid")
+    if manifest.get("protocol", protocol) != protocol:
+        _append_failure(failures, "protocol_namespace_mismatch")
+    if any(namespace_protocol(row.get("split_namespace")) != protocol for row in validation_rows + test_rows):
+        _append_failure(failures, "protocol_namespace_mismatch")
     validation_path = _resolve_manifest_path(eval_manifest_path, manifest["validation_path"])
     test_path = _resolve_manifest_path(eval_manifest_path, manifest["test_path"])
     validation_result = audit_eval_dataset(
@@ -246,7 +283,7 @@ def audit_eval_manifest(
         eval_manifest_path=eval_manifest_path,
         eval_manifest=manifest,
         split_label="validation",
-        expected_namespace="confirm_validation",
+        expected_namespace=expected["validation"],
         expected_dataset_hash=str(manifest.get("validation_hash")),
         topology_template=topology_template,
         base_payload=base_payload,
@@ -257,7 +294,7 @@ def audit_eval_manifest(
         eval_manifest_path=eval_manifest_path,
         eval_manifest=manifest,
         split_label="test",
-        expected_namespace="confirm_test",
+        expected_namespace=expected["test"],
         expected_dataset_hash=str(manifest.get("test_hash")),
         topology_template=topology_template,
         base_payload=base_payload,
@@ -281,18 +318,21 @@ def audit_fixed_topology_xy(
     topology_template: dict[str, Any],
     base_payload: dict[str, Any],
     generator_config: dict[str, Any],
+    protocol: str = "confirm",
 ) -> dict[str, Any]:
     train_result = audit_train_bank(
         train_bank_path=train_bank_path,
         topology_template=topology_template,
         base_payload=base_payload,
         generator_config=generator_config,
+        protocol=protocol,
     )
     eval_result = audit_eval_manifest(
         eval_manifest_path,
         topology_template=topology_template,
         base_payload=base_payload,
         generator_config=generator_config,
+        protocol=protocol,
     )
     failures = list(dict.fromkeys(train_result["failures"] + eval_result["failures"]))
     train_namespaces = {
@@ -306,6 +346,9 @@ def audit_fixed_topology_xy(
     }
     if train_namespaces & eval_namespaces:
         _append_failure(failures, "train_eval_namespace_overlap")
+    all_namespaces = train_namespaces | eval_namespaces
+    if any(namespace_protocol(namespace) != protocol for namespace in all_namespaces):
+        _append_failure(failures, "protocol_namespace_mismatch")
     return {
         "passed": not failures,
         "failures": failures,
@@ -321,6 +364,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--topology", type=Path, required=True)
     parser.add_argument("--base-payload", type=Path, required=True)
     parser.add_argument("--config", type=Path, required=True)
+    parser.add_argument("--protocol", choices=("screen", "confirm"), default="confirm")
     parser.add_argument("--require-locked", action="store_true")
     return parser.parse_args(argv)
 
@@ -331,6 +375,8 @@ def main(argv: list[str] | None = None) -> int:
     base_payload = json.loads(args.base_payload.read_text(encoding="utf-8"))
     generator_config = context_sampler.load_generator_config(args.config)
     if args.require_locked:
+        if args.protocol != "confirm":
+            raise ValueError("--require-locked is only valid for protocol=confirm")
         assert_formal_config_locked(generator_config)
     result = audit_fixed_topology_xy(
         train_bank_path=args.train_bank,
@@ -338,6 +384,7 @@ def main(argv: list[str] | None = None) -> int:
         topology_template=template,
         base_payload=base_payload,
         generator_config=generator_config,
+        protocol=args.protocol,
     )
     print(json.dumps({"passed": result["passed"], "failures": result["failures"]}, indent=2, sort_keys=True))
     return 0 if result["passed"] else 1
