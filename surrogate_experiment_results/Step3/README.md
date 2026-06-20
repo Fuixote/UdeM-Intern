@@ -702,6 +702,78 @@ selection. In native preflight, the 2stage selected-at-max-epoch fraction is 0
 for every review topology; SPO+ selected at max epoch only for a small fraction
 of seeds in G-810, G-9, and G-103.
 
+Targeted cap check for the remaining SPO+ max-epoch cases:
+
+```text
+purpose:
+    rerun only native-e1500 seeds where SPO+ selected epoch 1500
+    verify whether a larger cap changes the test decision outcome
+
+configuration:
+    topologies = G-810, G-103, G-9
+    train seeds = 16 total
+    max epochs = 3000 for both methods
+    metric_stride = 1
+    native early-stop patience = 20
+    native early-stop min_delta = 0.0001
+
+output:
+    surrogate_experiment_results/Step3/pairs20_ndd2/phase_c/native_earlystop_cap3000_check/
+
+completion:
+    success = 16 / 16
+    failed = 0
+    Brevo notification sent = HTTP 201
+```
+
+Cap-check result:
+
+```text
+outcome changes versus native-e1500 = 0 / 16
+max absolute raw improvement-gap delta = 0.0
+max absolute normalized improvement-gap delta = 0.0
+SPO+ selected at epoch 3000 = 0 / 16
+2stage selected at epoch 3000 = 0 / 16
+```
+
+Per-topology result:
+
+```text
+G-810:
+    seeds checked = 10
+    native-e1500 outcome = tie for all checked seeds
+    cap3000 outcome = tie for all checked seeds
+    cap3000 SPO+ selected epochs = 1524 to 2258
+
+G-103:
+    seeds checked = 2
+    native-e1500 outcome = better for all checked seeds
+    cap3000 outcome = better for all checked seeds
+    cap3000 SPO+ selected epochs = 1514 and 1827
+
+G-9:
+    seeds checked = 4
+    native-e1500 outcome = better for all checked seeds
+    cap3000 outcome = better for all checked seeds
+    cap3000 SPO+ selected epochs = 1500, 1533, 1581, and 1805
+```
+
+The single cap3000 run with selected epoch 1500 was G-9 seed 14; it stopped
+early at epoch 1520 after 20 non-improving checks, so it did not hit the
+3000-epoch cap. This targeted check supports freezing the Step3 screening
+training protocol as:
+
+```text
+max_epochs = 1500
+metric_stride = 1
+early_stop_patience = 20
+early_stop_min_delta = 0.0001
+```
+
+The next screening step should rerun the 160-topology Phase-B set under this
+native-e1500 protocol in a separate output directory, preserving the original
+100-epoch Phase-B results as an optimization-budget baseline.
+
 Phase-B full screening run:
 
 ```text
@@ -1312,6 +1384,13 @@ nonlinear model misspecification
 sample-level stochastic uncertainty
 ```
 
+The Step2c label-generating process is fixed across train, validation, and
+test. In stochastic Step2c runs, this means fixed formula, fixed parameters, and
+one fixed master label seed. It does **not** mean reusing the same edge-noise
+realization for every sample. Each sample receives an independent but
+deterministically reproducible noise draw derived from the master label seed and
+the sample key.
+
 ### 4.2 Secondary regime: Step2b noiseless polynomial
 
 Recommended secondary regime:
@@ -1363,6 +1442,13 @@ The exact generator must be documented in a versioned configuration file. It mus
 6. different sample seeds produce non-identical \(X\) with high probability;
 7. topology and feasible set do not change.
 
+The context generator must sample attributes on the frozen vertex/arc set. It
+must not rerun a full KEP generator that re-decides compatibility arcs, because
+that would change the topology. If a covariate normally affects compatibility,
+the formal generator must either treat it only as a reward/context feature,
+project the generated sample back onto the frozen arc set, or leave that
+covariate fixed and document the choice.
+
 Possible implementations include:
 
 ```text
@@ -1392,6 +1478,10 @@ different label_seed -> different y
 ```
 
 This ablation isolates label noise but must be reported separately from the full \((X,y)\)-resampling experiment.
+The current Phase-B materialized datasets and training results use this
+fixed-X / relabel-y setting. They are useful for optimization-protocol debugging
+and topology pre-screening, but they are not the advisor-facing formal
+full-\((X,y)\)-resampling protocol.
 
 ---
 
@@ -1405,7 +1495,8 @@ The experiment separates randomness into explicit namespaces.
 | `train_seed` | 1 to 1000 | changes the generated training sample bank |
 | `sample_index` | 0 to 499 | identifies a sample inside one nested bank |
 | `context_seed` | derived deterministically | generates \(X\) |
-| `label_seed` | derived deterministically | generates Step2c noise |
+| `master_label_seed` | fixed by experiment version | fixes the Step2c label-generating process |
+| `label_noise_seed` | derived deterministically | generates one sample's Step2c noise draw |
 | `validation_seed` | fixed within `(topology, regime)` | creates fixed validation set |
 | `test_seed` | fixed within `(topology, regime)` | creates fixed test set |
 | `theta_seed` | fixed, default 42 | controls model initialization |
@@ -1431,6 +1522,7 @@ context_seed =
 label_seed =
   stable_hash(
     "label",
+    master_label_seed,
     experiment_version,
     regime,
     topology_id,
@@ -1452,6 +1544,9 @@ confirm_test
 ```
 
 This prevents accidental overlap even when integer seed values are reused.
+The label seed in this expression is a per-sample label-noise seed. The fixed
+part is the master label seed and the Step2c formula/parameters, not a single
+shared noise vector.
 
 ---
 
@@ -1475,11 +1570,15 @@ For each regime R:
 
         Build one fixed validation set:
             same topology G_k
+            independently generated X samples on the frozen arcs
+            y generated by the fixed Step2c label-generating process
             fixed validation seed namespace
             fixed validation size
 
         Build one fixed test set:
             same topology G_k
+            independently generated X samples on the frozen arcs
+            y generated by the fixed Step2c label-generating process
             fixed test seed namespace
             fixed test size
             shared by all methods, train seeds, and train sizes
@@ -1488,6 +1587,8 @@ For each regime R:
 
             Generate one maximum-size training bank:
                 D_train(k, s) = 500 (X, y) pairs
+                X varies across samples under the fixed topology
+                y is generated from each sample's X by the fixed Step2c process
 
             Construct nested training sets:
                 n = 50  -> first 50 pairs
