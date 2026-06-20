@@ -1,0 +1,38 @@
+{
+  "generated_at": "2026-06-20T03:58:13Z",
+  "max_abs_delta_improvement_gap": 21.856757759094236,
+  "mean_abs_delta_improvement_gap": 3.7630288775194605,
+  "num_seed_rows": 650,
+  "num_topologies": 13,
+  "pattern_counts_100": {
+    "all_better": 4,
+    "all_tie": 4,
+    "all_worse": 2,
+    "better_tie": 2,
+    "worse_tie": 1
+  },
+  "pattern_counts_500": {
+    "all_better": 3,
+    "all_tie": 6,
+    "all_worse": 1,
+    "better_tie": 1,
+    "mixed_better_worse": 1,
+    "worse_tie": 1
+  },
+  "topology_ids": [
+    "G-9",
+    "G-14",
+    "G-21",
+    "G-31",
+    "G-47",
+    "G-59",
+    "G-72",
+    "G-79",
+    "G-103",
+    "G-206",
+    "G-269",
+    "G-810",
+    "G-934"
+  ],
+  "topology_pattern_changed_count": 6
+}

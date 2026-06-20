@@ -754,10 +754,144 @@ G-79 SPO+ selected epochs: 90, 100; epoch-100 fraction = 0.94
 G-72 SPO+ selected epochs: 50, 60, 70, 80, 90, 100; epoch-100 fraction = 0.46
 ```
 
-Before locking Phase-C, run a convergence check on the review set, at least
-`epochs = 100` versus `epochs = 500`, and decide whether the final confirmation
-protocol should keep the current fixed-X / relabel-y data model or implement
-true fixed-topology `(X, y)` resampling.
+Phase-C 100 versus 500 epoch convergence check:
+
+```text
+script:
+    surrogate_experiment_results/Step3/scripts/run_phase_b_training.py
+    surrogate_experiment_results/Step3/scripts/compare_phase_c_convergence.py
+
+configuration:
+    review topologies = 13
+    train seeds per topology = 50
+    jobs = 650
+    epochs_2stage = 500
+    epochs_spoplus = 500
+    validation = full 10 samples
+    test = full 1000 samples
+    workers = 8
+
+output:
+    surrogate_experiment_results/Step3/pairs20_ndd2/phase_c/convergence/results/
+    surrogate_experiment_results/Step3/pairs20_ndd2/phase_c/convergence/comparison/
+    surrogate_experiment_results/Step3/pairs20_ndd2/phase_c/convergence/logs/
+
+completion:
+    success = 650 / 650
+    failed = 0
+    real time = 71m29s
+    mean job elapsed = 52.35 sec
+    median job elapsed = 45.44 sec
+    max job elapsed = 108.55 sec
+```
+
+The notification watcher did not send mail for this run because it was launched
+with an unsupported `--subject-prefix` argument. The training job itself
+completed normally with exit marker `STEP3_PHASE_C_CONVERGENCE_E500_EXIT=0`.
+Use `--subject` rather than `--subject-prefix` for the shared notifier.
+
+100 versus 500 epoch comparison:
+
+```text
+matched seed rows = 650
+topologies compared = 13
+topology pattern changed = 6 / 13
+
+pattern counts at 100 epochs:
+    all_better = 4
+    all_worse = 2
+    all_tie = 4
+    better_tie = 2
+    worse_tie = 1
+
+pattern counts at 500 epochs:
+    all_better = 3
+    all_worse = 1
+    all_tie = 6
+    better_tie = 1
+    worse_tie = 1
+    mixed_better_worse = 1
+```
+
+Topology-level changes:
+
+```text
+G-810:
+    100 epochs: all_better, mean improvement = 21.8568
+    500 epochs: all_tie, mean improvement = 0.0000
+
+G-14:
+    100 epochs: all_better, mean improvement = 14.0773
+    500 epochs: all_tie, mean improvement = 0.0000
+
+G-934:
+    100 epochs: all_worse, mean improvement = -2.1003
+    500 epochs: all_better, mean improvement = 2.6381
+
+G-47:
+    100 epochs: better_tie, mean improvement = 2.7284
+    500 epochs: all_tie, mean improvement = 0.0000
+
+G-9:
+    100 epochs: all_tie, mean improvement = 0.0000
+    500 epochs: better_tie, mean improvement = 5.2864
+
+G-72:
+    100 epochs: better_tie, mean improvement = 0.5773
+    500 epochs: mixed_better_worse, mean improvement = 0.6275
+```
+
+Topology-level stable cases:
+
+```text
+G-103:
+    all_better at both 100 and 500 epochs
+    mean improvement = 11.6672 at both budgets
+
+G-269:
+    all_better at both 100 and 500 epochs
+    mean improvement = 15.4881 at both budgets
+
+G-206:
+    all_worse at both 100 and 500 epochs
+    mean improvement = -1.4465 at both budgets
+
+G-79:
+    worse_tie at both 100 and 500 epochs
+    mean improvement changes from -1.3183 to -1.4502
+
+G-21, G-31, G-59:
+    all_tie at both 100 and 500 epochs
+```
+
+SPO+ checkpoint selection uses validation SPO+ loss in both runs:
+
+```text
+primary SPO+ weight:
+    spoplus_best_by_validation_spoplus_loss.json/.npz
+
+100 epoch run:
+    automatic 10 review topologies mostly selected epoch 100
+    G-47 selected {80, 90, 100}; epoch-100 fraction = 0.94
+    G-79 selected {90, 100}; epoch-100 fraction = 0.94
+    G-72 selected {50, 60, 70, 80, 90, 100}; epoch-100 fraction = 0.46
+
+500 epoch run:
+    G-810 selected epoch 500 for all seeds
+    G-103 selected epoch 500 for 0.88 of seeds
+    G-269 selected epoch 500 for 0.86 of seeds
+    most other topologies selected a wide range of earlier epochs
+    G-47 selected only epochs 120-290 and never epoch 500
+    G-72 selected epochs 50-500 with epoch-500 fraction = 0.02
+    G-934 selected epochs 270-500 with epoch-500 fraction = 0.06
+```
+
+Interpretation: the Phase-B 100-epoch screening was not purely converged for
+the review set. Some strong 100-epoch patterns disappear or reverse under the
+500-epoch validation-selected checkpoints. Before locking Phase-C, do not rely
+on the automatic 100-epoch candidate list alone. Favor topology choices that are
+stable under the convergence check, or explicitly label unstable cases as
+epoch-sensitive mechanism examples.
 
 ---
 
