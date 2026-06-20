@@ -613,6 +613,95 @@ test decision gaps:
     SPO+ improvement gap = 11.6672
 ```
 
+Full native early-stop Phase-C review preflight on garnet:
+
+```text
+configuration:
+    review topologies = 13
+    train seeds per topology = 50
+    jobs = 650
+    max epochs = 1500 for both methods
+    metric_stride = 1
+    native early-stop patience = 20
+    native early-stop min_delta = 0.0001
+    validation = full 10 samples
+    test = full 1000 samples
+    workers = 8
+
+output:
+    surrogate_experiment_results/Step3/pairs20_ndd2/phase_c/native_earlystop_preflight_e1500/
+
+completion:
+    success = 650 / 650
+    failed = 0
+    mean job elapsed = 105.11 sec
+    median job elapsed = 71.65 sec
+    max job elapsed = 488.58 sec
+```
+
+Pattern comparison against the 500-epoch convergence preflight:
+
+```text
+topology pattern changed = 2 / 13
+
+native pattern counts:
+    all_better = 4
+    all_tie = 5
+    all_worse = 1
+    mixed_better_worse = 1
+    worse_tie = 2
+
+changed versus e500:
+    G-9:
+        e500 = better_tie
+        native_e1500 = all_better
+        mean improvement = 5.5066
+
+    G-47:
+        e500 = all_tie
+        native_e1500 = worse_tie
+        worse fraction = 0.06
+        mean improvement = -0.1949
+```
+
+Pattern comparison against the original 100-epoch Phase-B screen:
+
+```text
+topology pattern changed = 6 / 13
+
+notable changes:
+    G-810:
+        e100 = all_better
+        native_e1500 = all_tie
+
+    G-14:
+        e100 = all_better
+        native_e1500 = all_tie
+
+    G-934:
+        e100 = all_worse
+        native_e1500 = all_better
+
+    G-47:
+        e100 = better_tie
+        native_e1500 = worse_tie
+
+    G-72:
+        e100 = better_tie
+        native_e1500 = mixed_better_worse
+
+    G-9:
+        e100 = all_tie
+        native_e1500 = all_better
+```
+
+Interpretation: the original 100-epoch Phase-B screen is not stable enough for
+final topology selection. Native early stopping with a 1500-epoch cap is much
+closer to the 500-epoch convergence preflight, while avoiding most max-epoch
+selection. In native preflight, the 2stage selected-at-max-epoch fraction is 0
+for every review topology; SPO+ selected at max epoch only for a small fraction
+of seeds in G-810, G-9, and G-103.
+
 Phase-B full screening run:
 
 ```text
