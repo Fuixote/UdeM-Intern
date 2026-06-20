@@ -43,8 +43,10 @@ surrogate_experiment_results/Step3/scripts/select_phase_b_topologies.py
 surrogate_experiment_results/Step3/scripts/materialize_phase_b_step2c_datasets.py
 surrogate_experiment_results/Step3/scripts/audit_phase_b_materialized_datasets.py
 surrogate_experiment_results/Step3/scripts/run_phase_b_training.py
+surrogate_experiment_results/Step3/scripts/train_2stage_earlystop.py
 surrogate_experiment_results/Step3/scripts/aggregate_phase_b_results.py
 surrogate_experiment_results/Step3/scripts/audit_phase_c_candidates.py
+surrogate_experiment_results/Step3/scripts/compare_phase_c_convergence.py
 ```
 
 The current processed data and topology banks are:
@@ -492,6 +494,61 @@ but writes Step3-specific job configs, splits, logs, status rows, and timing
 fields. The theta and Gurobi seeds are fixed by default (`42`); the Phase-B
 `train_seed` changes only the already-materialized Step2c training sample set.
 
+Step3 native early stopping is available in the same runner:
+
+```text
+--early-stop-patience-2stage P
+--early-stop-min-delta-2stage D
+--early-stop-patience-spoplus P
+--early-stop-min-delta-spoplus D
+```
+
+Step3 defaults enable native early stopping for both methods:
+
+```text
+early_stop_patience_2stage = 20
+early_stop_min_delta_2stage = 0.0001
+early_stop_patience_spoplus = 20
+early_stop_min_delta_spoplus = 0.0001
+```
+
+Training stops during the training phase rather than running to the maximum
+epoch budget and replaying checkpoint selection afterward. The Step1c files
+remain unchanged:
+
+```text
+2stage:
+    uses Step3-owned script
+    surrogate_experiment_results/Step3/scripts/train_2stage_earlystop.py
+    writes metrics/early_stopping_2stage.json
+
+SPO+:
+    uses existing Step1c native early-stop CLI
+    --early_stop_metric validation_spoplus_loss
+    writes metrics/early_stopping.json
+```
+
+Both methods still write and evaluate the primary validation-selected weight
+files:
+
+```text
+model_weights/2stage_best_by_validation_mse_loss.npz
+model_weights/spoplus_best_by_validation_spoplus_loss.npz
+```
+
+The status CSV records:
+
+```text
+early_stop_patience_2stage
+early_stop_min_delta_2stage
+early_stop_patience_spoplus
+early_stop_min_delta_spoplus
+```
+
+`posthoc_early_stop_seconds` remains in the CSV schema for backward
+compatibility with earlier Step3 runner outputs, but native early stopping does
+not use a post-hoc selection pass.
+
 Phase-B training smoke on garnet:
 
 ```text
@@ -518,6 +575,42 @@ Phase-B training smoke on garnet:
 status files:
     surrogate_experiment_results/Step3/pairs20_ndd2/phase_b/results/smoke_training_status.csv
     surrogate_experiment_results/Step3/pairs20_ndd2/phase_b/results/smoke_training_status_2x2.csv
+```
+
+Step3 native early-stop smoke on garnet:
+
+```text
+topology = G-103
+train_seed = 1
+max epochs = 1500 for both methods
+metric_stride = 1
+validation = full 10 samples
+test = full 1000 samples
+early_stop_patience_2stage = 20
+early_stop_patience_spoplus = 20
+status = success
+elapsed = 51.70 sec
+
+output:
+    surrogate_experiment_results/Step3/pairs20_ndd2/phase_c/earlystop_e1500_native_single/
+
+2stage:
+    source = step3_native
+    best_epoch = 1500
+    stopped_epoch = 1500
+    stopped_early = false
+    interpretation = validation MSE kept improving, so patience was never exhausted
+
+SPO+:
+    best_epoch = 427
+    stop_epoch = 447
+    stopped_epoch = 447
+    interpretation = native early stopping stopped training before the 1500-epoch cap
+
+test decision gaps:
+    2stage = 13.9164
+    SPO+ = 2.2493
+    SPO+ improvement gap = 11.6672
 ```
 
 Phase-B full screening run:

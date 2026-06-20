@@ -19,7 +19,9 @@ from typing import Any
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 STEP1C_DIR = PROJECT_ROOT / "surrogate_experiment_results" / "Step1c"
+STEP3_DIR = PROJECT_ROOT / "surrogate_experiment_results" / "Step3"
 TRAIN_2STAGE_SCRIPT = STEP1C_DIR / "train_2stage.py"
+TRAIN_2STAGE_EARLYSTOP_SCRIPT = STEP3_DIR / "scripts" / "train_2stage_earlystop.py"
 TRAIN_SPOPLUS_SCRIPT = STEP1C_DIR / "train_spoplus.py"
 EVALUATE_MODELS_SCRIPT = STEP1C_DIR / "evaluate_models.py"
 
@@ -38,6 +40,8 @@ DEFAULT_STATUS_PATH = (
 DEFAULT_MANIFEST_PATH = (
     PROJECT_ROOT / "surrogate_experiment_results" / "Step3" / "pairs20_ndd2" / "phase_b" / "results" / "phase_b_training_manifest.csv"
 )
+DEFAULT_EARLY_STOP_PATIENCE = 20
+DEFAULT_EARLY_STOP_MIN_DELTA = 0.0001
 
 PRIMARY_WEIGHT_FILES = [
     "2stage_best_by_validation_mse_loss.npz",
@@ -76,6 +80,7 @@ STATUS_FIELDS = [
     "split_seconds",
     "train_2stage_seconds",
     "train_spoplus_seconds",
+    "posthoc_early_stop_seconds",
     "evaluate_seconds",
     "train_sample_count",
     "validation_sample_count",
@@ -84,6 +89,10 @@ STATUS_FIELDS = [
     "test_limit",
     "epochs_2stage",
     "epochs_spoplus",
+    "early_stop_patience_2stage",
+    "early_stop_min_delta_2stage",
+    "early_stop_patience_spoplus",
+    "early_stop_min_delta_spoplus",
     "test_mean_decision_gap_2stage",
     "test_mean_decision_gap_spoplus",
     "test_mean_normalized_gap_2stage",
@@ -152,6 +161,10 @@ class PhaseBOptions:
         thread_count: int = 1,
         include_decision_gap_checkpoint: bool = False,
         skip_completed: bool = True,
+        early_stop_patience_2stage: int = DEFAULT_EARLY_STOP_PATIENCE,
+        early_stop_min_delta_2stage: float = DEFAULT_EARLY_STOP_MIN_DELTA,
+        early_stop_patience_spoplus: int = DEFAULT_EARLY_STOP_PATIENCE,
+        early_stop_min_delta_spoplus: float = DEFAULT_EARLY_STOP_MIN_DELTA,
     ) -> None:
         self.project_root = Path(project_root)
         self.python_bin = python_bin or os.environ.get("KEP_PYTHON") or sys.executable
@@ -169,6 +182,22 @@ class PhaseBOptions:
         self.thread_count = int(thread_count)
         self.include_decision_gap_checkpoint = bool(include_decision_gap_checkpoint)
         self.skip_completed = bool(skip_completed)
+        self.early_stop_patience_2stage = int(early_stop_patience_2stage)
+        self.early_stop_min_delta_2stage = float(early_stop_min_delta_2stage)
+        self.early_stop_patience_spoplus = int(early_stop_patience_spoplus)
+        self.early_stop_min_delta_spoplus = float(early_stop_min_delta_spoplus)
+
+    @property
+    def early_stop_enabled_2stage(self) -> bool:
+        return self.early_stop_patience_2stage > 0
+
+    @property
+    def early_stop_enabled_spoplus(self) -> bool:
+        return self.early_stop_patience_spoplus > 0
+
+    @property
+    def early_stop_enabled(self) -> bool:
+        return self.early_stop_enabled_2stage or self.early_stop_enabled_spoplus
 
 
 class JobResult:
@@ -182,6 +211,7 @@ class JobResult:
         split_seconds: float = 0.0,
         train_2stage_seconds: float = 0.0,
         train_spoplus_seconds: float = 0.0,
+        posthoc_early_stop_seconds: float = 0.0,
         evaluate_seconds: float = 0.0,
         metrics: dict[str, float | str] | None = None,
         message: str = "",
@@ -193,6 +223,7 @@ class JobResult:
         self.split_seconds = float(split_seconds)
         self.train_2stage_seconds = float(train_2stage_seconds)
         self.train_spoplus_seconds = float(train_spoplus_seconds)
+        self.posthoc_early_stop_seconds = float(posthoc_early_stop_seconds)
         self.evaluate_seconds = float(evaluate_seconds)
         self.metrics = metrics or {}
         self.message = message
@@ -218,6 +249,60 @@ def write_json(path: Path, payload: dict[str, Any]) -> None:
     with Path(path).open("w", encoding="utf-8") as handle:
         json.dump(payload, handle, indent=2, sort_keys=True)
         handle.write("\n")
+
+
+def simulate_native_early_stopping(
+    *,
+    epochs: list[int],
+    values: list[float],
+    patience: int,
+    min_delta: float,
+    metric_name: str,
+    max_epochs: int,
+    metric_stride: int,
+) -> dict[str, Any]:
+    if patience <= 0:
+        raise ValueError("early stopping patience must be positive")
+    if len(epochs) != len(values) or not epochs:
+        raise ValueError("epochs and values must be non-empty and have the same length")
+    best_epoch = int(epochs[0])
+    best_value = float(values[0])
+    bad_checks = 0
+    stop_epoch = int(epochs[-1])
+    stopped_early = False
+    evaluated_epochs = []
+    for index, (epoch, value) in enumerate(zip(epochs, values)):
+        epoch = int(epoch)
+        value = float(value)
+        evaluated_epochs.append(epoch)
+        if index == 0:
+            continue
+        if value < best_value - float(min_delta):
+            best_epoch = epoch
+            best_value = value
+            bad_checks = 0
+            continue
+        bad_checks += 1
+        if bad_checks >= patience:
+            stop_epoch = epoch
+            stopped_early = epoch < int(max_epochs)
+            break
+    return {
+        "enabled": True,
+        "source": "step3_native",
+        "metric": metric_name,
+        "patience": int(patience),
+        "min_delta": float(min_delta),
+        "max_epochs": int(max_epochs),
+        "metric_stride": int(metric_stride),
+        "best_epoch": int(best_epoch),
+        "best_value": float(best_value),
+        "stop_epoch": int(stop_epoch),
+        "stopped_epoch": int(stop_epoch),
+        "stopped_early": bool(stopped_early),
+        "num_bad_checks_at_stop": int(bad_checks),
+        "evaluated_epochs": evaluated_epochs,
+    }
 
 
 def read_csv_rows(path: Path) -> list[dict[str, Any]]:
@@ -371,9 +456,10 @@ def optional_int_arg(command: list[str], flag: str, value: int | None) -> None:
 
 
 def build_train_2stage_command(job: PhaseBJob, options: PhaseBOptions) -> list[str]:
+    train_script = TRAIN_2STAGE_EARLYSTOP_SCRIPT if options.early_stop_enabled_2stage else TRAIN_2STAGE_SCRIPT
     command = [
         options.python_bin,
-        str(TRAIN_2STAGE_SCRIPT),
+        str(train_script),
         "--split_path",
         str(job.split_path),
         "--validation_data_dir",
@@ -392,6 +478,17 @@ def build_train_2stage_command(job: PhaseBJob, options: PhaseBOptions) -> list[s
         str(options.lr_2stage),
     ]
     optional_int_arg(command, "--validation_limit", options.validation_limit)
+    if options.early_stop_enabled_2stage:
+        command.extend(
+            [
+                "--metric_stride",
+                str(options.metric_stride),
+                "--early_stop_patience",
+                str(options.early_stop_patience_2stage),
+                "--early_stop_min_delta",
+                str(options.early_stop_min_delta_2stage),
+            ]
+        )
     return command
 
 
@@ -421,11 +518,25 @@ def build_train_spoplus_command(job: PhaseBJob, options: PhaseBOptions) -> list[
         str(options.metric_stride),
     ]
     optional_int_arg(command, "--validation_limit", options.validation_limit)
+    if options.early_stop_enabled_spoplus:
+        command.extend(
+            [
+                "--early_stop_metric",
+                "validation_spoplus_loss",
+                "--early_stop_patience",
+                str(options.early_stop_patience_spoplus),
+                "--early_stop_min_delta",
+                str(options.early_stop_min_delta_spoplus),
+            ]
+        )
     return command
 
 
 def evaluation_weight_paths(job: PhaseBJob, options: PhaseBOptions) -> list[Path]:
-    weights = [job.run_dir / "model_weights" / filename for filename in PRIMARY_WEIGHT_FILES]
+    weights = [
+        job.run_dir / "model_weights" / PRIMARY_WEIGHT_FILES[0],
+        job.run_dir / "model_weights" / PRIMARY_WEIGHT_FILES[1],
+    ]
     if options.include_decision_gap_checkpoint:
         weights.append(job.run_dir / "model_weights" / "spoplus_best_by_validation_decision_gap.npz")
     return weights
@@ -452,14 +563,18 @@ def build_evaluate_command(job: PhaseBJob, options: PhaseBOptions) -> list[str]:
     return command
 
 
-def expected_artifacts(job: PhaseBJob) -> list[Path]:
+def expected_artifacts(job: PhaseBJob, options: PhaseBOptions | None = None) -> list[Path]:
     artifacts = [job.run_dir / "model_weights" / filename for filename in GENERATED_WEIGHT_FILES]
+    if options is not None and options.early_stop_enabled_2stage:
+        artifacts.append(job.run_dir / "metrics" / "early_stopping_2stage.json")
+    if options is not None and options.early_stop_enabled_spoplus:
+        artifacts.append(job.run_dir / "metrics" / "early_stopping.json")
     artifacts.append(job.run_dir / "metrics" / "test_summary.csv")
     return artifacts
 
 
-def is_job_complete(job: PhaseBJob) -> bool:
-    return all(path.exists() for path in expected_artifacts(job))
+def is_job_complete(job: PhaseBJob, options: PhaseBOptions | None = None) -> bool:
+    return all(path.exists() for path in expected_artifacts(job, options))
 
 
 def run_environment(options: PhaseBOptions) -> dict[str, str]:
@@ -565,13 +680,17 @@ def write_job_config(job: PhaseBJob, options: PhaseBOptions) -> None:
             "gurobi_seed": options.gurobi_seed,
             "validation_limit": options.validation_limit,
             "test_limit": options.test_limit,
+            "early_stop_patience_2stage": options.early_stop_patience_2stage,
+            "early_stop_min_delta_2stage": options.early_stop_min_delta_2stage,
+            "early_stop_patience_spoplus": options.early_stop_patience_spoplus,
+            "early_stop_min_delta_spoplus": options.early_stop_min_delta_spoplus,
         },
     )
 
 
 def run_job(job: PhaseBJob, options: PhaseBOptions) -> JobResult:
     start = time.monotonic()
-    if options.skip_completed and is_job_complete(job):
+    if options.skip_completed and is_job_complete(job, options):
         metrics = summarize_primary_metrics(read_test_summary_rows(job.run_dir))
         return JobResult(
             job=job,
@@ -586,6 +705,7 @@ def run_job(job: PhaseBJob, options: PhaseBOptions) -> JobResult:
         "split_seconds": 0.0,
         "train_2stage_seconds": 0.0,
         "train_spoplus_seconds": 0.0,
+        "posthoc_early_stop_seconds": 0.0,
         "evaluate_seconds": 0.0,
     }
     env = run_environment(options)
@@ -596,12 +716,11 @@ def run_job(job: PhaseBJob, options: PhaseBOptions) -> JobResult:
         timings["split_seconds"] = time.monotonic() - split_start
         write_job_config(job, options)
 
-        stages = [
+        train_stages = [
             ("train_2stage", build_train_2stage_command(job, options), "train_2stage_seconds"),
             ("train_spoplus", build_train_spoplus_command(job, options), "train_spoplus_seconds"),
-            ("evaluate", build_evaluate_command(job, options), "evaluate_seconds"),
         ]
-        for stage_name, command, timing_key in stages:
+        for stage_name, command, timing_key in train_stages:
             code, elapsed = run_logged_command(
                 command,
                 cwd=options.project_root,
@@ -618,10 +737,33 @@ def run_job(job: PhaseBJob, options: PhaseBOptions) -> JobResult:
                     split_seconds=timings["split_seconds"],
                     train_2stage_seconds=timings["train_2stage_seconds"],
                     train_spoplus_seconds=timings["train_spoplus_seconds"],
+                    posthoc_early_stop_seconds=timings["posthoc_early_stop_seconds"],
                     evaluate_seconds=timings["evaluate_seconds"],
                     message=f"{stage_name} failed",
                 )
-        missing = [str(path) for path in expected_artifacts(job) if not path.exists()]
+
+        code, elapsed = run_logged_command(
+            build_evaluate_command(job, options),
+            cwd=options.project_root,
+            env=env,
+            log_path=job.run_dir / "logs" / "evaluate.log",
+        )
+        timings["evaluate_seconds"] = elapsed
+        if code != 0:
+            return JobResult(
+                job=job,
+                status="failed",
+                return_code=code,
+                elapsed_seconds=time.monotonic() - start,
+                split_seconds=timings["split_seconds"],
+                train_2stage_seconds=timings["train_2stage_seconds"],
+                train_spoplus_seconds=timings["train_spoplus_seconds"],
+                posthoc_early_stop_seconds=timings["posthoc_early_stop_seconds"],
+                evaluate_seconds=timings["evaluate_seconds"],
+                message="evaluate failed",
+            )
+
+        missing = [str(path) for path in expected_artifacts(job, options) if not path.exists()]
         if missing:
             return JobResult(
                 job=job,
@@ -631,6 +773,7 @@ def run_job(job: PhaseBJob, options: PhaseBOptions) -> JobResult:
                 split_seconds=timings["split_seconds"],
                 train_2stage_seconds=timings["train_2stage_seconds"],
                 train_spoplus_seconds=timings["train_spoplus_seconds"],
+                posthoc_early_stop_seconds=timings["posthoc_early_stop_seconds"],
                 evaluate_seconds=timings["evaluate_seconds"],
                 message="missing expected artifacts: " + "; ".join(missing),
             )
@@ -643,6 +786,7 @@ def run_job(job: PhaseBJob, options: PhaseBOptions) -> JobResult:
             split_seconds=timings["split_seconds"],
             train_2stage_seconds=timings["train_2stage_seconds"],
             train_spoplus_seconds=timings["train_spoplus_seconds"],
+            posthoc_early_stop_seconds=timings["posthoc_early_stop_seconds"],
             evaluate_seconds=timings["evaluate_seconds"],
             message=f"{type(exc).__name__}: {exc}",
         )
@@ -655,6 +799,7 @@ def run_job(job: PhaseBJob, options: PhaseBOptions) -> JobResult:
         split_seconds=timings["split_seconds"],
         train_2stage_seconds=timings["train_2stage_seconds"],
         train_spoplus_seconds=timings["train_spoplus_seconds"],
+        posthoc_early_stop_seconds=timings["posthoc_early_stop_seconds"],
         evaluate_seconds=timings["evaluate_seconds"],
         metrics=metrics,
         message="completed",
@@ -673,6 +818,7 @@ def result_row(result: JobResult, options: PhaseBOptions) -> dict[str, Any]:
         "split_seconds": f"{result.split_seconds:.2f}",
         "train_2stage_seconds": f"{result.train_2stage_seconds:.2f}",
         "train_spoplus_seconds": f"{result.train_spoplus_seconds:.2f}",
+        "posthoc_early_stop_seconds": f"{result.posthoc_early_stop_seconds:.2f}",
         "evaluate_seconds": f"{result.evaluate_seconds:.2f}",
         "train_sample_count": job.train_sample_count,
         "validation_sample_count": job.validation_sample_count,
@@ -681,6 +827,10 @@ def result_row(result: JobResult, options: PhaseBOptions) -> dict[str, Any]:
         "test_limit": "" if options.test_limit is None else options.test_limit,
         "epochs_2stage": options.epochs_2stage,
         "epochs_spoplus": options.epochs_spoplus,
+        "early_stop_patience_2stage": options.early_stop_patience_2stage,
+        "early_stop_min_delta_2stage": options.early_stop_min_delta_2stage,
+        "early_stop_patience_spoplus": options.early_stop_patience_spoplus,
+        "early_stop_min_delta_spoplus": options.early_stop_min_delta_spoplus,
         "run_dir": str(job.run_dir),
         "message": result.message,
     }
@@ -786,6 +936,30 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--validation-limit", type=int, default=None)
     parser.add_argument("--test-limit", type=int, default=None)
     parser.add_argument("--include-decision-gap-checkpoint", action="store_true")
+    parser.add_argument(
+        "--early-stop-patience-2stage",
+        type=int,
+        default=DEFAULT_EARLY_STOP_PATIENCE,
+        help="Enable Step3 native 2stage early stopping after this many bad validation checks.",
+    )
+    parser.add_argument(
+        "--early-stop-min-delta-2stage",
+        type=float,
+        default=DEFAULT_EARLY_STOP_MIN_DELTA,
+        help="Minimum validation MSE improvement required to reset Step3 native 2stage early stopping.",
+    )
+    parser.add_argument(
+        "--early-stop-patience-spoplus",
+        type=int,
+        default=DEFAULT_EARLY_STOP_PATIENCE,
+        help="Enable native SPO+ early stopping after this many bad validation checks.",
+    )
+    parser.add_argument(
+        "--early-stop-min-delta-spoplus",
+        type=float,
+        default=DEFAULT_EARLY_STOP_MIN_DELTA,
+        help="Minimum validation SPO+ loss improvement required to reset native SPO+ early stopping.",
+    )
     parser.add_argument("--no-skip-completed", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
     return parser.parse_args(argv)
@@ -799,6 +973,13 @@ def print_plan(jobs: list[PhaseBJob], args: argparse.Namespace, options: PhaseBO
     print(f"  methods: 2stage, SPO+")
     print(f"  train/validation/test: 40/10/1000 per topology")
     print(f"  epochs: 2stage={options.epochs_2stage}, spoplus={options.epochs_spoplus}")
+    print(
+        "  early stop: "
+        f"2stage_patience={options.early_stop_patience_2stage}, "
+        f"spoplus_patience={options.early_stop_patience_spoplus}, "
+        f"min_delta_2stage={options.early_stop_min_delta_2stage}, "
+        f"min_delta_spoplus={options.early_stop_min_delta_spoplus}"
+    )
     print(f"  validation_limit: {options.validation_limit}")
     print(f"  test_limit: {options.test_limit}")
     print(f"  workers: {args.workers}")
@@ -825,6 +1006,10 @@ def main(argv: list[str] | None = None) -> int:
         thread_count=args.thread_count,
         include_decision_gap_checkpoint=args.include_decision_gap_checkpoint,
         skip_completed=not args.no_skip_completed,
+        early_stop_patience_2stage=args.early_stop_patience_2stage,
+        early_stop_min_delta_2stage=args.early_stop_min_delta_2stage,
+        early_stop_patience_spoplus=args.early_stop_patience_spoplus,
+        early_stop_min_delta_spoplus=args.early_stop_min_delta_spoplus,
     )
     jobs = discover_phase_b_jobs(
         dataset_dir=args.dataset_dir,
