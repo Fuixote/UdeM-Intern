@@ -12,6 +12,13 @@ SCRIPT = (
     / "scripts"
     / "build_fixed_eval_sets.py"
 )
+COMMON_SCRIPT = (
+    ROOT
+    / "surrogate_experiment_results"
+    / "Step3"
+    / "scripts"
+    / "fixed_topology_xy_common.py"
+)
 BUILDER = (
     ROOT
     / "surrogate_experiment_results"
@@ -155,6 +162,39 @@ class Step3FixedEvalSetTests(unittest.TestCase):
             self.assertTrue(result["dry_run"])
             self.assertFalse((Path(tmp) / "validation.npz").exists())
             self.assertFalse((Path(tmp) / "test.npz").exists())
+
+    def test_materializing_fewer_payloads_cannot_leave_stale_json_files(self):
+        eval_mod = load_module(SCRIPT, "build_fixed_eval_sets_materialize_stale")
+        common = load_module(COMMON_SCRIPT, "fixed_topology_xy_common_materialize_stale")
+        builder = load_module(BUILDER, "build_topology_bank_eval_stale")
+        template = builder.build_topology_template("G-test", sample_payload(), max_cycle=3, max_chain=4)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            result = eval_mod.build_fixed_eval_sets_for_topology(
+                topology_template=template,
+                base_payload=sample_payload(),
+                output_dir=root / "eval",
+                topology_id="G-test",
+                regime="step2c_poly_d8_mult_eps050",
+                validation_size=5,
+                test_size=1,
+                experiment_version="v-test",
+                master_label_seed=20260619,
+                generator_config=config(),
+            )
+            output_dir = root / "json"
+
+            common.materialize_npz_payloads_to_dir(result["validation_path"], output_dir, limit=5)
+            self.assertEqual(len(list(output_dir.glob("G-*.json"))), 5)
+
+            with self.assertRaisesRegex(ValueError, "Refusing to write"):
+                common.materialize_npz_payloads_to_dir(result["validation_path"], output_dir, limit=3)
+
+            common.materialize_npz_payloads_to_dir(result["validation_path"], output_dir, limit=3, clear=True)
+            self.assertEqual(
+                sorted(path.name for path in output_dir.glob("G-*.json")),
+                ["G-000000.json", "G-000001.json", "G-000002.json"],
+            )
 
 
 if __name__ == "__main__":

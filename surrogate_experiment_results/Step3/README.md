@@ -119,6 +119,21 @@ The example context-generator config is intentionally marked
 `status: pilot_not_locked`. Formal confirmation must use a reviewed config with
 `status: locked`.
 
+Current integration-hardening status:
+
+```text
+audit_fixed_topology_xy.py:
+    reads train/eval NPZ payloads and recomputes sample and dataset hashes
+
+run_one_job.py:
+    default / --dry-run writes a paired manifest and exact commands only
+    --execute runs one explicit paired job through the train/evaluate wrappers
+
+run_confirmation.py:
+    plan-only for locked configs
+    generates the confirmation job plan but does not launch jobs
+```
+
 The current processed data and topology banks are:
 
 ```text
@@ -2597,6 +2612,22 @@ evaluate both
 write a single paired job manifest
 ```
 
+Current implementation note:
+
+```text
+default / --dry-run:
+    write paired_job_manifest.json
+    record exact 2stage, SPO+, and evaluation commands
+    do not train
+
+--execute:
+    run one explicit paired job
+    call train_2stage_fixed_topology.py
+    call train_spoplus_fixed_topology.py
+    call evaluate_fixed_topology.py
+    write job_status.json
+```
+
 This reduces the risk that the two methods use different data.
 
 ## 11.11 `scripts/run_screening.py`
@@ -2624,10 +2655,13 @@ Required options:
 Purpose:
 
 ```text
-run the locked K-topology, 1,000-seed confirmation
+plan the locked K-topology, 1,000-seed confirmation
 ```
 
-The job manifest should contain:
+This script requires a locked context-generator config, expands the formal job
+grid, and writes/prints a plan. It does not launch the large confirmation run.
+
+The planned job manifest should contain:
 
 ```text
 job_id

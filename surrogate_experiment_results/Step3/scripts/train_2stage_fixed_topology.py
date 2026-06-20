@@ -66,19 +66,51 @@ def build_command(args: argparse.Namespace, split_path: Path, validation_dir: Pa
     ]
 
 
-def prepare_inputs(args: argparse.Namespace) -> tuple[Path, Path, list[str]]:
+def _validate_expected_hash(name: str, actual: str, expected: str | None) -> None:
+    if expected is not None and str(actual) != str(expected):
+        raise ValueError(f"expected {name} {expected}, observed {actual}")
+
+
+def prepare_inputs(args: argparse.Namespace) -> tuple[Path, Path, list[str], dict]:
     materialized = Path(args.out_dir) / "_materialized" / "2stage"
     train_dir = materialized / "train_prefix"
     validation_dir = materialized / "validation"
     split_path = materialized / "split.json"
+    train_bank = common.read_npz_dataset(args.train_bank)
+    train_manifest = train_bank["manifest"]
+    prefix_key = str(int(args.train_size))
+    prefix_hashes = train_manifest.get("prefix_hashes", {})
+    if prefix_key not in prefix_hashes:
+        raise ValueError(f"train_size={args.train_size} missing from train bank prefix_hashes")
+    train_prefix_hash = prefix_hashes[prefix_key]
+    validation = common.read_npz_dataset(args.validation_set)
+    validation_hash = validation["manifest"]["dataset_hash"]
+    _validate_expected_hash("train prefix hash", train_prefix_hash, args.expected_train_prefix_hash)
+    _validate_expected_hash("validation hash", validation_hash, args.expected_validation_hash)
     train_entries = common.materialize_npz_payloads_to_dir(
         args.train_bank,
         train_dir,
         limit=args.train_size,
+        clear=True,
     )
-    common.materialize_npz_payloads_to_dir(args.validation_set, validation_dir)
+    common.materialize_npz_payloads_to_dir(args.validation_set, validation_dir, clear=True)
     write_split(train_entries, split_path)
-    return split_path, validation_dir, build_command(args, split_path, validation_dir)
+    input_manifest = {
+        "method": "2stage",
+        "train_bank_path": str(args.train_bank),
+        "validation_set_path": str(args.validation_set),
+        "train_size": int(args.train_size),
+        "train_bank_hash": train_manifest.get("bank_hash"),
+        "train_prefix_hash": train_prefix_hash,
+        "validation_hash": validation_hash,
+        "expected_train_prefix_hash": args.expected_train_prefix_hash,
+        "expected_validation_hash": args.expected_validation_hash,
+        "paired_job_manifest": None if args.paired_job_manifest is None else str(args.paired_job_manifest),
+        "split_path": str(split_path),
+        "train_dir": str(train_dir),
+        "validation_dir": str(validation_dir),
+    }
+    return split_path, validation_dir, build_command(args, split_path, validation_dir), input_manifest
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -94,13 +126,18 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--early-stop-min-delta", type=float, default=0.0001)
     parser.add_argument("--lr", type=float, default=0.05)
     parser.add_argument("--python", default=None)
+    parser.add_argument("--expected-train-prefix-hash", default=None)
+    parser.add_argument("--expected-validation-hash", default=None)
+    parser.add_argument("--paired-job-manifest", type=Path, default=None)
     parser.add_argument("--dry-run", action="store_true")
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
-    split_path, validation_dir, command = prepare_inputs(args)
+    split_path, validation_dir, command, input_manifest = prepare_inputs(args)
+    input_manifest["command"] = command
+    common.atomic_write_json(Path(args.out_dir) / "method_input_manifest.json", input_manifest)
     common.atomic_write_json(
         Path(args.out_dir) / "train_2stage_fixed_topology_command.json",
         {

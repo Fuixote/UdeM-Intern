@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -32,6 +33,13 @@ EVAL_SCRIPT = (
     / "Step3"
     / "scripts"
     / "build_fixed_eval_sets.py"
+)
+COMMON_SCRIPT = (
+    ROOT
+    / "surrogate_experiment_results"
+    / "Step3"
+    / "scripts"
+    / "fixed_topology_xy_common.py"
 )
 BUILDER = (
     ROOT
@@ -181,6 +189,181 @@ class Step3FixedTopologyXYAuditTests(unittest.TestCase):
             {"execution": {"dry_run": True}},
             generator_config=config(status="locked"),
         )
+
+    def test_audit_reads_validation_npz_payloads_and_fails_on_corrupt_x_hash(self):
+        audit = load_module(AUDIT_SCRIPT, "audit_fixed_topology_xy_eval_npz_corrupt")
+        common = load_module(COMMON_SCRIPT, "fixed_topology_xy_common_eval_npz_corrupt")
+        bank_mod = load_module(BANK_SCRIPT, "build_nested_train_bank_eval_npz_corrupt")
+        eval_mod = load_module(EVAL_SCRIPT, "build_fixed_eval_sets_eval_npz_corrupt")
+        builder = load_module(BUILDER, "build_topology_bank_eval_npz_corrupt")
+        template = builder.build_topology_template("G-test", payload(), max_cycle=3, max_chain=4)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            bank_path = root / "bank.npz"
+            bank_mod.build_nested_train_bank(
+                topology_template=template,
+                base_payload=payload(),
+                output_path=bank_path,
+                topology_id="G-test",
+                regime="step2c_poly_d8_mult_eps050",
+                train_seed=17,
+                max_train_size=2,
+                prefix_sizes=(1, 2),
+                experiment_version="v-test",
+                master_label_seed=20260619,
+                generator_config=config(),
+            )
+            eval_mod.build_fixed_eval_sets_for_topology(
+                topology_template=template,
+                base_payload=payload(),
+                output_dir=root / "eval",
+                topology_id="G-test",
+                regime="step2c_poly_d8_mult_eps050",
+                validation_size=1,
+                test_size=1,
+                experiment_version="v-test",
+                master_label_seed=20260619,
+                generator_config=config(),
+            )
+            validation_path = root / "eval" / "validation.npz"
+            validation = common.read_npz_dataset(validation_path)
+            validation["payloads"][0]["data"]["0"]["matches"][0]["utility"] += 1.0
+            common.write_npz_dataset(
+                validation_path,
+                samples=[
+                    {
+                        "payload": validation["payloads"][0],
+                        "X": validation["X"][0],
+                        "y": validation["y"][0],
+                        "manifest": validation["sample_manifests"][0],
+                    }
+                ],
+                manifest=validation["manifest"],
+            )
+
+            result = audit.audit_fixed_topology_xy(
+                train_bank_path=bank_path,
+                eval_manifest_path=root / "eval" / "eval_manifest.json",
+                topology_template=template,
+                base_payload=payload(),
+                generator_config=config(),
+            )
+
+            self.assertFalse(result["passed"])
+            self.assertIn("validation_x_hash_mismatch", result["failures"])
+
+    def test_audit_fails_when_eval_manifest_hash_disagrees_with_npz(self):
+        audit = load_module(AUDIT_SCRIPT, "audit_fixed_topology_xy_eval_manifest_corrupt")
+        bank_mod = load_module(BANK_SCRIPT, "build_nested_train_bank_eval_manifest_corrupt")
+        eval_mod = load_module(EVAL_SCRIPT, "build_fixed_eval_sets_eval_manifest_corrupt")
+        builder = load_module(BUILDER, "build_topology_bank_eval_manifest_corrupt")
+        template = builder.build_topology_template("G-test", payload(), max_cycle=3, max_chain=4)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            bank_path = root / "bank.npz"
+            bank_mod.build_nested_train_bank(
+                topology_template=template,
+                base_payload=payload(),
+                output_path=bank_path,
+                topology_id="G-test",
+                regime="step2c_poly_d8_mult_eps050",
+                train_seed=17,
+                max_train_size=2,
+                prefix_sizes=(1, 2),
+                experiment_version="v-test",
+                master_label_seed=20260619,
+                generator_config=config(),
+            )
+            eval_mod.build_fixed_eval_sets_for_topology(
+                topology_template=template,
+                base_payload=payload(),
+                output_dir=root / "eval",
+                topology_id="G-test",
+                regime="step2c_poly_d8_mult_eps050",
+                validation_size=1,
+                test_size=1,
+                experiment_version="v-test",
+                master_label_seed=20260619,
+                generator_config=config(),
+            )
+            manifest_path = root / "eval" / "eval_manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["validation_hash"] = "bad-hash"
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+            result = audit.audit_fixed_topology_xy(
+                train_bank_path=bank_path,
+                eval_manifest_path=manifest_path,
+                topology_template=template,
+                base_payload=payload(),
+                generator_config=config(),
+            )
+
+            self.assertFalse(result["passed"])
+            self.assertIn("validation_dataset_hash_mismatch", result["failures"])
+
+    def test_confirmation_plan_reads_hashes_without_launching_jobs(self):
+        module = load_module(CONFIRMATION_SCRIPT, "run_confirmation_plan_test")
+        bank_mod = load_module(BANK_SCRIPT, "build_nested_train_bank_confirmation_plan")
+        eval_mod = load_module(EVAL_SCRIPT, "build_fixed_eval_sets_confirmation_plan")
+        builder = load_module(BUILDER, "build_topology_bank_confirmation_plan")
+        template = builder.build_topology_template("G-test", payload(), max_cycle=3, max_chain=4)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            bank_dir = root / "banks" / "G-test" / "step2c_poly_d8_mult_eps050"
+            bank_dir.mkdir(parents=True)
+            bank_path = bank_dir / "train_seed=000001.npz"
+            bank_manifest = bank_mod.build_nested_train_bank(
+                topology_template=template,
+                base_payload=payload(),
+                output_path=bank_path,
+                topology_id="G-test",
+                regime="step2c_poly_d8_mult_eps050",
+                train_seed=1,
+                max_train_size=3,
+                prefix_sizes=(2, 3),
+                experiment_version="v-test",
+                master_label_seed=20260619,
+                generator_config=config(status="locked"),
+            )
+            eval_result = eval_mod.build_fixed_eval_sets_for_topology(
+                topology_template=template,
+                base_payload=payload(),
+                output_dir=root / "eval",
+                topology_id="G-test",
+                regime="step2c_poly_d8_mult_eps050",
+                validation_size=1,
+                test_size=1,
+                experiment_version="v-test",
+                master_label_seed=20260619,
+                generator_config=config(status="locked"),
+            )
+
+            plan = module.build_confirmation_job_plan(
+                {
+                    "regimes": ["step2c_poly_d8_mult_eps050"],
+                    "topologies": [
+                        {
+                            "topology_id": "G-test",
+                            "train_bank_dir": str(bank_dir),
+                            "eval_manifest": eval_result["eval_manifest_path"],
+                            "output_dir": str(root / "runs" / "G-test"),
+                        }
+                    ],
+                    "training": {
+                        "train_sizes": [2, 3],
+                        "train_seed_start": 1,
+                        "train_seed_count": 1,
+                        "nested_train_sets": True,
+                    },
+                },
+                generator_config=config(status="locked"),
+            )
+
+            self.assertEqual(plan["job_count"], 2)
+            self.assertEqual(plan["jobs"][0]["expected_train_prefix_hash"], bank_manifest["prefix_hashes"]["2"])
+            self.assertEqual(plan["jobs"][0]["validation_hash"], eval_result["validation_hash"])
+            self.assertEqual(plan["jobs"][0]["test_hash"], eval_result["test_hash"])
 
 
 if __name__ == "__main__":

@@ -38,6 +38,8 @@ def audit_sample_rows(
     generator_config: dict[str, Any],
 ) -> list[str]:
     failures: list[str] = []
+    if len(sample_rows) != len(payloads):
+        _append_failure(failures, "sample_payload_count_mismatch")
     expected_hashes = common.template_hashes(topology_template)
     expected_config_hash = common.generator_config_hash(generator_config)
     seen_context_hashes: set[str] = set()
@@ -95,6 +97,17 @@ def audit_sample_rows(
     return failures
 
 
+def _prefix_failures(prefix: str, failures: list[str]) -> list[str]:
+    return [f"{prefix}_{failure}" for failure in failures]
+
+
+def _resolve_manifest_path(eval_manifest_path: str | Path, raw_path: str | Path) -> Path:
+    path = Path(raw_path)
+    if path.is_absolute():
+        return path
+    return Path(eval_manifest_path).parent / path
+
+
 def audit_train_bank(
     *,
     train_bank_path: str | Path,
@@ -122,6 +135,10 @@ def audit_train_bank(
         _append_failure(failures, "bank_hash_mismatch")
     if any(str(row.get("split_namespace")) not in common.TRAIN_NAMESPACES for row in sample_rows):
         _append_failure(failures, "train_bank_namespace_invalid")
+    if manifest.get("split_namespace") != "confirm_train":
+        _append_failure(failures, "train_bank_namespace_invalid")
+    if any(str(row.get("split_namespace")) != "confirm_train" for row in sample_rows):
+        _append_failure(failures, "train_bank_namespace_invalid")
     return {
         "passed": not failures,
         "failures": failures,
@@ -129,7 +146,79 @@ def audit_train_bank(
     }
 
 
-def audit_eval_manifest(eval_manifest_path: str | Path) -> dict[str, Any]:
+def audit_eval_dataset(
+    *,
+    dataset_path: str | Path,
+    eval_manifest_path: str | Path,
+    eval_manifest: dict[str, Any],
+    split_label: str,
+    expected_namespace: str,
+    expected_dataset_hash: str,
+    topology_template: dict[str, Any],
+    base_payload: dict[str, Any],
+    generator_config: dict[str, Any],
+) -> dict[str, Any]:
+    dataset = common.read_npz_dataset(dataset_path)
+    dataset_manifest = dataset["manifest"]
+    sample_rows = list(dataset_manifest.get("samples", []))
+    failures = _prefix_failures(
+        split_label,
+        audit_sample_rows(
+            sample_rows=sample_rows,
+            payloads=dataset["payloads"],
+            topology_template=topology_template,
+            base_payload=base_payload,
+            generator_config=generator_config,
+        ),
+    )
+    if dataset_manifest.get("samples") != dataset.get("sample_manifests"):
+        _append_failure(failures, f"{split_label}_sample_manifest_array_mismatch")
+    if dataset_manifest.get("split_namespace") != expected_namespace:
+        _append_failure(failures, f"{split_label}_dataset_namespace_invalid")
+    if dataset_manifest.get("train_seed") is not None:
+        _append_failure(failures, f"{split_label}_dataset_train_seed_varies")
+    if dataset_manifest.get("topology_id") != eval_manifest.get("topology_id"):
+        _append_failure(failures, f"{split_label}_dataset_topology_mismatch")
+    if any(row.get("split_namespace") != expected_namespace for row in sample_rows):
+        _append_failure(failures, f"{split_label}_namespace_invalid")
+    if any(row.get("train_seed") is not None for row in sample_rows):
+        _append_failure(failures, f"{split_label}_train_seed_varies")
+    if any(row.get("topology_id") != eval_manifest.get("topology_id") for row in sample_rows):
+        _append_failure(failures, f"{split_label}_topology_mismatch")
+    for key, expected in common.template_hashes(topology_template).items():
+        if expected and dataset_manifest.get(key) != expected:
+            _append_failure(failures, f"{split_label}_{key}_mismatch")
+    recomputed_dataset_hash = common.sample_manifest_hashes(sample_rows)
+    if dataset_manifest.get("dataset_hash") != recomputed_dataset_hash:
+        _append_failure(failures, f"{split_label}_npz_dataset_hash_mismatch")
+    if str(expected_dataset_hash) != str(recomputed_dataset_hash):
+        _append_failure(failures, f"{split_label}_dataset_hash_mismatch")
+    manifest_rows = eval_manifest.get(f"{split_label}_samples", [])
+    if manifest_rows and manifest_rows != sample_rows:
+        _append_failure(failures, f"{split_label}_manifest_samples_mismatch")
+    for index, payload in enumerate(dataset["payloads"]):
+        if index >= len(dataset["X"]) or index >= len(dataset["y"]):
+            _append_failure(failures, f"{split_label}_array_count_mismatch")
+            break
+        if common.matrix_hash(dataset["X"][index]) != common.x_hash(payload, topology_template):
+            _append_failure(failures, f"{split_label}_X_array_mismatch")
+        if common.vector_hash(dataset["y"][index]) != common.label_hash(payload, topology_template):
+            _append_failure(failures, f"{split_label}_y_array_mismatch")
+    return {
+        "passed": not failures,
+        "failures": failures,
+        "path": str(dataset_path),
+        "manifest": dataset_manifest,
+    }
+
+
+def audit_eval_manifest(
+    eval_manifest_path: str | Path,
+    *,
+    topology_template: dict[str, Any],
+    base_payload: dict[str, Any],
+    generator_config: dict[str, Any],
+) -> dict[str, Any]:
     manifest = json.loads(Path(eval_manifest_path).read_text(encoding="utf-8"))
     failures: list[str] = []
     validation_rows = manifest.get("validation_samples", [])
@@ -146,10 +235,42 @@ def audit_eval_manifest(eval_manifest_path: str | Path) -> dict[str, Any]:
     }
     if len(train_keys) != len(validation_rows) + len(test_rows):
         _append_failure(failures, "eval_namespace_overlap")
+    if manifest.get("validation_namespace") != "confirm_validation":
+        _append_failure(failures, "validation_namespace_invalid")
+    if manifest.get("test_namespace") != "confirm_test":
+        _append_failure(failures, "test_namespace_invalid")
+    validation_path = _resolve_manifest_path(eval_manifest_path, manifest["validation_path"])
+    test_path = _resolve_manifest_path(eval_manifest_path, manifest["test_path"])
+    validation_result = audit_eval_dataset(
+        dataset_path=validation_path,
+        eval_manifest_path=eval_manifest_path,
+        eval_manifest=manifest,
+        split_label="validation",
+        expected_namespace="confirm_validation",
+        expected_dataset_hash=str(manifest.get("validation_hash")),
+        topology_template=topology_template,
+        base_payload=base_payload,
+        generator_config=generator_config,
+    )
+    test_result = audit_eval_dataset(
+        dataset_path=test_path,
+        eval_manifest_path=eval_manifest_path,
+        eval_manifest=manifest,
+        split_label="test",
+        expected_namespace="confirm_test",
+        expected_dataset_hash=str(manifest.get("test_hash")),
+        topology_template=topology_template,
+        base_payload=base_payload,
+        generator_config=generator_config,
+    )
+    failures.extend(validation_result["failures"])
+    failures.extend(test_result["failures"])
     return {
         "passed": not failures,
-        "failures": failures,
+        "failures": list(dict.fromkeys(failures)),
         "manifest": manifest,
+        "validation": validation_result,
+        "test": test_result,
     }
 
 
@@ -167,7 +288,12 @@ def audit_fixed_topology_xy(
         base_payload=base_payload,
         generator_config=generator_config,
     )
-    eval_result = audit_eval_manifest(eval_manifest_path)
+    eval_result = audit_eval_manifest(
+        eval_manifest_path,
+        topology_template=topology_template,
+        base_payload=base_payload,
+        generator_config=generator_config,
+    )
     failures = list(dict.fromkeys(train_result["failures"] + eval_result["failures"]))
     train_namespaces = {
         row.get("split_namespace")

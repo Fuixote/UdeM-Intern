@@ -41,11 +41,19 @@ def build_command(args: argparse.Namespace, split_path: Path) -> list[str]:
     return command
 
 
-def prepare_inputs(args: argparse.Namespace) -> tuple[Path, list[str]]:
+def _validate_expected_hash(name: str, actual: str, expected: str | None) -> None:
+    if expected is not None and str(actual) != str(expected):
+        raise ValueError(f"expected {name} {expected}, observed {actual}")
+
+
+def prepare_inputs(args: argparse.Namespace) -> tuple[Path, list[str], dict]:
     materialized = Path(args.out_dir) / "_materialized" / "evaluation"
     test_dir = materialized / "test"
     split_path = materialized / "split.json"
-    test_entries = common.materialize_npz_payloads_to_dir(args.eval_set, test_dir)
+    eval_set = common.read_npz_dataset(args.eval_set)
+    test_hash = eval_set["manifest"]["dataset_hash"]
+    _validate_expected_hash("test hash", test_hash, args.expected_test_hash)
+    test_entries = common.materialize_npz_payloads_to_dir(args.eval_set, test_dir, clear=True)
     common.atomic_write_json(
         split_path,
         {
@@ -59,7 +67,16 @@ def prepare_inputs(args: argparse.Namespace) -> tuple[Path, list[str]]:
             "test": test_entries,
         },
     )
-    return split_path, build_command(args, split_path)
+    input_manifest = {
+        "eval_set_path": str(args.eval_set),
+        "test_hash": test_hash,
+        "expected_test_hash": args.expected_test_hash,
+        "paired_job_manifest": None if args.paired_job_manifest is None else str(args.paired_job_manifest),
+        "split_path": str(split_path),
+        "test_dir": str(test_dir),
+        "weights": [str(path) for path in args.weights],
+    }
+    return split_path, build_command(args, split_path), input_manifest
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -71,13 +88,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--bootstrap-samples", type=int, default=1000)
     parser.add_argument("--bootstrap-seed", type=int, default=42)
     parser.add_argument("--python", default=None)
+    parser.add_argument("--expected-test-hash", default=None)
+    parser.add_argument("--paired-job-manifest", type=Path, default=None)
     parser.add_argument("--dry-run", action="store_true")
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
-    split_path, command = prepare_inputs(args)
+    split_path, command, input_manifest = prepare_inputs(args)
+    input_manifest["command"] = command
+    common.atomic_write_json(Path(args.out_dir) / "evaluation_input_manifest.json", input_manifest)
     common.atomic_write_json(
         Path(args.out_dir) / "evaluate_fixed_topology_command.json",
         {"split_path": str(split_path), "command": command},

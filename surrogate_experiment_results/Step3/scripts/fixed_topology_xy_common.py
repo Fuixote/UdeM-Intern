@@ -327,6 +327,8 @@ def materialize_npz_payloads_to_dir(
     output_dir: str | Path,
     *,
     limit: int | None = None,
+    clear: bool = False,
+    force: bool = False,
 ) -> list[dict[str, Any]]:
     dataset = read_npz_dataset(dataset_path)
     payloads = dataset["payloads"]
@@ -334,6 +336,15 @@ def materialize_npz_payloads_to_dir(
         payloads = payloads[: int(limit)]
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
+    existing_json = sorted(output.glob("G-*.json"))
+    if existing_json:
+        if not (clear or force):
+            raise ValueError(
+                f"Refusing to write {len(payloads)} payloads into non-empty "
+                f"materialization directory {output} containing {len(existing_json)} G-*.json files"
+            )
+        for path in existing_json:
+            path.unlink()
     entries = []
     for index, payload in enumerate(payloads):
         path = output / f"G-{index:06d}.json"
