@@ -1947,6 +1947,47 @@ compute-time statistics
 
 Screening uses `screen_*` seed namespaces. It must not reuse the formal confirmation test set.
 
+### 7.2.1 Completed low-seed full-\((X,y)\) screen
+
+A completed 160-topology by 5-train-seed Phase-B' screen is archived in small
+text summaries for GitHub-hosted review tools:
+
+```text
+surrogate_experiment_results/Step3/validation_logs/screen160x5_e3000_20260620.md
+surrogate_experiment_results/Step3/pairs20_ndd2/screening/screen160x5_e3000_20260620_summary.json
+surrogate_experiment_results/Step3/pairs20_ndd2/screening/screen160x5_e3000_20260620_jobs.csv
+surrogate_experiment_results/Step3/pairs20_ndd2/screening/screen160x5_e3000_20260620_topology_summary.csv
+```
+
+Run scale:
+
+```text
+protocol = screen
+topologies = 160
+train_seeds = 1,2,3,4,5
+train_size = 50
+validation_size = 100
+test_size = 1000
+max_epochs = 3000
+early_stop_patience = 20
+early_stop_min_delta = 0.0001
+```
+
+Completion status:
+
+```text
+jobs = 800 / 800
+success = 800
+failed = 0
+skipped = 0
+elapsed = 104.22 hours
+scratch output size = 78G
+```
+
+The tracked files are summaries only. Train banks, eval NPZ files, model
+weights, per-job metrics directories, and other generated artifacts remain on
+Garnet scratch storage and are not committed.
+
 ## 7.3 Phase 2: fixed-topology confirmation
 
 Recommended formal setting:

@@ -1,0 +1,31 @@
+{
+  "attempted_jobs": 800,
+  "early_stop_min_delta": 0.0001,
+  "early_stop_patience": 20,
+  "elapsed_seconds": 375176.686,
+  "expected_job_count": 800,
+  "failed_count": 0,
+  "jobs_csv": "/local1/fuweik/step3_screen_160x5_e3000_20260620/screen160x5_jobs.csv",
+  "max_epochs": 3000,
+  "max_train_size": 50,
+  "metric_stride": 1,
+  "prefix_sizes": [
+    50
+  ],
+  "protocol": "screen",
+  "skipped_count": 0,
+  "stage": "execute",
+  "status": "complete",
+  "success_count": 800,
+  "test_size": 1000,
+  "topology_count": 160,
+  "train_seeds": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "train_size": 50,
+  "validation_size": 100
+}
