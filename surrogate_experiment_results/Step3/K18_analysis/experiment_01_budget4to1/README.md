@@ -261,6 +261,21 @@ test_size = 1000
 18 topologies × 1 test bank
 ```
 
+对应脚本：
+
+```text
+scripts/build_k18_test_bank.py
+```
+
+该脚本为每个 topology 写入：
+
+```text
+test.npz
+test_manifest.json
+```
+
+`test_hash` 必须来自实际 `test.npz` 的 `dataset_hash`，不能手写或只在 eval manifest 中声明。
+
 同一个 topology 的：
 
 ```text
@@ -407,6 +422,15 @@ evaluation:
 configs/context_generator.locked.yaml
 ```
 
+同一目录还必须存在：
+
+```text
+configs/k18_topologies.csv
+configs/experiment.yaml
+```
+
+如果这三个正式配置文件缺失，或者 `context_generator.locked.yaml` 仍标记为 `pilot_not_locked`，不得进入完整数据物化或 270-job planning。
+
 并记录：
 
 ```text
@@ -429,6 +453,7 @@ experiment config hash
 ```text
 surrogate_experiment_results/Step3/K18_analysis/experiment_01_budget4to1/scripts/
     build_nested_fit_validation_bank.py
+    build_k18_test_bank.py
 ```
 
 它对每个 `(G, data_seed)`：
@@ -479,6 +504,34 @@ validation_sample_size500.npz   # 100 samples
     }
   }
 }
+```
+
+同时写一个完整 `fit_manifest.json`，记录 500 个 fit samples 的 sample rows、role assignment 和 `fit_bank_hash`。Audit 使用它检查：
+
+```text
+training_400 ∪ validation_100 = full 500-sample fit set
+training_400 ∩ validation_100 = ∅
+```
+
+`train_bank.npz` 和 validation NPZ 的顶层 manifest 必须保留 `source_namespace = screen_train`，validation 只通过：
+
+```text
+fit_role = validation
+validation_scheme = every_fifth_sample
+```
+
+表达其在 fit bank 中的角色，不应把顶层 namespace 改成公共工具不认识的新 namespace。
+
+这些 manifests 必须包含非空 provenance：
+
+```text
+experiment_version
+master_label_seed
+generator_version
+generator_config_hash
+topology_hash
+arc_order_hash
+feasible_set_hash
 ```
 
 这样只需生成：
@@ -596,6 +649,18 @@ audit_k18_sample_size_artifacts.py
 ```
 
 而不要硬改 formal confirmation planner。
+
+`plan_k18_sample_size_jobs.py` 默认 strict：train bank、eval manifest、validation NPZ、test NPZ 或 hash 缺失时直接失败。只有做纯 planning 草稿时才使用：
+
+```bash
+--allow-missing-artifacts
+```
+
+strict plan 中的 job row status 必须是：
+
+```text
+ready
+```
 
 ---
 
@@ -717,7 +782,37 @@ test_hash 必须完全相同
 
 不同 topology 可以有不同 test hash。
 
+Audit 必须实际读取 `test.npz`：
+
+```text
+test.npz exists
+test sample_count = 1000
+computed dataset_hash == eval_manifest.test_hash
+split_namespace = screen_test
+```
+
+Plan-level audit 还必须检查：
+
+```text
+18 unique topologies
+5 unique data seeds
+3 sample sizes
+270 unique jobs
+270 / 270 status = ready
+one test hash per topology
+```
+
 现有 `run_one_job.py` 已经会检查 2stage 和 SPO+ 是否使用相同的 train-prefix、validation、test 和 theta initialization。
+
+在 `--sample-size` 路径下，`run_one_job.py` 还必须 fail-fast 检查：
+
+```text
+CLI --train-size == eval_manifest.training_size
+CLI --train-size == eval_manifest.trainer_train_size_arg
+CLI --train-seed == eval_manifest.data_seed
+CLI topology_id/regime/protocol == eval_manifest topology_id/regime/protocol
+sample_size == training_size + validation_size
+```
 
 ---
 
@@ -801,6 +896,29 @@ early-stop epoch distribution
 ```text
 audit passed = 270 / 270
 dry-run ready = 270 / 270
+```
+
+Bundle audit 示例：
+
+```bash
+python scripts/audit_k18_sample_size_artifacts.py \
+  --train-bank data/.../train_bank.npz \
+  --split-manifest data/.../split_manifest.json \
+  --eval-manifest data/.../eval_manifest_sample_size050.json \
+  --eval-manifest data/.../eval_manifest_sample_size100.json \
+  --eval-manifest data/.../eval_manifest_sample_size500.json \
+  --expected-test-size 1000
+```
+
+Plan-level audit 示例：
+
+```bash
+python scripts/audit_k18_sample_size_artifacts.py \
+  --plan-json sample_size_plan.json \
+  --expected-topology-count 18 \
+  --expected-data-seed-count 5 \
+  --expected-sample-sizes 50,100,500 \
+  --expected-job-count 270
 ```
 
 ## Stage 4：bounded parallel execution

@@ -117,6 +117,41 @@ def read_eval_manifest(eval_manifest_path: Path) -> dict[str, Any]:
     return json.loads(eval_manifest_path.read_text(encoding="utf-8"))
 
 
+def resolve_artifact_path(eval_manifest_path: Path, raw_path: str | Path) -> Path:
+    path = Path(raw_path)
+    if path.is_absolute():
+        return path
+    return eval_manifest_path.parent / path
+
+
+def readiness_failures(
+    *,
+    train_bank_path: Path,
+    eval_manifest_path: Path,
+    eval_manifest: dict[str, Any],
+    expected_training_hash: str | None,
+) -> list[str]:
+    failures: list[str] = []
+    if not train_bank_path.exists():
+        failures.append("train_bank_missing")
+    if not eval_manifest_path.exists():
+        failures.append("eval_manifest_missing")
+    if not expected_training_hash:
+        failures.append("expected_training_hash_missing")
+    for key in ("validation_hash", "test_hash", "validation_path", "test_path"):
+        if eval_manifest.get(key) in (None, ""):
+            failures.append(f"{key}_missing")
+    if eval_manifest.get("validation_path"):
+        validation_path = resolve_artifact_path(eval_manifest_path, eval_manifest["validation_path"])
+        if not validation_path.exists():
+            failures.append("validation_npz_missing")
+    if eval_manifest.get("test_path"):
+        test_path = resolve_artifact_path(eval_manifest_path, eval_manifest["test_path"])
+        if not test_path.exists():
+            failures.append("test_npz_missing")
+    return failures
+
+
 def build_run_one_job_command(job: dict[str, Any], *, python_bin: str | None = None) -> str:
     command = [
         python_bin or sys.executable,
@@ -172,6 +207,7 @@ def build_plan(
     early_stop_min_delta: float = 0.0001,
     long_topologies: set[str] | None = None,
     python_bin: str | None = None,
+    strict: bool = True,
 ) -> dict[str, Any]:
     output_root = Path(output_root)
     long_topologies = long_topologies or {"G-237", "G-670", "G-970"}
@@ -188,6 +224,19 @@ def build_plan(
                 validation_size = int(split["validation_size"])
                 eval_manifest_path = data_dir / f"eval_manifest_sample_size{sample_size:03d}.json"
                 eval_manifest = read_eval_manifest(eval_manifest_path)
+                expected_training_hash = read_train_prefix_hash(train_bank_path, training_size)
+                failures = readiness_failures(
+                    train_bank_path=train_bank_path,
+                    eval_manifest_path=eval_manifest_path,
+                    eval_manifest=eval_manifest,
+                    expected_training_hash=expected_training_hash,
+                )
+                if strict and failures:
+                    raise ValueError(
+                        "artifact_not_ready "
+                        f"{topology_id} data_seed={data_seed} sample_size={sample_size}: "
+                        + ",".join(failures)
+                    )
                 job = {
                     "job_id": (
                         f"{topology_id}|data_seed={data_seed:06d}|"
@@ -216,7 +265,7 @@ def build_plan(
                         / f"data_seed={data_seed:06d}"
                         / f"sample_size={sample_size:03d}"
                     ),
-                    "expected_training_hash": read_train_prefix_hash(train_bank_path, training_size),
+                    "expected_training_hash": expected_training_hash,
                     "validation_hash": eval_manifest.get("validation_hash"),
                     "test_hash": eval_manifest.get("test_hash"),
                     "theta_seed": int(theta_seed),
@@ -226,12 +275,12 @@ def build_plan(
                     "early_stop_patience": int(early_stop_patience),
                     "early_stop_min_delta": float(early_stop_min_delta),
                     "runtime_class": "long" if topology_id in long_topologies else "normal",
-                    "status": "planned",
+                    "status": "ready" if not failures else "planned",
                 }
                 job["run_one_job_command"] = build_run_one_job_command(job, python_bin=python_bin)
                 jobs.append(job)
     return {
-        "status": "planned",
+        "status": "ready" if all(str(job.get("status")) == "ready" for job in jobs) else "planned",
         "job_count": len(jobs),
         "topology_count": len(topology_rows),
         "data_seed_count": len(set(int(seed) for seed in data_seeds)),
@@ -255,6 +304,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--early-stop-patience", type=int, default=20)
     parser.add_argument("--early-stop-min-delta", type=float, default=0.0001)
     parser.add_argument("--python", default=None)
+    parser.add_argument("--allow-missing-artifacts", action="store_true")
     parser.add_argument("--plan-output", type=Path, default=None)
     parser.add_argument("--jobs-csv-output", type=Path, default=None)
     return parser.parse_args(argv)
@@ -276,6 +326,7 @@ def main(argv: list[str] | None = None) -> int:
         early_stop_patience=args.early_stop_patience,
         early_stop_min_delta=args.early_stop_min_delta,
         python_bin=args.python,
+        strict=not args.allow_missing_artifacts,
     )
     plan_output = args.plan_output or Path(args.output_root) / "sample_size_plan.json"
     jobs_output = args.jobs_csv_output or Path(args.output_root) / "sample_size_jobs.csv"

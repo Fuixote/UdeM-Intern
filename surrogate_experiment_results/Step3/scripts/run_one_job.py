@@ -58,6 +58,17 @@ def prepare_paired_job_manifest(
     key = str(int(train_size))
     if key not in prefix_hashes:
         raise ValueError(f"train_size={train_size} not available in train bank prefix_hashes")
+    if sample_size is not None:
+        _validate_sample_size_contract(
+            topology_id=topology_id,
+            regime=regime,
+            protocol=protocol,
+            train_seed=train_seed,
+            train_size=train_size,
+            sample_size=sample_size,
+            train_bank_manifest=train_bank_manifest,
+            eval_manifest=eval_manifest,
+        )
     theta_init = theta_init_from_seed(theta_seed)
     output_dir = Path(output_dir)
     method_common = {
@@ -72,10 +83,6 @@ def prepare_paired_job_manifest(
             f"{topology_id}|{regime}|seed={int(train_seed):06d}|"
             f"sample_size={int(sample_size):03d}|train={int(train_size):03d}"
         )
-        if "sample_size" in eval_manifest and int(eval_manifest["sample_size"]) != int(sample_size):
-            raise ValueError(
-                f"sample_size={sample_size} does not match eval manifest sample_size={eval_manifest['sample_size']}"
-            )
     manifest = {
         "job_id": job_id,
         "topology_id": str(topology_id),
@@ -118,6 +125,73 @@ def prepare_paired_job_manifest(
             manifest["validation_size"] = int(eval_manifest["validation_size"])
     validate_paired_job_manifest(manifest)
     return manifest
+
+
+def _require_equal(label: str, observed: Any, expected: Any) -> None:
+    if observed != expected:
+        raise ValueError(f"{label} mismatch: observed={observed!r} expected={expected!r}")
+
+
+def _validate_sample_size_contract(
+    *,
+    topology_id: str,
+    regime: str,
+    protocol: str,
+    train_seed: int,
+    train_size: int,
+    sample_size: int,
+    train_bank_manifest: dict[str, Any],
+    eval_manifest: dict[str, Any],
+) -> None:
+    required_eval_fields = [
+        "topology_id",
+        "regime",
+        "protocol",
+        "data_seed",
+        "sample_size",
+        "training_size",
+        "validation_size",
+        "trainer_train_size_arg",
+    ]
+    missing = [field for field in required_eval_fields if field not in eval_manifest]
+    if missing:
+        raise ValueError(f"eval manifest missing required sample-size fields: {','.join(missing)}")
+
+    _require_equal("eval topology_id", str(eval_manifest["topology_id"]), str(topology_id))
+    _require_equal("eval regime", str(eval_manifest["regime"]), str(regime))
+    _require_equal("eval protocol", str(eval_manifest["protocol"]), str(protocol))
+    _require_equal("eval data_seed", int(eval_manifest["data_seed"]), int(train_seed))
+    if "train_seed" in eval_manifest:
+        _require_equal("eval train_seed", int(eval_manifest["train_seed"]), int(train_seed))
+    _require_equal("eval sample_size", int(eval_manifest["sample_size"]), int(sample_size))
+    _require_equal("eval training_size", int(eval_manifest["training_size"]), int(train_size))
+    _require_equal(
+        "eval trainer_train_size_arg",
+        int(eval_manifest["trainer_train_size_arg"]),
+        int(train_size),
+    )
+    if int(eval_manifest["training_size"]) + int(eval_manifest["validation_size"]) != int(sample_size):
+        raise ValueError(
+            "sample_size must equal training_size + validation_size: "
+            f"{sample_size} != {eval_manifest['training_size']} + {eval_manifest['validation_size']}"
+        )
+
+    optional_train_bank_checks = {
+        "topology_id": str(topology_id),
+        "regime": str(regime),
+        "protocol": str(protocol),
+        "data_seed": int(train_seed),
+        "train_seed": int(train_seed),
+    }
+    for key, expected in optional_train_bank_checks.items():
+        if key not in train_bank_manifest:
+            continue
+        observed = train_bank_manifest[key]
+        if key in {"data_seed", "train_seed"}:
+            observed = int(observed)
+        else:
+            observed = str(observed)
+        _require_equal(f"train bank {key}", observed, expected)
 
 
 def validate_paired_job_manifest(manifest: dict[str, Any]) -> None:

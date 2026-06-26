@@ -60,6 +60,26 @@ def _fit_index(sample: dict[str, Any], fallback: int) -> int:
     return int(sample.get("manifest", {}).get("sample_index", fallback))
 
 
+def _provenance_fields(
+    *,
+    topology_template: dict[str, Any] | None = None,
+    generator_config: dict[str, Any] | None = None,
+    experiment_version: str | None = None,
+    master_label_seed: int | None = None,
+) -> dict[str, Any]:
+    fields: dict[str, Any] = {}
+    if experiment_version is not None:
+        fields["experiment_version"] = str(experiment_version)
+    if master_label_seed is not None:
+        fields["master_label_seed"] = int(master_label_seed)
+    if generator_config is not None:
+        fields["generator_version"] = str(generator_config["generator_version"])
+        fields["generator_config_hash"] = common.generator_config_hash(generator_config)
+    if topology_template is not None:
+        fields.update(common.template_hashes(topology_template))
+    return fields
+
+
 def split_fit_samples(
     fit_samples: list[dict[str, Any]],
     *,
@@ -82,6 +102,7 @@ def split_fit_samples(
         fit_role_rows.append(
             {
                 "fit_index": fit_index,
+                "sample_index": fit_index,
                 "sample_id": sample.get("manifest", {}).get("sample_id", ""),
                 "role": role,
             }
@@ -134,6 +155,7 @@ def _dataset_manifest(
     data_seed: int,
     protocol: str,
     sample_size: int | None = None,
+    extra_fields: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     sample_rows = [sample["manifest"] for sample in samples]
     manifest = {
@@ -146,6 +168,8 @@ def _dataset_manifest(
         "samples": sample_rows,
         "dataset_hash": common.sample_manifest_hashes(sample_rows),
     }
+    if extra_fields:
+        manifest.update(extra_fields)
     if sample_size is not None:
         manifest["sample_size"] = int(sample_size)
     return manifest
@@ -162,10 +186,42 @@ def write_artifacts_from_fit_samples(
     sample_sizes: list[int] | tuple[int, ...] = DEFAULT_SAMPLE_SIZES,
     test_path: str | Path,
     test_hash: str,
+    topology_template: dict[str, Any] | None = None,
+    generator_config: dict[str, Any] | None = None,
+    experiment_version: str | None = None,
+    master_label_seed: int | None = None,
 ) -> dict[str, Any]:
     split = split_fit_samples(fit_samples, sample_sizes=sample_sizes)
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
+    provenance = _provenance_fields(
+        topology_template=topology_template,
+        generator_config=generator_config,
+        experiment_version=experiment_version,
+        master_label_seed=master_label_seed,
+    )
+    source_namespace = train_namespace_for_protocol(protocol)
+    validation_scheme = "every_fifth_sample"
+    fit_prefix = list(fit_samples[: int(split["max_sample_size"])])
+    fit_rows = [sample["manifest"] for sample in fit_prefix]
+    fit_bank_hash = common.sample_manifest_hashes(fit_rows)
+    fit_manifest_path = output_dir / "fit_manifest.json"
+    fit_manifest = {
+        "topology_id": str(topology_id),
+        "regime": str(regime),
+        "protocol": str(protocol),
+        "source_namespace": source_namespace,
+        "data_seed": int(data_seed),
+        "train_seed": int(data_seed),
+        "sample_count": len(fit_prefix),
+        "max_sample_size": int(split["max_sample_size"]),
+        "fit_bank_hash": fit_bank_hash,
+        "samples": fit_rows,
+        "fit_role_rows": split["fit_role_rows"],
+        "validation_scheme": validation_scheme,
+        **provenance,
+    }
+    common.atomic_write_json(fit_manifest_path, fit_manifest)
 
     training_samples = split["training_samples"]
     training_rows = [sample["manifest"] for sample in training_samples]
@@ -187,6 +243,11 @@ def write_artifacts_from_fit_samples(
         "bank_hash": common.sample_manifest_hashes(training_rows),
         "prefix_hashes": prefix_hashes,
         "samples": training_rows,
+        "source_namespace": source_namespace,
+        "validation_scheme": validation_scheme,
+        "fit_manifest_path": str(fit_manifest_path),
+        "fit_bank_hash": fit_bank_hash,
+        **provenance,
     }
     train_bank_path = output_dir / "train_bank.npz"
     common.write_npz_dataset(train_bank_path, samples=training_samples, manifest=train_bank_manifest)
@@ -202,10 +263,16 @@ def write_artifacts_from_fit_samples(
             samples=validation_samples,
             topology_id=topology_id,
             regime=regime,
-            split_namespace=f"{protocol}_sample_size_validation",
+            split_namespace=source_namespace,
             data_seed=data_seed,
             protocol=protocol,
             sample_size=sample_size,
+            extra_fields={
+                "source_namespace": source_namespace,
+                "fit_role": "validation",
+                "validation_scheme": validation_scheme,
+                **provenance,
+            },
         )
         common.write_npz_dataset(validation_path, samples=validation_samples, manifest=validation_manifest)
         split_row = dict(split["sample_size_splits"][key])
@@ -226,6 +293,11 @@ def write_artifacts_from_fit_samples(
             "validation_hash": validation_manifest["dataset_hash"],
             "test_path": str(test_path),
             "test_hash": str(test_hash),
+            "source_namespace": source_namespace,
+            "validation_scheme": validation_scheme,
+            "fit_manifest_path": str(fit_manifest_path),
+            "fit_bank_hash": fit_bank_hash,
+            **provenance,
         }
         eval_manifest_path = output_dir / f"eval_manifest_sample_size{sample_size:03d}.json"
         common.atomic_write_json(eval_manifest_path, eval_manifest)
@@ -240,13 +312,19 @@ def write_artifacts_from_fit_samples(
         "sample_sizes": split["sample_sizes"],
         "assignment_rule": "every_fifth_sample_is_validation",
         "training_bank_path": str(train_bank_path),
+        "fit_manifest_path": str(fit_manifest_path),
+        "fit_bank_hash": fit_bank_hash,
         "sample_size_splits": split_manifest_splits,
         "fit_role_rows": split["fit_role_rows"],
+        "source_namespace": source_namespace,
+        "validation_scheme": validation_scheme,
+        **provenance,
     }
     split_manifest_path = output_dir / "split_manifest.json"
     common.atomic_write_json(split_manifest_path, split_manifest)
     return {
         "train_bank_path": str(train_bank_path),
+        "fit_manifest_path": str(fit_manifest_path),
         "split_manifest_path": str(split_manifest_path),
         "validation_paths": validation_paths,
         "eval_manifest_paths": eval_manifest_paths,
@@ -300,6 +378,10 @@ def main(argv: list[str] | None = None) -> int:
         sample_sizes=sample_sizes,
         test_path=args.test_path,
         test_hash=args.test_hash,
+        topology_template=template,
+        generator_config=generator_config,
+        experiment_version=args.experiment_version,
+        master_label_seed=int(args.master_label_seed),
     )
     print(json.dumps(result, indent=2, sort_keys=True))
     return 0
