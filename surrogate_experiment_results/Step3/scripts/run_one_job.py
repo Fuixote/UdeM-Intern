@@ -47,6 +47,7 @@ def prepare_paired_job_manifest(
     output_dir: str | Path,
     theta_seed: int,
     gurobi_seed: int,
+    sample_size: int | None = None,
     max_epochs: int = DEFAULT_MAX_EPOCHS,
     metric_stride: int = DEFAULT_METRIC_STRIDE,
     early_stop_patience: int = DEFAULT_EARLY_STOP_PATIENCE,
@@ -65,8 +66,18 @@ def prepare_paired_job_manifest(
         "test_hash": eval_manifest["test_hash"],
         "theta_init": theta_init,
     }
+    job_id = f"{topology_id}|{regime}|seed={int(train_seed):06d}|n={int(train_size)}"
+    if sample_size is not None:
+        job_id = (
+            f"{topology_id}|{regime}|seed={int(train_seed):06d}|"
+            f"sample_size={int(sample_size):03d}|train={int(train_size):03d}"
+        )
+        if "sample_size" in eval_manifest and int(eval_manifest["sample_size"]) != int(sample_size):
+            raise ValueError(
+                f"sample_size={sample_size} does not match eval manifest sample_size={eval_manifest['sample_size']}"
+            )
     manifest = {
-        "job_id": f"{topology_id}|{regime}|seed={int(train_seed):06d}|n={int(train_size)}",
+        "job_id": job_id,
         "topology_id": str(topology_id),
         "regime": str(regime),
         "protocol": str(protocol),
@@ -99,6 +110,12 @@ def prepare_paired_job_manifest(
             },
         },
     }
+    if sample_size is not None:
+        manifest["sample_size"] = int(sample_size)
+        manifest["training_size"] = int(train_size)
+        manifest["trainer_train_size_arg"] = int(train_size)
+        if "validation_size" in eval_manifest:
+            manifest["validation_size"] = int(eval_manifest["validation_size"])
     validate_paired_job_manifest(manifest)
     return manifest
 
@@ -267,6 +284,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--protocol", choices=("screen", "confirm"), default="confirm")
     parser.add_argument("--train-seed", type=int, required=True)
     parser.add_argument("--train-size", type=int, required=True)
+    parser.add_argument("--sample-size", type=int, default=None)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--theta-seed", type=int, default=42)
     parser.add_argument("--gurobi-seed", type=int, default=42)
@@ -295,6 +313,7 @@ def main(argv: list[str] | None = None) -> int:
         output_dir=args.output_dir,
         theta_seed=args.theta_seed,
         gurobi_seed=args.gurobi_seed,
+        sample_size=args.sample_size,
         max_epochs=args.max_epochs,
         metric_stride=args.metric_stride,
         early_stop_patience=args.early_stop_patience,

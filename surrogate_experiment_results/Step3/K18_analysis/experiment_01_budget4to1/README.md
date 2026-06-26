@@ -427,7 +427,7 @@ experiment config hash
 建议新增：
 
 ```text
-surrogate_experiment_results/Step3/scripts/
+surrogate_experiment_results/Step3/K18_analysis/experiment_01_budget4to1/scripts/
     build_nested_fit_validation_bank.py
 ```
 
@@ -592,6 +592,7 @@ sample-size-specific validation size
 
 ```text
 plan_k18_sample_size_jobs.py
+audit_k18_sample_size_artifacts.py
 ```
 
 而不要硬改 formal confirmation planner。
