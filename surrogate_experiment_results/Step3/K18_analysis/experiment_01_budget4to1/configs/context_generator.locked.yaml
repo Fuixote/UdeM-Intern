@@ -1,0 +1,19 @@
+status: locked
+generator_version: fixed_topology_context_v1_k18_exp1_sample_size4to1_locked
+method: bounded_additive_uniform
+locked_for_experiment: k18_exp1_sample_size4to1_fullxy_v1
+locked_date: 2026-06-26
+selection_source_commit: 779f55e88bc5578abafdb3c7e6a846946facdeb1
+
+recipient_cpra:
+  lower: 0.0
+  upper: 1.0
+  half_width: 0.05
+
+utility:
+  lower: 0.0
+  upper: 100.0
+  half_width: 5.0
+
+label:
+  epsilon_bar: 0.5

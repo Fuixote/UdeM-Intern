@@ -1,0 +1,93 @@
+experiment:
+  experiment_id: k18_exp1_sample_size4to1_fullxy_v1
+  phase: K18_analysis
+  subexperiment: experiment_01_budget4to1
+  protocol: screen
+  claim_level: exploratory
+  topology_count: 18
+  selection_source_commit: 779f55e88bc5578abafdb3c7e6a846946facdeb1
+
+paths:
+  topology_manifest: configs/k18_topologies.csv
+  context_generator_config: configs/context_generator.locked.yaml
+
+regime:
+  name: step2c_poly_d8_mult_eps050
+
+data:
+  sample_sizes: [50, 100, 500]
+  max_fit_bank_size: 500
+  test_size: 1000
+  test_shared_across_data_seeds: true
+  test_shared_across_sample_sizes: true
+  test_independent_from_selection_screen: true
+  split:
+    train_fraction: 0.8
+    validation_fraction: 0.2
+    assignment_rule: every_fifth_sample_is_validation
+    nested_across_sample_sizes: true
+    roles_never_change_across_sample_sizes: true
+  counts:
+    sample_size_50:
+      sample_size: 50
+      training_size: 40
+      validation_size: 10
+      trainer_train_size_arg: 40
+    sample_size_100:
+      sample_size: 100
+      training_size: 80
+      validation_size: 20
+      trainer_train_size_arg: 80
+    sample_size_500:
+      sample_size: 500
+      training_size: 400
+      validation_size: 100
+      trainer_train_size_arg: 400
+
+seeds:
+  data_seeds: [101, 102, 103, 104, 105]
+  theta_seed: 42
+  gurobi_seed: 42
+  master_label_seed: 20260626
+
+training:
+  methods: [2stage, spoplus]
+  max_epochs: 3000
+  metric_stride: 1
+  early_stop_patience: 20
+  early_stop_min_delta: 0.0001
+
+execution:
+  paired_jobs: 270
+  model_training_runs: 540
+  paired_evaluations: 270
+  scheduler: tmux_bounded_parallel
+  normal_workers: 3
+  long_workers: 1
+  long_topologies: [G-237, G-670, G-970]
+
+audit_requirements:
+  bundle_audit_required: true
+  plan_audit_required: true
+  expected_topology_count: 18
+  expected_data_seed_count: 5
+  expected_sample_sizes: [50, 100, 500]
+  expected_job_count: 270
+  expected_test_size: 1000
+  require_all_jobs_ready: true
+  require_one_test_hash_per_topology: true
+  require_clean_worktree_before_full_run: true
+
+smoke_gate:
+  tiny_smoke_topologies: [G-364, G-237]
+  tiny_smoke_data_seeds: [101]
+  tiny_smoke_sample_sizes: [50, 100, 500]
+  tiny_smoke_max_epochs: 2
+  runtime_pilot_topologies: [G-364, G-784, G-237]
+  runtime_pilot_data_seeds: [101]
+  runtime_pilot_sample_sizes: [50, 100, 500]
+  runtime_pilot_max_epochs: 3000
+
+evaluation:
+  primary_metric: test_mean_decision_gap
+  improvement_metric: test_mean_decision_gap_2stage_minus_test_mean_decision_gap_spoplus

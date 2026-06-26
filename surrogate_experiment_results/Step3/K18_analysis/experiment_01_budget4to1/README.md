@@ -431,6 +431,15 @@ configs/experiment.yaml
 
 如果这三个正式配置文件缺失，或者 `context_generator.locked.yaml` 仍标记为 `pilot_not_locked`，不得进入完整数据物化或 270-job planning。
 
+当前目录已经 materialize 了上述三个配置文件。`context_generator.locked.yaml` 使用新的：
+
+```text
+generator_version = fixed_topology_context_v1_k18_exp1_sample_size4to1_locked
+status = locked
+```
+
+后续正式物化和 planning 必须引用这三个文件，而不是 `surrogate_experiment_results/Step3/configs/context_generator.example.yaml`。
+
 并记录：
 
 ```text
