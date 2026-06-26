@@ -22,6 +22,175 @@ SPO+
 270 paired evaluations
 ```
 
+## Current artifact review status
+
+Reviewed on garnet at `2026-06-26T01:57:40-04:00`.
+
+Materialized output root:
+
+```text
+/local1/fuweik/UdeM-Intern/surrogate_experiment_results/Step3/K18_analysis/experiment_01_budget4to1/results/materialized
+```
+
+Stage 3 data materialization and artifact audit are complete:
+
+```text
+test banks:        18 / 18
+fit bundles:       90 / 90
+bundle audits:     90 / 90 passed
+plan rows:         270 / 270 ready
+plan-level audit:  passed=true, failures=[]
+materialized size: 539M
+```
+
+The fresh plan-level audit reported:
+
+```json
+{
+  "data_seed_count": 5,
+  "failures": [],
+  "job_count": 270,
+  "passed": true,
+  "ready_count": 270,
+  "sample_sizes": [50, 100, 500],
+  "topology_count": 18
+}
+```
+
+Full manifest review confirmed:
+
+```text
+sample_size 50  -> training_size 40,  validation_size 10,  trainer_train_size_arg 40
+sample_size 100 -> training_size 80,  validation_size 20,  trainer_train_size_arg 80
+sample_size 500 -> training_size 400, validation_size 100, trainer_train_size_arg 400
+
+18 test manifests each contain 1000 screen_test samples.
+90 fit manifests each contain 500 samples.
+90 split manifests pass the every-fifth validation partition.
+training and validation indices are disjoint for every sample size.
+training_40 <= training_80 <= training_400.
+validation_10 <= validation_20 <= validation_100.
+```
+
+Recorded hashes:
+
+```text
+k18_topologies.csv:              897b3f95fce6f840c76136a7fed8113c3de6bf198df806359bfb6a745e2414e2
+experiment.yaml:                 b2a02b902d6da2d9305bfecfe3ba5964510900834e14c630da27172055450102
+context_generator.locked.yaml:   713f598ee636fc61a314ef513831ce4558e68487f882ef72dec4004464674b4f
+sample_size_plan.json:           c9f334cf36c97a076a49ef5f4aede1afe6af6d0e1d789a1640c8a5336189f481
+sample_size_jobs.csv:            af9ed09c29c95fca5c6a0db932a82fec15c3859954051ef1c9788186355fc0bc
+plan_audit_result.json:          406ce56cf06b5385f8c435485a22ac048700184d7880226d2c0f49063efe6402
+```
+
+Two execution caveats remain before starting the formal 270 training jobs:
+
+```text
+1. sample_size_jobs.csv currently stores validation_path as the basename from
+   the eval manifest. run_one_job.py resolves this relative to the eval manifest
+   directory, so execution is not blocked, but external launchers should not
+   treat validation_path as an absolute path.
+
+2. run_one_job_command in the plan is intentionally dry-run-only and ends with
+   --dry-run. The formal launcher must generate execute commands or strip that
+   flag deliberately.
+```
+
+Do not start the full 270-job training run until Stage 1 tiny smoke, Stage 2
+runtime pilot, and the bounded execution launcher have also been reviewed.
+
+## Current tiny smoke status
+
+Reviewed on garnet at `2026-06-26T02:13:47-04:00`.
+
+Tiny smoke output root:
+
+```text
+/local1/fuweik/UdeM-Intern/surrogate_experiment_results/Step3/K18_analysis/experiment_01_budget4to1/results/tiny_smoke_6job_20260626
+```
+
+The 6-job tiny smoke used:
+
+```text
+topologies:    G-364, G-237
+data seed:     101
+sample sizes:  50, 100, 500
+max_epochs:    2
+execution:     sequential tmux runner
+```
+
+All six paired jobs completed successfully:
+
+```text
+paired manifests:      6 / 6
+job_status.json:       6 / 6
+job status:            success = 6
+2stage status:         success = 6
+SPO+ status:           success = 6
+evaluation status:     success = 6
+runner elapsed time:   187.45 seconds
+tiny smoke size:       577M
+```
+
+The paired job manifests preserved the sample-size contract:
+
+```text
+sample_size 50  -> train_size 40,  training_size 40,  validation_size 10,  trainer_train_size_arg 40
+sample_size 100 -> train_size 80,  training_size 80,  validation_size 20,  trainer_train_size_arg 80
+sample_size 500 -> train_size 400, training_size 400, validation_size 100, trainer_train_size_arg 400
+```
+
+The completion watcher sent a Brevo notification with HTTP 201.
+
+## Current runtime pilot status
+
+Reviewed on garnet at `2026-06-26T08:50:43-04:00`.
+
+Runtime pilot output root:
+
+```text
+/local1/fuweik/UdeM-Intern/surrogate_experiment_results/Step3/K18_analysis/experiment_01_budget4to1/results/runtime_pilot_9job_full_epoch_20260626
+```
+
+The full-epoch runtime pilot used:
+
+```text
+topologies:       G-364, G-784, G-237
+data seed:        101
+sample sizes:     50, 100, 500
+max_epochs:       3000
+early stopping:   patience=20, min_delta=0.0001
+execution:        9 jobs launched in parallel
+thread limits:    OMP/MKL/OPENBLAS/NUMEXPR = 1
+```
+
+The pilot completed successfully:
+
+```text
+paired jobs:         9 / 9
+job_status.json:     9 / 9
+failed jobs:         0
+wall time:           10252.302 seconds = 2h 50m 52s
+completion time:     2026-06-26T05:16:19-04:00
+notification:        Brevo HTTP 201
+```
+
+The wall time was dominated by the slowest paired job:
+
+```text
+G-237 sample_size=500 -> 10252.286s
+G-784 sample_size=500 -> 3158.885s
+G-237 sample_size=100 -> 2082.606s
+G-237 sample_size=50  -> 1031.324s
+```
+
+This confirms that `G-237` at `sample_size=500` is substantially slower than the
+other pilot jobs. Its SPO+ run selected epoch 3000 and did not trigger early
+stopping, so the runtime should be treated as an important bound for formal-run
+scheduling. The main runtime log and per-job `job_status.json` are the completion
+source of truth; `runtime_pilot_summary.json` did not backfill the final row's
+elapsed time even though the run status and per-job status are successful.
+
 ## 先明确一个关键点
 
 **现有 Step3 pipeline 不能直接把 `train_size=50` 解释成 40 个训练样本加 10 个验证样本。**
