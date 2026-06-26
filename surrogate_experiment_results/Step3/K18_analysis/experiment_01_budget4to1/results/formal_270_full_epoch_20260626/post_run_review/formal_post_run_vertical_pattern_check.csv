@@ -1,0 +1,19 @@
+rank,topology_id,role,old_mean_delta,old_sign,current_mean_delta_50,current_mean_delta_100,current_mean_delta_500,current_signs_50_100_500,current_seed_win_50,current_seed_win_100,current_seed_win_500,current_negative_seeds_50,current_negative_seeds_100,current_negative_seeds_500,current_sign_overall,kept_previous_sign_pattern,sample_size_trend,delta_500_minus_50
+1,G-269,强正例,15.2832,positive,15.31355315322876,15.324839792633057,15.266109842681885,positive/positive/positive,1.0,1.0,1.0,0,0,0,positive,True,flat,-0.047443310546874784
+2,G-398,强正例,11.6999,positive,11.70437440109253,11.70437440109253,11.70437440109253,positive/positive/positive,1.0,1.0,1.0,0,0,0,positive,True,flat,0.0
+3,G-784,强正例,10.8334,positive,10.95851113204956,10.91394521560669,10.981541169738769,positive/positive/positive,1.0,1.0,1.0,0,0,0,positive,True,flat,0.023030037689208527
+4,G-103,强正例,10.0232,positive,10.449076621246338,10.358409061431885,10.28516272125244,positive/positive/positive,1.0,1.0,1.0,0,0,0,positive,True,flat,-0.16391389999389716
+5,G-927,匹配正例,8.0005,positive,7.919585012054443,7.799481308746338,8.351393900299072,positive/positive/positive,1.0,1.0,1.0,0,0,0,positive,True,flat,0.43180888824462915
+6,G-970,强正例/计算困难,7.6602,positive,5.2464067703247075,6.4127552108764645,7.3933364768981935,positive/positive/positive,1.0,1.0,1.0,0,0,0,positive,True,improves_with_sample_size,2.146929706573486
+7,G-304,强正例,5.8401,positive,5.427610521316528,5.267338724899292,5.272012817764282,positive/positive/positive,1.0,1.0,1.0,0,0,0,positive,True,flat,-0.155597703552246
+8,G-364,稀疏正例锚点,3.1866,positive,1.3015145318984984,1.9816504323959352,3.092864354133606,positive/positive/positive,1.0,1.0,1.0,0,0,0,positive,True,improves_with_sample_size,1.7913498222351076
+9,G-730,结构覆盖正例,2.3368,positive,1.9060115966796876,2.0065728385925294,2.055723069000244,positive/positive/positive,1.0,1.0,1.0,0,0,0,positive,True,flat,0.1497114723205566
+10,G-658,neutral-regime 正例锚点,0.0872,positive,0.14801816730499268,0.15016874504089356,0.16063040590286254,positive/positive/positive,1.0,1.0,1.0,0,0,0,positive,True,flat,0.012612238597869863
+11,G-79,强负对照,-1.5503,negative,-0.860527283668518,-1.3476500970840455,-1.3860670469284058,negative/negative/negative,0.2,0.0,0.0,4,5,5,negative,True,weakens_with_sample_size,-0.5255397632598877
+12,G-836,匹配负对照,-0.083,negative,-0.05281116714477539,-0.049764485931396485,-0.06922532577514648,negative/neutral/negative,0.0,0.0,0.0,5,5,5,negative/neutral,True,flat,-0.016414158630371087
+13,G-124,高改善空间负对照,-0.6136,negative,-0.4323792739868164,-0.44463643798828123,-0.4402368438720703,negative/negative/negative,0.0,0.0,0.0,5,5,5,negative,True,flat,-0.007857569885253879
+14,G-396,高改善空间中性对照,0.0,neutral,0.0,0.001621839904785156,0.0,neutral/neutral/neutral,0.0,0.2,0.0,0,0,0,neutral,True,flat,0.0
+15,G-670,无改善空间中性/计算困难,0.0,neutral,0.0,0.0,0.0,neutral/neutral/neutral,0.0,0.0,0.0,0,0,0,neutral,True,flat,0.0
+16,G-237,结构/计算困难,0.442,positive,0.3334907699584961,0.33481655120849607,0.33057983093261717,positive/positive/positive,1.0,1.0,1.0,0,0,0,positive,True,flat,-0.0029109390258789114
+17,G-206,强负例 extension,-1.5274,negative,-1.4141696601867675,-1.4184182567596435,-1.4487749698638916,negative/negative/negative,0.0,0.0,0.0,5,5,5,negative,True,flat,-0.03460530967712416
+18,G-72,强负例 extension,-0.9737,negative,-0.6897869812011719,-0.10454953384399414,-0.2019086868286133,negative/negative/negative,0.2,0.4,0.2,4,3,4,negative,True,flat,0.4878782943725586

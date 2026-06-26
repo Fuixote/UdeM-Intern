@@ -103,6 +103,15 @@ surrogate_experiment_results/Step3/**/phase_b/splits/
 surrogate_experiment_results/Step3/**/phase_b/smoke_runs*/
 surrogate_experiment_results/Step3/**/phase_b/smoke_splits*/
 
+# K18 sample-size formal experiment artifacts are intentionally trackable for
+# GitHub review, including its result summaries.
+!surrogate_experiment_results/Step3/K18_analysis/experiment_01_budget4to1/
+!surrogate_experiment_results/Step3/K18_analysis/experiment_01_budget4to1/**
+!surrogate_experiment_results/Step3/K18_analysis/experiment_01_budget4to1/results/
+!surrogate_experiment_results/Step3/K18_analysis/experiment_01_budget4to1/results/**
+surrogate_experiment_results/Step3/K18_analysis/experiment_01_budget4to1/scripts/__pycache__/
+surrogate_experiment_results/Step3/K18_analysis/experiment_01_budget4to1/scripts/__pycache__/**
+
 # Third-party dependencies
 generator_webapp/bower_components/
 

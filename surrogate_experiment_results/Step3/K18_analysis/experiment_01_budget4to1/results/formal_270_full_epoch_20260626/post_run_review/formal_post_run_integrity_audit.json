@@ -1,0 +1,56 @@
+{
+  "counts": {
+    "data_seed_count": 5,
+    "job_rows": 270,
+    "job_status_files": 270,
+    "runtime_source_counts": {
+      "formal_launcher_log": 266,
+      "missing": 4
+    },
+    "sample_size_counts": {
+      "50": 90,
+      "100": 90,
+      "500": 90
+    },
+    "status_counts": {
+      "success": 270
+    },
+    "test_hash_unique_count": 18,
+    "test_hashes_per_topology": {
+      "G-103": 1,
+      "G-124": 1,
+      "G-206": 1,
+      "G-237": 1,
+      "G-269": 1,
+      "G-304": 1,
+      "G-364": 1,
+      "G-396": 1,
+      "G-398": 1,
+      "G-658": 1,
+      "G-670": 1,
+      "G-72": 1,
+      "G-730": 1,
+      "G-784": 1,
+      "G-79": 1,
+      "G-836": 1,
+      "G-927": 1,
+      "G-970": 1
+    },
+    "topology_count": 18,
+    "training_size_counts": {
+      "40": 90,
+      "80": 90,
+      "400": 90
+    },
+    "validation_size_counts": {
+      "10": 90,
+      "20": 90,
+      "100": 90
+    }
+  },
+  "failures": [],
+  "launcher_log": "/local1/fuweik/UdeM-Intern/surrogate_experiment_results/Step3/K18_analysis/experiment_01_budget4to1/results/logs/formal_270_full_epoch_20260626.log",
+  "output_dir": "/local1/fuweik/UdeM-Intern/surrogate_experiment_results/Step3/K18_analysis/experiment_01_budget4to1/results/formal_270_full_epoch_20260626/post_run_review",
+  "output_root": "/local1/fuweik/UdeM-Intern/surrogate_experiment_results/Step3/K18_analysis/experiment_01_budget4to1/results/formal_270_full_epoch_20260626",
+  "passed": true
+}
