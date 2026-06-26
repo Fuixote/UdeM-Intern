@@ -191,6 +191,44 @@ scheduling. The main runtime log and per-job `job_status.json` are the completio
 source of truth; `runtime_pilot_summary.json` did not backfill the final row's
 elapsed time even though the run status and per-job status are successful.
 
+## Current formal 270-job run status
+
+Launched on garnet at `2026-06-26T09:17:51-04:00`.
+
+Formal output root:
+
+```text
+/local1/fuweik/UdeM-Intern/surrogate_experiment_results/Step3/K18_analysis/experiment_01_budget4to1/results/formal_270_full_epoch_20260626
+```
+
+Launcher and watcher sessions:
+
+```text
+k18_e1_formal_270
+notify_k18_e1_formal_270
+```
+
+Launch settings:
+
+```text
+normal queue: 225 jobs, concurrency=16
+long queue:   45 jobs,  concurrency=4
+long topologies: G-237, G-670, G-970
+thread limits: OMP/MKL/OPENBLAS/NUMEXPR = 1
+monitor interval: 60 seconds
+```
+
+The first monitor record reported:
+
+```text
+active_jobs=20
+active_normal=16
+active_long=4
+failed_jobs=0
+pending_normal=209
+pending_long=41
+```
+
 ## 先明确一个关键点
 
 **现有 Step3 pipeline 不能直接把 `train_size=50` 解释成 40 个训练样本加 10 个验证样本。**

@@ -594,5 +594,78 @@ class K18SampleSizeExperimentTests(unittest.TestCase):
                     )
 
 
+    def test_formal_launcher_builds_execute_commands_and_skips_successful_jobs(self):
+        launcher = load_module(
+            "launch_formal_k18_sample_size_jobs_test",
+            EXPERIMENT_SCRIPTS / "launch_formal_k18_sample_size_jobs.py",
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output_root = root / "formal"
+            row = {
+                "job_id": "G-1|data_seed=000101|sample_size=050|training=040|validation=010",
+                "topology_id": "G-1",
+                "runtime_class": "normal",
+                "output_dir": "old/results/jobs/G-1/data_seed=000101/sample_size=050",
+                "run_one_job_command": (
+                    "/usr/bin/python /repo/surrogate_experiment_results/Step3/scripts/run_one_job.py "
+                    "--output-dir old/results/jobs/G-1/data_seed=000101/sample_size=050 "
+                    "--max-epochs 3000 --dry-run"
+                ),
+            }
+
+            planned = launcher.job_from_plan_row(row, output_root=output_root)
+
+            self.assertEqual(planned.queue, "normal")
+            self.assertEqual(
+                planned.output_dir,
+                output_root / "jobs" / "G-1" / "data_seed=000101" / "sample_size=050",
+            )
+            self.assertIn("--execute", planned.command)
+            self.assertNotIn("--dry-run", planned.command)
+            self.assertEqual(
+                planned.command[planned.command.index("--output-dir") + 1],
+                str(planned.output_dir),
+            )
+            self.assertFalse(launcher.is_job_success(planned))
+
+            planned.output_dir.mkdir(parents=True)
+            (planned.output_dir / "job_status.json").write_text(
+                json.dumps({"status": "success", "2stage status": "success", "SPO+ status": "success", "evaluation status": "success"}),
+                encoding="utf-8",
+            )
+
+            self.assertTrue(launcher.is_job_success(planned))
+
+    def test_formal_launcher_splits_normal_and_long_queues(self):
+        launcher = load_module(
+            "launch_formal_k18_sample_size_jobs_queue_test",
+            EXPERIMENT_SCRIPTS / "launch_formal_k18_sample_size_jobs.py",
+        )
+        rows = [
+            {
+                "job_id": "normal-job",
+                "topology_id": "G-1",
+                "runtime_class": "normal",
+                "output_dir": "old/G-1/data_seed=000101/sample_size=050",
+                "run_one_job_command": "python run_one_job.py --output-dir old/G-1/data_seed=000101/sample_size=050 --dry-run",
+            },
+            {
+                "job_id": "long-job",
+                "topology_id": "G-237",
+                "runtime_class": "long",
+                "output_dir": "old/G-237/data_seed=000101/sample_size=050",
+                "run_one_job_command": "python run_one_job.py --output-dir old/G-237/data_seed=000101/sample_size=050 --dry-run",
+            },
+        ]
+
+        queues = launcher.split_queues(
+            [launcher.job_from_plan_row(row, output_root=Path("formal")) for row in rows]
+        )
+
+        self.assertEqual([job.job_id for job in queues["normal"]], ["normal-job"])
+        self.assertEqual([job.job_id for job in queues["long"]], ["long-job"])
+
+
 if __name__ == "__main__":
     unittest.main()
