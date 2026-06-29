@@ -1,7 +1,8 @@
 # Experiment Completion Notifications
 
-This repository can send a Brevo email when long-running tmux experiments
-finish. The shared helper is:
+This repository can send Brevo emails when long-running tmux experiment
+watchers start successfully and when the watched experiments finish. The shared
+helper is:
 
 ```text
 scripts/experiment_notify.py
@@ -48,13 +49,14 @@ tmux new-session -d -s notify_my_experiment \
     > logs/notify_my_experiment.log 2>&1'
 ```
 
-The watcher checks whether each tmux session still exists. When all watched
-sessions have ended, it scans result CSVs and log files, then sends a Brevo
-transactional email.
+The watcher sends a startup confirmation email immediately after it has parsed
+the request and loaded the Brevo settings. It then checks whether each tmux
+session still exists. When all watched sessions have ended, it scans result
+CSVs and log files, then sends the completion Brevo email.
 
 ## Dry Run
 
-Use `--dry-run` to preview the email body without sending:
+Use `--dry-run` to preview both email bodies without sending:
 
 ```bash
 python3 scripts/experiment_notify.py \

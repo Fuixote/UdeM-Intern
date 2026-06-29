@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Send a Brevo email when watched tmux experiment sessions finish.
+Send Brevo emails when a tmux experiment watcher starts and finishes.
 """
 
 import argparse
@@ -101,6 +101,26 @@ def format_message(project, sessions, summary):
     )
 
 
+def format_start_message(project, sessions, result_dir, log_dir, interval, running_sessions):
+    running = ", ".join(running_sessions) if running_sessions else "none"
+    return (
+        "Watcher started successfully.\n\n"
+        "Project: {}\n"
+        "Watched tmux sessions: {}\n"
+        "Currently running sessions: {}\n"
+        "Check interval seconds: {}\n"
+        "Result dir: {}\n"
+        "Log dir: {}\n".format(
+            project,
+            ", ".join(sessions),
+            running,
+            interval,
+            result_dir,
+            log_dir,
+        )
+    )
+
+
 def send_brevo_email(api_key, sender, recipient, subject, text):
     payload = {
         "sender": {"email": sender},
@@ -139,35 +159,21 @@ def parse_args():
     return parser.parse_args()
 
 
-def main():
-    args = parse_args()
-    while True:
-        running = active_sessions(args.sessions)
-        if not running:
-            break
-        print("Still running: {}".format(", ".join(running)), flush=True)
-        time.sleep(args.interval)
-
-    subject = args.subject or "{} experiments finished".format(args.project)
-    summary = collect_summary(args.result_dir, args.log_dir)
-    message = format_message(args.project, args.sessions, summary)
-    if args.dry_run:
-        print(message)
-        return
-
-    env = os.environ.copy()
-    env.update(load_env_file(args.env))
+def require_notification_env(env, env_path):
     required = ["BREVO_API_KEY", "SPO_NOTIFY_FROM", "SPO_NOTIFY_TO"]
     missing = [key for key in required if not env.get(key)]
     if missing:
         raise RuntimeError(
             "Missing notification settings in {}: {}".format(
-                args.env,
+                env_path,
                 ", ".join(missing),
             )
         )
+    return env
 
-    status, body = send_brevo_email(
+
+def deliver_email(send_email, env, subject, message):
+    status, body = send_email(
         env["BREVO_API_KEY"],
         env["SPO_NOTIFY_FROM"],
         env["SPO_NOTIFY_TO"],
@@ -177,6 +183,57 @@ def main():
     print("Brevo notification sent: HTTP {}".format(status))
     if body:
         print(body)
+
+
+def run_watcher(
+    args,
+    env=None,
+    send_email=send_brevo_email,
+    active_sessions_fn=active_sessions,
+    sleep_fn=time.sleep,
+    collect_summary_fn=collect_summary,
+):
+    running = active_sessions_fn(args.sessions)
+    start_subject = "{} watcher started".format(args.project)
+    start_message = format_start_message(
+        args.project,
+        args.sessions,
+        args.result_dir,
+        args.log_dir,
+        args.interval,
+        running,
+    )
+
+    if args.dry_run:
+        output = "Subject: {}\n{}\n".format(start_subject, start_message)
+    else:
+        notify_env = env
+        if notify_env is None:
+            notify_env = os.environ.copy()
+            notify_env.update(load_env_file(args.env))
+        require_notification_env(notify_env, args.env)
+        deliver_email(send_email, notify_env, start_subject, start_message)
+        output = ""
+
+    while running:
+        print("Still running: {}".format(", ".join(running)), flush=True)
+        sleep_fn(args.interval)
+        running = active_sessions_fn(args.sessions)
+
+    subject = args.subject or "{} experiments finished".format(args.project)
+    summary = collect_summary_fn(args.result_dir, args.log_dir)
+    message = format_message(args.project, args.sessions, summary)
+    if args.dry_run:
+        output += "Subject: {}\n{}\n".format(subject, message)
+        print(output, end="")
+        return output
+
+    deliver_email(send_email, notify_env, subject, message)
+    return output
+
+
+def main():
+    run_watcher(parse_args())
 
 
 if __name__ == "__main__":
