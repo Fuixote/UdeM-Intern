@@ -112,6 +112,27 @@ surrogate_experiment_results/Step3/**/phase_b/smoke_splits*/
 surrogate_experiment_results/Step3/K18_analysis/experiment_01_budget4to1/scripts/__pycache__/
 surrogate_experiment_results/Step3/K18_analysis/experiment_01_budget4to1/scripts/__pycache__/**
 
+# Step4 AI-handoff artifacts are intentionally trackable. Keep compact
+# structural/summary/target CSVs in git; keep full decision rows and per-batch
+# raw overlays local or in external artifacts.
+!surrogate_experiment_results/Step4 Topology Structural Atlas/results/
+!surrogate_experiment_results/Step4 Topology Structural Atlas/results/*.csv
+
+!surrogate_experiment_results/Step4 Decision Overlay/results/
+surrogate_experiment_results/Step4 Decision Overlay/results/**
+!surrogate_experiment_results/Step4 Decision Overlay/results/full_8topology_5seed_3size/
+surrogate_experiment_results/Step4 Decision Overlay/results/full_8topology_5seed_3size/**
+!surrogate_experiment_results/Step4 Decision Overlay/results/full_8topology_5seed_3size/candidate_overlay_summary.csv
+
+!surrogate_experiment_results/Step4 Rank-Reversal Detail/results/
+surrogate_experiment_results/Step4 Rank-Reversal Detail/results/**
+!surrogate_experiment_results/Step4 Rank-Reversal Detail/results/full_8topology_5seed_3size/
+surrogate_experiment_results/Step4 Rank-Reversal Detail/results/full_8topology_5seed_3size/**
+!surrogate_experiment_results/Step4 Rank-Reversal Detail/results/full_8topology_5seed_3size/rank_reversal_case_summary_by_topology_sample.csv
+!surrogate_experiment_results/Step4 Rank-Reversal Detail/results/full_8topology_5seed_3size/candidate_set_switch_summary.csv
+!surrogate_experiment_results/Step4 Rank-Reversal Detail/results/full_8topology_5seed_3size/rank_reversal_top20_per_topology.csv
+!surrogate_experiment_results/Step4 Rank-Reversal Detail/results/full_8topology_5seed_3size/rank_reversal_all_different_contexts.csv
+
 # Third-party dependencies
 generator_webapp/bower_components/
 
