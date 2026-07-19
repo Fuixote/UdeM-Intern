@@ -50,6 +50,16 @@ The formal reviewer exports `normalized_improvement_pp` and refuses label rows
 when either early-stopping record is missing, invalid, or has
 `should_stop != true`.
 
+Formal artifacts are a versioned dataset bundle, not model output. For each
+topology they contain 40 training samples, 10 validation samples, the fixed
+1000-sample test bank, and the manifests/hashes needed to prove the split and
+generation provenance. The formal root rebuilds all 1000 bundles rather than
+copying smoke files, avoiding stale paths while preserving the same deterministic
+data namespace and hashes.
+
+Artifact construction uses 16 deterministic, estimated-load-balanced shards.
+The full artifact audit must pass 1000/1000 before any training plan is created.
+
 The critical planning and review arguments are:
 
 ```bash

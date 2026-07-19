@@ -47,6 +47,7 @@ target:
 execution:
   host: garnet
   scheduler: tmux_bounded_parallel
+  artifact_shards: 16
   normal_workers: 16
   slurm: false
   expected_job_count: 1000
