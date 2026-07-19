@@ -1,0 +1,21 @@
+status: locked
+generator_version: fixed_topology_context_v1_step5_exp1_weak_label_seed42_sample50_locked
+method: bounded_additive_uniform
+locked_for_experiment: step5_exp1_weak_label_seed42_sample50_v1
+locked_date: 2026-07-19
+source_protocol: step3_k18_exp1_sample_size4to1
+source_config_sha256: 713f598ee636fc61a314ef513831ce4558e68487f882ef72dec4004464674b4f
+source_commit: c5cd7ab107ce0c1e7770c2930e32ca3df251f49a
+
+recipient_cpra:
+  lower: 0.0
+  upper: 1.0
+  half_width: 0.05
+
+utility:
+  lower: 0.0
+  upper: 100.0
+  half_width: 5.0
+
+label:
+  epsilon_bar: 0.5

@@ -1,0 +1,68 @@
+experiment:
+  experiment_id: step5_exp1_weak_label_seed42_sample50_v1
+  phase: Step5_topology_dfl_suitability
+  subexperiment: experiment_01_weak_label_seed42_sample50
+  status: protocol_locked_pre_smoke
+  locked_date: 2026-07-19
+  protocol: screen
+  regime: step2c_poly_d8_mult_eps050
+  claim_level: weak_label_exploratory
+
+paths:
+  source_topology_bank: surrogate_experiment_results/Step3/pairs20_ndd2/data/topologies/topology_bank.csv
+  topology_manifest: configs/topologies.locked.csv
+  topology_bank_audit: results/topology_bank_audit.json
+  context_generator_config: configs/context_generator.locked.yaml
+  topology_manifest_sha256: c621300e21d06b2217951abf007317bf774e9e01616a0bbb5c050e121f5847a2
+  context_generator_file_sha256: 091af7cb5947981acb840db30047b7bfb4a9ae40a26a40eb5c696d2108365bf4
+  context_generator_config_hash: 97d25caaf4383fecfe31ba2a03491d7bd30fbab0f869d9dff14b17bfe0042e49
+
+data:
+  topology_count: 1000
+  sample_size: 50
+  training_size: 40
+  validation_size: 10
+  trainer_train_size_arg: 40
+  test_size: 1000
+  split_assignment_rule: every_fifth_sample_is_validation
+  test_shared_across_data_seeds: true
+  test_independent_from_training_data: true
+
+seeds:
+  data_seed: 42
+  theta_seed: 42
+  gurobi_seed: 42
+  master_label_seed: 20260719
+  seed_role_note: master_label_seed fixes label generation and is distinct from data_seed
+
+training:
+  methods: 2stage,spoplus
+  max_epochs: 1500
+  metric_stride: 1
+  early_stop_patience: 20
+  early_stop_min_delta: 0.0001
+  source_protocol: Step3 native-e1500 cap-check freeze
+
+labels:
+  continuous_label: test_gap_2stage_minus_test_gap_spoplus
+  helpful_if_delta_gt: 0.1
+  harmful_if_delta_lt: -0.1
+  near_neutral_if_abs_delta_lte: 0.1
+  weak_label: true
+
+execution:
+  scheduler: tmux_bounded_parallel_on_garnet
+  smoke_topology_count: 20
+  smoke_normal_workers: 4
+  full_normal_workers: 16
+  long_workers: 4
+  long_topologies: none_until_smoke_review
+  slurm: false
+
+audit:
+  expected_topology_count: 1000
+  expected_job_count: 1000
+  expected_label_count: 1000
+  require_all_jobs_success: true
+  require_paired_2stage_spoplus_evaluation: true
+  require_dry_run_plan: true

@@ -13,11 +13,39 @@
   data_seed = 42
   theta_seed = 42
   gurobi_seed = 42
+  master_label_seed = 20260719
   test_size = 1000
   protocol = screen
+  max_epochs = 1500
+  metric_stride = 1
+  early_stop_patience = 20
+  early_stop_min_delta = 0.0001
 
   Heavy data, model outputs, and job results should live on Garnet under /local1/fuweik/UdeM-Intern/.... Tracked repo changes should be limited to
   small configs, scripts, summaries, tests, and README documentation.
+
+  ## Local Implementation Status
+
+  As of 2026-07-19, the six experiment-local pipeline scripts have been implemented under:
+
+  surrogate_experiment_results/Step5_topology_dfl_suitability/experiment_01_weak_label_seed42_sample50/scripts/
+
+  Implemented locally:
+
+  - topology-bank locking and integrity audit;
+  - deterministic 4:1 artifact construction;
+  - artifact integrity audit;
+  - dry-run-only paired-job planning;
+  - bounded and resumable execution launching;
+  - result review and weak-label export.
+
+  Local validation covers the 40/10 split, artifact hashes, dry-run safety gate, launcher command conversion, label calculation, and real-bank
+  compatibility. The real 1000-row bank passed the temporary validation with 1000 unique topology/hash rows and no missing template/source files.
+
+  No Step5 NPZ datasets or model jobs have been generated, and nothing has been synchronized to Garnet yet. The pre-smoke protocol is now locked in
+  `configs/experiment.yaml`: `master_label_seed=20260719`, `max_epochs=1500`, `metric_stride=1`, `early_stop_patience=20`, and
+  `early_stop_min_delta=0.0001`. The generator config and 1000-row topology manifest are locked, and `results/topology_bank_audit.json` reports
+  `passed=true` with no failures.
 
   ## Key Changes
 
@@ -97,10 +125,10 @@
       - Compare GNN against tabular baseline on the same split and same labels.
       - Keep model small; this experiment tests whether topology structure has signal, not whether a large model can overfit.
 
-
-        20 most predicted helpful
-        20 most predicted harmful
-        20 most uncertain / closest to zero
+  6. Targeted multi-seed stability check
+      20 most predicted helpful
+      20 most predicted harmful
+      20 most uncertain / closest to zero
 
       - Re-run those 60 topologies with seeds 101,102,103,104,105 at sample_size=50.
       - Acceptance: report seed stability, sign flip count, mean/median delta, and whether single-seed seed42 labels were reliable.

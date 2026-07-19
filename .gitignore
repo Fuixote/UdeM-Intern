@@ -112,6 +112,15 @@ surrogate_experiment_results/Step3/**/phase_b/smoke_splits*/
 surrogate_experiment_results/Step3/K18_analysis/experiment_01_budget4to1/scripts/__pycache__/
 surrogate_experiment_results/Step3/K18_analysis/experiment_01_budget4to1/scripts/__pycache__/**
 
+# Step5 weak-label code/configs and compact audit summaries are trackable.
+# Heavy smoke/formal datasets and job trees remain ignored under results/.
+!surrogate_experiment_results/Step5_topology_dfl_suitability/experiment_01_weak_label_seed42_sample50/results/
+surrogate_experiment_results/Step5_topology_dfl_suitability/experiment_01_weak_label_seed42_sample50/results/**
+!surrogate_experiment_results/Step5_topology_dfl_suitability/experiment_01_weak_label_seed42_sample50/results/topology_bank_audit.json
+!surrogate_experiment_results/Step5_topology_dfl_suitability/experiment_01_weak_label_seed42_sample50/results/weak_label_job_metrics.csv
+!surrogate_experiment_results/Step5_topology_dfl_suitability/experiment_01_weak_label_seed42_sample50/results/weak_label_topology_summary.csv
+!surrogate_experiment_results/Step5_topology_dfl_suitability/experiment_01_weak_label_seed42_sample50/results/weak_label_integrity_audit.json
+
 # Step4 AI-handoff artifacts are intentionally trackable. Keep compact
 # structural/summary/target CSVs in git; keep full decision rows and per-batch
 # raw overlays local or in external artifacts.
