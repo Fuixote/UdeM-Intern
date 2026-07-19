@@ -63,7 +63,12 @@ JOB_METRIC_FIELDS = [
     "paired_improvement_matches_delta",
     "test_normalized_gap_2stage",
     "test_normalized_gap_spoplus",
+    "normalized_improvement_pp",
     "fraction_improved_over_2stage",
+    "two_stage_early_stop_triggered",
+    "spoplus_early_stop_triggered",
+    "two_stage_stopped_epoch",
+    "spoplus_stopped_epoch",
     "weak_label_class",
     "weak_label",
     "weak_label_threshold",
@@ -92,6 +97,13 @@ LABEL_FIELDS = [
     "test_gap_2stage",
     "test_gap_spoplus",
     "delta",
+    "test_normalized_gap_2stage",
+    "test_normalized_gap_spoplus",
+    "normalized_improvement_pp",
+    "two_stage_early_stop_triggered",
+    "spoplus_early_stop_triggered",
+    "two_stage_stopped_epoch",
+    "spoplus_stopped_epoch",
     "weak_label_class",
     "weak_label",
     "weak_label_threshold",
@@ -187,6 +199,18 @@ def method_rows_from_summary(path: Path) -> dict[str, dict[str, Any]]:
     return rows
 
 
+def early_stop_record(path: Path) -> tuple[dict[str, Any], str | None]:
+    if not path.is_file():
+        return {}, "missing"
+    try:
+        payload = read_json(path)
+    except (OSError, json.JSONDecodeError) as exc:
+        return {}, f"invalid:{exc}"
+    if not isinstance(payload, dict):
+        return {}, "invalid:not_object"
+    return payload, None
+
+
 def classify_delta(delta: float, threshold: float = 0.1) -> str:
     if float(delta) > float(threshold):
         return "helpful"
@@ -238,6 +262,7 @@ def review_one_job(
     early_stop_patience: int,
     early_stop_min_delta: float,
     threshold: float,
+    require_early_stop: bool,
 ) -> tuple[dict[str, Any], dict[str, Any] | None, list[str]]:
     topology_id = str(topology_row["topology_id"])
     training_size, validation_size = builder.validate_sample_size(sample_size)
@@ -337,6 +362,29 @@ def review_one_job(
     weak_class = "" if delta is None else classify_delta(delta, threshold)
     normalized_gap_2stage = to_float(two_stage.get("test_mean_normalized_gap"))
     normalized_gap_spoplus = to_float(spoplus.get("test_mean_normalized_gap"))
+    normalized_improvement_pp = None
+    if normalized_gap_2stage is not None and normalized_gap_spoplus is not None:
+        normalized_improvement_pp = 100.0 * (
+            normalized_gap_2stage - normalized_gap_spoplus
+        )
+    else:
+        failures.append("normalized_improvement_unavailable")
+
+    two_stage_early_stop, two_stage_early_stop_error = early_stop_record(
+        job_dir / "2stage" / "metrics" / "early_stopping_2stage.json"
+    )
+    spoplus_early_stop, spoplus_early_stop_error = early_stop_record(
+        job_dir / "spoplus" / "metrics" / "early_stopping.json"
+    )
+    if require_early_stop:
+        for method, record, error in (
+            ("2stage", two_stage_early_stop, two_stage_early_stop_error),
+            ("spoplus", spoplus_early_stop, spoplus_early_stop_error),
+        ):
+            if error is not None:
+                failures.append(f"{method}_early_stop_{error}")
+            elif record.get("should_stop") is not True:
+                failures.append(f"{method}_early_stop_not_triggered")
     fraction_improved = to_float(spoplus.get("fraction_improved_over_2stage"))
     label_protocol = label_protocol_text(threshold)
     row = {
@@ -373,7 +421,14 @@ def review_one_job(
         "test_normalized_gap_spoplus": (
             "" if normalized_gap_spoplus is None else normalized_gap_spoplus
         ),
+        "normalized_improvement_pp": (
+            "" if normalized_improvement_pp is None else normalized_improvement_pp
+        ),
         "fraction_improved_over_2stage": "" if fraction_improved is None else fraction_improved,
+        "two_stage_early_stop_triggered": two_stage_early_stop.get("should_stop", ""),
+        "spoplus_early_stop_triggered": spoplus_early_stop.get("should_stop", ""),
+        "two_stage_stopped_epoch": two_stage_early_stop.get("stopped_epoch", ""),
+        "spoplus_stopped_epoch": spoplus_early_stop.get("stopped_epoch", ""),
         "weak_label_class": weak_class,
         "weak_label": True,
         "weak_label_threshold": float(threshold),
@@ -405,6 +460,13 @@ def review_one_job(
             "test_gap_2stage": gap_2stage,
             "test_gap_spoplus": gap_spoplus,
             "delta": delta,
+            "test_normalized_gap_2stage": normalized_gap_2stage,
+            "test_normalized_gap_spoplus": normalized_gap_spoplus,
+            "normalized_improvement_pp": normalized_improvement_pp,
+            "two_stage_early_stop_triggered": two_stage_early_stop.get("should_stop", ""),
+            "spoplus_early_stop_triggered": spoplus_early_stop.get("should_stop", ""),
+            "two_stage_stopped_epoch": two_stage_early_stop.get("stopped_epoch", ""),
+            "spoplus_stopped_epoch": spoplus_early_stop.get("stopped_epoch", ""),
             "weak_label_class": weak_class,
             "weak_label": True,
             "weak_label_threshold": float(threshold),
@@ -433,6 +495,7 @@ def review_results(
     early_stop_patience: int = DEFAULT_EARLY_STOP_PATIENCE,
     early_stop_min_delta: float = DEFAULT_EARLY_STOP_MIN_DELTA,
     threshold: float = 0.1,
+    require_early_stop: bool = False,
 ) -> dict[str, Any]:
     output_dir = Path(output_dir)
     job_rows: list[dict[str, Any]] = []
@@ -455,6 +518,7 @@ def review_results(
             early_stop_patience=early_stop_patience,
             early_stop_min_delta=early_stop_min_delta,
             threshold=threshold,
+            require_early_stop=require_early_stop,
         )
         job_rows.append(job_row)
         if label_row is not None:
@@ -513,6 +577,10 @@ def review_results(
         "unexpected_job_status_files": extra_status_paths,
         "label_protocol": {
             "continuous_label": "delta=test_gap_2stage-test_gap_spoplus",
+            "primary_regression_target": (
+                "normalized_improvement_pp=100*(test_normalized_gap_2stage-"
+                "test_normalized_gap_spoplus)"
+            ),
             "helpful": f"delta>{float(threshold)}",
             "harmful": f"delta<{-float(threshold)}",
             "near_neutral": f"abs(delta)<={float(threshold)}",
@@ -528,6 +596,7 @@ def review_results(
             "metric_stride": int(metric_stride),
             "early_stop_patience": int(early_stop_patience),
             "early_stop_min_delta": float(early_stop_min_delta),
+            "require_early_stop": bool(require_early_stop),
             "protocol": str(protocol),
             "regime": str(regime),
         },
@@ -557,6 +626,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--metric-stride", type=int, default=DEFAULT_METRIC_STRIDE)
     parser.add_argument("--early-stop-patience", type=int, default=DEFAULT_EARLY_STOP_PATIENCE)
     parser.add_argument("--early-stop-min-delta", type=float, default=DEFAULT_EARLY_STOP_MIN_DELTA)
+    parser.add_argument(
+        "--require-early-stop",
+        action="store_true",
+        help="Reject labels unless both method early-stopping records have should_stop=true.",
+    )
     parser.add_argument("--threshold", type=float, default=0.1)
     parser.add_argument("--topology-id", action="append", default=None)
     parser.add_argument("--limit", type=int, default=None)
@@ -589,6 +663,7 @@ def main(argv: list[str] | None = None) -> int:
         early_stop_patience=args.early_stop_patience,
         early_stop_min_delta=args.early_stop_min_delta,
         threshold=args.threshold,
+        require_early_stop=args.require_early_stop,
     )
     print(json.dumps(audit, indent=2, sort_keys=True))
     return 0 if audit["passed"] else 1

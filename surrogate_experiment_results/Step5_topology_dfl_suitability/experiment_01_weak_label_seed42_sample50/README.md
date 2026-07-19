@@ -2,7 +2,7 @@
 
 ## Status
 
-The local pipeline implementation, pre-smoke protocol lock, and smoke20 execution are complete as of 2026-07-19. The implementation was recorded in commit `6208873d53dfe4e624a80bfbb2aea8b1cb40b386`, synchronized to Garnet, and used to complete the smoke20 artifact build, audit, training, evaluation, and weak-label review. The formal 1000-topology sweep has not started.
+The local pipeline implementation, pre-smoke protocol lock, and smoke20 execution are complete as of 2026-07-19. The implementation was recorded in commit `6208873d53dfe4e624a80bfbb2aea8b1cb40b386`, synchronized to Garnet, and used to complete the smoke20 artifact build, audit, training, evaluation, and weak-label review. The formal 1000-topology sweep has not started. Its successor protocol is now maintained separately in `experiment_03_formal_continuous_label_seed42_sample50`; this Experiment 01 contract remains an immutable record of the 1500-epoch smoke.
 
 The fixed experiment contract is:
 
@@ -23,7 +23,7 @@ metric_stride    1
 early_stop       patience=20, min_delta=0.0001
 ```
 
-The `master_label_seed` fixes the label-generating process and is deliberately distinct from `data_seed=42`. The 1500-epoch cap follows the Step3 native-e1500 cap check: extending the reviewed cap-hit cases to 3000 epochs produced no decision-outcome changes, so the lower cap remains the frozen protocol.
+The `master_label_seed` fixes the label-generating process and is deliberately distinct from `data_seed=42`. The 1500-epoch cap remains frozen for this historical smoke protocol; it is not the cap selected for the formal successor experiment.
 
 Locked configuration artifacts:
 
@@ -84,7 +84,7 @@ Execution proceeded through a gated `G-0` canary and then the remaining 19 jobs:
 - integrity-audit SHA-256: `bd78e3813c8d170a1179b2134b78c8ed32b2e4bb62e778a1dd12caab468b3612`;
 - the shared Brevo completion watcher returned HTTP 201.
 
-The smoke used the frozen 1500-epoch protocol successfully. Epoch review nevertheless found that SPO+ for `G-4` and `G-15` had `best_epoch=1500`, `stopped_epoch=1500`, and did not trigger early stopping; no 2stage job hit the cap. Before launching the formal 1000-topology sweep, run a targeted same-artifact 1500-versus-3000 cap-sensitivity check for `G-4` and `G-15`. Do not change the formal cap unless that paired check changes delta materially or changes a weak-label class.
+The smoke used the frozen 1500-epoch protocol successfully. Epoch review nevertheless found that SPO+ for `G-4` and `G-15` reached the cap without triggering early stopping; no 2stage job hit the cap. Experiment 02 later extended G-15 to 3000 epochs at sample sizes 50, 100, and 250: all three runs triggered early stopping and retained exactly 0 pp improvement on the fixed test banks. The formal successor therefore uses a 10000-epoch emergency cap and accepts labels only when both methods actually trigger early stopping.
 
 ## Scripts
 
@@ -186,7 +186,7 @@ python "$STEP5_EXP/scripts/review_weak_label_results.py" \
   --limit 20
 ```
 
-Smoke acceptance requires `passed=true`, `job_rows=20`, `success=20`, `label_rows=20`, and no failures in `results/weak_label_integrity_audit.json`. Only then remove `--limit 20`, generate the 1000-row formal plan, and use `--expected-job-count 1000` with the formal launcher.
+Smoke acceptance requires `passed=true`, `job_rows=20`, `success=20`, `label_rows=20`, and no failures in `results/weak_label_integrity_audit.json`. These conditions were met. Do not launch the formal sweep by merely removing `--limit 20` from these historical commands; use the locked Experiment 03 protocol with explicit `--max-epochs 10000` and reviewer `--require-early-stop`.
 
 ## Canonical outputs
 

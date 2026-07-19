@@ -239,6 +239,18 @@ class Step5WeakLabelScriptTests(unittest.TestCase):
             )
             metrics_dir = job_dir / "evaluation" / "metrics"
             metrics_dir.mkdir(parents=True)
+            two_stage_metrics = job_dir / "2stage" / "metrics"
+            spoplus_metrics = job_dir / "spoplus" / "metrics"
+            two_stage_metrics.mkdir(parents=True)
+            spoplus_metrics.mkdir(parents=True)
+            (two_stage_metrics / "early_stopping_2stage.json").write_text(
+                json.dumps({"should_stop": True, "stopped_epoch": 123}),
+                encoding="utf-8",
+            )
+            (spoplus_metrics / "early_stopping.json").write_text(
+                json.dumps({"should_stop": True, "stopped_epoch": 456}),
+                encoding="utf-8",
+            )
             (job_dir / "job_status.json").write_text(
                 json.dumps(
                     {
@@ -307,11 +319,29 @@ class Step5WeakLabelScriptTests(unittest.TestCase):
                 test_size=1000,
                 theta_seed=42,
                 gurobi_seed=42,
+                require_early_stop=True,
             )
             with (root / "results" / "weak_label_topology_summary.csv").open(
                 newline="", encoding="utf-8"
             ) as handle:
                 rows = list(csv.DictReader(handle))
+            (spoplus_metrics / "early_stopping.json").write_text(
+                json.dumps({"should_stop": False, "stopped_epoch": 1500}),
+                encoding="utf-8",
+            )
+            rejected = reviewer.review_results(
+                [TOPOLOGY_ROW],
+                output_root=root,
+                output_dir=root / "rejected",
+                regime=REGIME,
+                protocol="screen",
+                data_seed=42,
+                sample_size=50,
+                test_size=1000,
+                theta_seed=42,
+                gurobi_seed=42,
+                require_early_stop=True,
+            )
 
         self.assertTrue(audit["passed"], audit["failures"])
         self.assertEqual(audit["job_rows"], 1)
@@ -319,6 +349,12 @@ class Step5WeakLabelScriptTests(unittest.TestCase):
         self.assertEqual(audit["label_rows"], 1)
         self.assertEqual(rows[0]["weak_label_class"], "helpful")
         self.assertAlmostEqual(float(rows[0]["delta"]), 0.2)
+        self.assertAlmostEqual(float(rows[0]["normalized_improvement_pp"]), 10.0)
+        self.assertEqual(rows[0]["two_stage_early_stop_triggered"], "True")
+        self.assertEqual(rows[0]["spoplus_early_stop_triggered"], "True")
+        self.assertFalse(rejected["passed"])
+        self.assertEqual(rejected["label_rows"], 0)
+        self.assertIn("G-1:spoplus_early_stop_not_triggered", rejected["failures"])
 
     def test_topology_bank_audit_checks_locked_hash_fields_and_paths(self):
         with tempfile.TemporaryDirectory() as tmp:

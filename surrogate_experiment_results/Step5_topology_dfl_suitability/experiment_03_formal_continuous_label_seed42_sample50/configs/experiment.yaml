@@ -1,0 +1,59 @@
+experiment:
+  experiment_id: step5_exp3_formal_continuous_label_seed42_sample50_v1
+  status: protocol_locked_pre_run
+  locked_date: 2026-07-19
+  purpose: build continuous topology-level DFL suitability targets for GNN regression
+  historical_smoke: surrogate_experiment_results/Step5_topology_dfl_suitability/experiment_01_weak_label_seed42_sample50
+  sample_size_diagnostic: surrogate_experiment_results/Step5_topology_dfl_suitability/experiment_02_sample_size_sensitivity_seed42
+
+paths:
+  topology_manifest: surrogate_experiment_results/Step5_topology_dfl_suitability/experiment_01_weak_label_seed42_sample50/configs/topologies.locked.csv
+  context_generator_config: surrogate_experiment_results/Step5_topology_dfl_suitability/experiment_01_weak_label_seed42_sample50/configs/context_generator.locked.yaml
+  output_root: surrogate_experiment_results/Step5_topology_dfl_suitability/experiment_03_formal_continuous_label_seed42_sample50/results/formal1000
+
+data:
+  topology_count: 1000
+  sample_size: 50
+  training_size: 40
+  validation_size: 10
+  test_size: 1000
+  split_assignment_rule: every_fifth_sample_is_validation
+  generator_experiment_version: step5_exp1_weak_label_seed42_sample50_v1
+
+seeds:
+  data_seed: 42
+  theta_seed: 42
+  gurobi_seed: 42
+  master_label_seed: 20260719
+
+training:
+  methods: 2stage,spoplus
+  max_epochs: 10000
+  max_epochs_role: emergency_safety_cap
+  metric_stride: 1
+  early_stop_patience: 20
+  early_stop_min_delta: 0.0001
+  require_early_stop: true
+  accepted_termination: both_methods_should_stop_true
+  cap_reached_action: reject_job_and_do_not_export_label
+
+target:
+  task: regression
+  primary: normalized_improvement_pp
+  formula: 100 * (test_mean_normalized_gap_2stage - test_mean_normalized_gap_spoplus)
+  sign: positive_favors_spoplus_negative_favors_2stage
+  legacy_weak_class_is_primary: false
+
+execution:
+  host: garnet
+  scheduler: tmux_bounded_parallel
+  normal_workers: 16
+  slurm: false
+  expected_job_count: 1000
+
+audit:
+  require_all_jobs_success: true
+  require_paired_2stage_spoplus_evaluation: true
+  require_both_methods_early_stop: true
+  reject_cap_terminated_jobs: true
+  expected_label_count: 1000
