@@ -46,7 +46,9 @@
   `configs/experiment.yaml`: `master_label_seed=20260719`, `max_epochs=1500`, `metric_stride=1`, `early_stop_patience=20`, and
   `early_stop_min_delta=0.0001`. The generator config and 1000-row topology manifest are locked, and `results/topology_bank_audit.json` reports
   `passed=true` with no failures. On 2026-07-19, the `G-0` through `G-19` smoke20 artifacts were built on Garnet: 20/20 topology bundles passed
-  the artifact audit with zero failures. No model training jobs have been launched yet; the next gate is dry-run plan generation and launcher review.
+  the artifact audit with zero failures. The subsequent 20-row dry-run plan and launcher preview also passed: all jobs were ready, all commands were
+  dry-run-only, and the preview reported `execute=false` with 4 normal workers. No model training jobs have been launched yet; the next gate is an
+  explicitly reviewed Garnet tmux launch with launcher-level `--execute`.
 
   ## Key Changes
 

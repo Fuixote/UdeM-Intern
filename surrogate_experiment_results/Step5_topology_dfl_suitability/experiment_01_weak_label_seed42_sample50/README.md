@@ -50,7 +50,21 @@ Verified results:
 - inventory: 60 NPZ files, 80 manifest JSON files, approximately 137 MB total;
 - protocol: `data_seed=42`, `master_label_seed=20260719`, `sample_size=50`, and regime `step2c_poly_d8_mult_eps050`.
 
-The next gate is to generate the 20-row dry-run job plan and preview the launcher. Training may start only after the CSV commands and launcher preview have been reviewed.
+The artifact gate was followed by the dry-run plan and launcher-preview checkpoint described below.
+
+## Smoke20 plan and launcher-preview checkpoint
+
+The initial Garnet planning attempt exposed a path-resolution mismatch: validation paths are manifest-relative while test paths are project-root-relative. Commit `630fb579da7af52bae18df8491ac24ac7ab6e6cb` fixed the planner to support both conventions and added a regression test. Local and Garnet test suites then passed 8/8.
+
+The regenerated plan passed with 20 ready jobs. Independent token-level CSV review verified:
+
+- exactly 20 unique jobs in topology order `G-0` through `G-19`;
+- all 20 commands contain exactly one `--dry-run` and none contain `--execute`;
+- all jobs are `ready` and `normal`;
+- every command uses the locked 40/10/1000 split, seeds 42, `max_epochs=1500`, `metric_stride=1`, `early_stop_patience=20`, and `early_stop_min_delta=0.0001`;
+- `weak_label_jobs.csv` SHA-256: `e845ff293b01ff52fa2078001443ac476bff900d7a0d4c56678661528f4e9ea0`.
+
+The launcher preview reported `execute=false`, 20 normal jobs, 4 normal workers, 0 long jobs, and 1 reserved long worker. Post-preview checks found no `jobs/` directory, no job status files, and no paired-job manifests. No training has started. The next gate is an explicitly reviewed Garnet tmux launch with launcher-level `--execute`.
 
 ## Scripts
 
