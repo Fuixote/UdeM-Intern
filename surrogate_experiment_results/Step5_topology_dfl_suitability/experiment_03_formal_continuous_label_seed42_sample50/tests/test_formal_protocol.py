@@ -20,6 +20,7 @@ class FormalProtocolTests(unittest.TestCase):
             EXPERIMENT_ROOT / "configs" / "experiment.yaml"
         )
 
+        self.assertEqual(config["experiment"]["status"], "complete")
         self.assertEqual(config["training"]["max_epochs"], 10000)
         self.assertEqual(config["training"]["max_epochs_role"], "emergency_safety_cap")
         self.assertTrue(config["training"]["require_early_stop"])
@@ -31,6 +32,8 @@ class FormalProtocolTests(unittest.TestCase):
         self.assertEqual(config["target"]["primary"], "normalized_improvement_pp")
         self.assertEqual(config["execution"]["expected_job_count"], 1000)
         self.assertEqual(config["execution"]["normal_workers"], 20)
+        self.assertTrue(config["audit"]["final_review_passed"])
+        self.assertEqual(config["audit"]["final_label_count"], 1000)
         self.assertTrue((ROOT / config["paths"]["topology_manifest"]).is_file())
         self.assertTrue((ROOT / config["paths"]["context_generator_config"]).is_file())
 

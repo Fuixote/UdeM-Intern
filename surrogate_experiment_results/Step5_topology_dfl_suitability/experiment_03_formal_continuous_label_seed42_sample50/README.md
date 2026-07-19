@@ -2,10 +2,11 @@
 
 ## Status
 
-Protocol locked on 2026-07-19. All 1000 formal artifact bundles were built and
-audited, and the 1000-row job plan passed its independent checks. Formal
-training started on Garnet at 2026-07-19 10:22:34 -0400 with 20 concurrent
-normal workers and no long-worker queue.
+Complete. All 1000 formal artifact bundles were built and audited, the 1000-row
+job plan passed its independent checks, all paired training/evaluation jobs
+succeeded, and the final continuous-label review passed with 1000 labels.
+Formal training started on Garnet at 2026-07-19 10:22:34 -0400 with 20
+concurrent normal workers and no long-worker queue.
 The completed smoke and sample-size sensitivity experiments remain immutable
 historical records with their original 1500/3000 epoch limits.
 
@@ -142,3 +143,41 @@ finished jobs, zero failures, and 968 pending jobs. A subsequent artifact-level
 check found 19 completed `job_status.json` records; all 19 reported success for
 the paired job, 2stage, SPO+, and evaluation stages. Both early-stopping files
 were present for every completed job and all had `should_stop=true`.
+
+## Final review checkpoint: 2026-07-20
+
+The launcher finished all 1000 jobs in 5792.5 seconds with zero failed or
+skipped jobs. The strict reviewer was run with `max_epochs=10000` and
+`--require-early-stop`; it found 1000 successful paired jobs, 1000 unique label
+rows, no unexpected status files, and an empty failure list. For every topology,
+2stage, SPO+, and evaluation succeeded and both method records had
+`should_stop=true`.
+
+The primary GNN dataset is `weak_label_topology_summary.csv`. Its locked compact
+outputs are:
+
+```text
+0e7b8554c63da668a2ad1b2ddd84386ec91970dd2a27d7986e417806af68deba  weak_label_topology_summary.csv
+ad2b198910eb09b2c92c724370ca4792d416baf471d3ec975b730b75acbeb12d  weak_label_job_metrics.csv
+a7bc853d44ebb7a0a4f72d2f2414ef6a68ee88821fc0cf19df76b67e02d942a5  weak_label_integrity_audit.json
+```
+
+The continuous target distribution, in normalized improvement percentage
+points, is strongly zero-inflated:
+
+```text
+negative / exact zero / positive  85 / 641 / 274
+mean / median                     1.3020 / 0.0000 pp
+minimum / maximum                -9.7041 / 50.1005 pp
+abs(label) <= 0.01 pp             679
+abs(label) <= 0.10 pp             759
+```
+
+The legacy threshold classes are secondary metadata only: 20 harmful, 796
+near-neutral, and 184 helpful. They must not replace the continuous regression
+target. Future topology-only GNN work should report an all-zero baseline and
+metrics on both the full set and the nonzero subset because 64.1% of labels are
+exactly zero.
+
+The 10000-epoch cap was not hit. The maximum stopped epoch was 2425 for 2stage
+and 8649 for SPO+; their median stopped epochs were 740 and 359, respectively.
