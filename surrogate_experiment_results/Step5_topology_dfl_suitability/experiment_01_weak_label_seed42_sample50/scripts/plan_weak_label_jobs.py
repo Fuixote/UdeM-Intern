@@ -100,9 +100,26 @@ def _training_hash(train_bank_path: Path, training_size: int) -> str | None:
     return dataset["manifest"].get("prefix_hashes", {}).get(str(int(training_size)))
 
 
-def _resolve_eval_path(eval_manifest_path: Path, raw_path: str | Path) -> Path:
+def _resolve_eval_path(
+    eval_manifest_path: Path,
+    raw_path: str | Path,
+    *,
+    project_root: Path = PROJECT_ROOT,
+) -> Path:
     path = Path(raw_path)
-    return path if path.is_absolute() else eval_manifest_path.parent / path
+    if path.is_absolute():
+        return path
+
+    manifest_relative = eval_manifest_path.parent / path
+    if manifest_relative.is_file():
+        return manifest_relative
+
+    project_relative = project_root / path
+    if project_relative.is_file():
+        return project_relative
+
+    # Preserve the manifest-relative convention for useful missing-file errors.
+    return manifest_relative
 
 
 def readiness_failures(

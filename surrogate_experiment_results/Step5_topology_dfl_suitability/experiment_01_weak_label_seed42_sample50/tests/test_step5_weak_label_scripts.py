@@ -182,6 +182,32 @@ class Step5WeakLabelScriptTests(unittest.TestCase):
         self.assertIn("--dry-run", command)
         self.assertNotIn("--execute", command)
 
+    def test_planner_resolves_both_eval_path_conventions(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp)
+            eval_dir = project_root / "results" / "G-1" / "data_seed=000042"
+            eval_dir.mkdir(parents=True)
+            eval_manifest = eval_dir / "eval_manifest.json"
+            validation = eval_dir / "validation.npz"
+            validation.touch()
+            test = project_root / "results" / "G-1" / "test" / "test.npz"
+            test.parent.mkdir(parents=True)
+            test.touch()
+
+            resolved_validation = planner._resolve_eval_path(
+                eval_manifest,
+                "validation.npz",
+                project_root=project_root,
+            )
+            resolved_test = planner._resolve_eval_path(
+                eval_manifest,
+                "results/G-1/test/test.npz",
+                project_root=project_root,
+            )
+
+        self.assertEqual(resolved_validation, validation)
+        self.assertEqual(resolved_test, test)
+
     def test_launcher_requires_dry_run_plan_before_conversion(self):
         converted = launcher.command_for_execute(
             "python run_one_job.py --output-dir old/jobs/G-1 --dry-run",
