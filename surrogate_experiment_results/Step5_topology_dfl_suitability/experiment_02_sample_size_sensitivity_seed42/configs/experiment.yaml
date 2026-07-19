@@ -1,6 +1,6 @@
 experiment:
   experiment_id: step5_exp2_sample_size_sensitivity_seed42_v1
-  status: protocol_locked_pre_run
+  status: complete
   locked_date: 2026-07-19
   purpose: distinguish low-data effects from topology decision plateaus
 
@@ -44,7 +44,7 @@ target:
 
 cap_check:
   topology_id: G-15
-  sample_size: 50
+  sample_sizes: 50,100,250
   reuse_existing_artifacts: true
   baseline_max_epochs: 1500
   comparison_max_epochs: 3000

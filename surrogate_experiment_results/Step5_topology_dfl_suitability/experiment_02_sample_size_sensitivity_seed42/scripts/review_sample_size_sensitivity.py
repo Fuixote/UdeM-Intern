@@ -246,7 +246,7 @@ def run_review(
     roles: list[tuple[str, str]],
     sample_roots: dict[int, Path],
     output_dir: Path,
-    cap_root: Path | None = None,
+    cap_roots: dict[int, Path] | None = None,
 ) -> dict[str, Any]:
     if tuple(sorted(sample_roots)) != EXPECTED_SAMPLE_SIZES:
         raise ValueError(f"sample roots must be exactly {EXPECTED_SAMPLE_SIZES}")
@@ -277,18 +277,29 @@ def run_review(
             hash_failures.append(f"{topology_id}:fit_prefix_not_nested")
 
     cap_rows: list[dict[str, Any]] = []
-    if cap_root is not None:
+    cap_roots = cap_roots or {}
+    if cap_roots:
+        unknown_sizes = sorted(set(cap_roots) - set(EXPECTED_SAMPLE_SIZES))
+        if unknown_sizes:
+            raise ValueError(f"unexpected cap-check sample sizes: {unknown_sizes}")
         role_by_id = dict(roles)
-        baseline = next(
-            row for row in rows if row["topology_id"] == "G-15" and row["sample_size"] == 50
-        )
-        cap_rows = [baseline, collect_one(cap_root, "G-15", role_by_id["G-15"], 50, 3000)]
-        if cap_rows[0]["test_hash"] != cap_rows[1]["test_hash"]:
-            hash_failures.append("G-15:cap_check_test_hash_mismatch")
-        if cap_rows[0]["train_prefix_hash"] != cap_rows[1]["train_prefix_hash"]:
-            hash_failures.append("G-15:cap_check_train_hash_mismatch")
-        if cap_rows[0]["validation_hash"] != cap_rows[1]["validation_hash"]:
-            hash_failures.append("G-15:cap_check_validation_hash_mismatch")
+        for size in sorted(cap_roots):
+            baseline = next(
+                row
+                for row in rows
+                if row["topology_id"] == "G-15" and row["sample_size"] == size
+            )
+            comparison = collect_one(
+                cap_roots[size], "G-15", role_by_id["G-15"], size, 3000
+            )
+            cap_rows.extend((baseline, comparison))
+            for field, failure_name in (
+                ("test_hash", "test_hash_mismatch"),
+                ("train_prefix_hash", "train_hash_mismatch"),
+                ("validation_hash", "validation_hash_mismatch"),
+            ):
+                if baseline[field] != comparison[field]:
+                    hash_failures.append(f"G-15:sample{size}:cap_check_{failure_name}")
 
     output_dir.mkdir(parents=True, exist_ok=True)
     result_path = output_dir / "sample_size_sensitivity.csv"
@@ -330,7 +341,13 @@ def parse_args() -> argparse.Namespace:
         default=experiment_root / "configs" / "topologies.selected.csv",
     )
     parser.add_argument("--sample-root", action="append", type=parse_root, required=True)
-    parser.add_argument("--cap-root", type=Path, default=None)
+    parser.add_argument(
+        "--cap-root",
+        action="append",
+        type=parse_root,
+        default=[],
+        help="Optional repeated SAMPLE_SIZE=PATH roots for G-15 3000-epoch checks.",
+    )
     parser.add_argument("--output-dir", type=Path, default=experiment_root / "results")
     return parser.parse_args()
 
@@ -340,7 +357,10 @@ def main() -> int:
     roots = dict(args.sample_root)
     if len(roots) != len(args.sample_root):
         raise ValueError("duplicate --sample-root sample size")
-    audit = run_review(topology_roles(args.topologies_csv), roots, args.output_dir, args.cap_root)
+    cap_roots = dict(args.cap_root)
+    if len(cap_roots) != len(args.cap_root):
+        raise ValueError("duplicate --cap-root sample size")
+    audit = run_review(topology_roles(args.topologies_csv), roots, args.output_dir, cap_roots)
     print(json.dumps(audit, indent=2, sort_keys=True))
     return 0 if audit["passed"] else 1
 

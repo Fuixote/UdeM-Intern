@@ -1,0 +1,59 @@
+{
+  "cap_check_rows": 6,
+  "expected_rows": 18,
+  "failures": [],
+  "fit_prefix_nested_by_topology": {
+    "G-0": true,
+    "G-13": true,
+    "G-14": true,
+    "G-15": true,
+    "G-3": true,
+    "G-9": true
+  },
+  "observed_rows": 18,
+  "outputs": {
+    "audit_json": "surrogate_experiment_results/Step5_topology_dfl_suitability/experiment_02_sample_size_sensitivity_seed42/results/sample_size_sensitivity_audit.json",
+    "g15_epoch_cap_check_csv": "surrogate_experiment_results/Step5_topology_dfl_suitability/experiment_02_sample_size_sensitivity_seed42/results/g15_epoch_cap_check.csv",
+    "sample_size_sensitivity_csv": "surrogate_experiment_results/Step5_topology_dfl_suitability/experiment_02_sample_size_sensitivity_seed42/results/sample_size_sensitivity.csv"
+  },
+  "passed": true,
+  "primary_target": "normalized_improvement_pp=100*(test_mean_normalized_gap_2stage-test_mean_normalized_gap_spoplus)",
+  "sample_sizes": [
+    50,
+    100,
+    250
+  ],
+  "test_hashes_by_topology": {
+    "G-0": [
+      "9ca047d9d14ce29e8f22a6d8c217f7f05c592c930976dd846ccafea8444235ce",
+      "9ca047d9d14ce29e8f22a6d8c217f7f05c592c930976dd846ccafea8444235ce",
+      "9ca047d9d14ce29e8f22a6d8c217f7f05c592c930976dd846ccafea8444235ce"
+    ],
+    "G-13": [
+      "b0959d42ca1520a8cfc226749b7ca4043260015311eb6a10f86ad3d6e05fbb04",
+      "b0959d42ca1520a8cfc226749b7ca4043260015311eb6a10f86ad3d6e05fbb04",
+      "b0959d42ca1520a8cfc226749b7ca4043260015311eb6a10f86ad3d6e05fbb04"
+    ],
+    "G-14": [
+      "afe37e08ad38556c4bf6cc544848f42212a10b66a9876011cfc0e7a320d4d660",
+      "afe37e08ad38556c4bf6cc544848f42212a10b66a9876011cfc0e7a320d4d660",
+      "afe37e08ad38556c4bf6cc544848f42212a10b66a9876011cfc0e7a320d4d660"
+    ],
+    "G-15": [
+      "5b0c8d1696972c55025a2da40fc3d6ff345c2f6ee3ad7c36c8082915bb1184c8",
+      "5b0c8d1696972c55025a2da40fc3d6ff345c2f6ee3ad7c36c8082915bb1184c8",
+      "5b0c8d1696972c55025a2da40fc3d6ff345c2f6ee3ad7c36c8082915bb1184c8"
+    ],
+    "G-3": [
+      "f81ff10578e5408507cc5e0e21695b0c21dec75b1f7d6a03b308dcb63f57c45d",
+      "f81ff10578e5408507cc5e0e21695b0c21dec75b1f7d6a03b308dcb63f57c45d",
+      "f81ff10578e5408507cc5e0e21695b0c21dec75b1f7d6a03b308dcb63f57c45d"
+    ],
+    "G-9": [
+      "7ee1b1cd00b04842e5f25317cb9432dd805b384481bfabd6ea6e8638cecb0efa",
+      "7ee1b1cd00b04842e5f25317cb9432dd805b384481bfabd6ea6e8638cecb0efa",
+      "7ee1b1cd00b04842e5f25317cb9432dd805b384481bfabd6ea6e8638cecb0efa"
+    ]
+  },
+  "topology_count": 6
+}
