@@ -179,6 +179,55 @@ class Step3FixedTopologyRunOneJobTests(unittest.TestCase):
             self.assertIn("evaluation", manifest["commands"])
             self.assertEqual(manifest["status"], "dry_run_ready")
 
+    def test_commands_resolve_manifest_and_project_relative_eval_paths(self):
+        job_mod = load_module(JOB_SCRIPT, "run_one_job_mixed_eval_paths")
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp)
+            eval_dir = project_root / "artifacts" / "G-1" / "data_seed=000042"
+            eval_dir.mkdir(parents=True)
+            eval_manifest_path = eval_dir / "eval_manifest.json"
+            validation_path = eval_dir / "validation.npz"
+            validation_path.touch()
+            test_path = project_root / "artifacts" / "G-1" / "test" / "test.npz"
+            test_path.parent.mkdir(parents=True)
+            test_path.touch()
+            eval_manifest = {
+                "validation_path": "validation.npz",
+                "test_path": "artifacts/G-1/test/test.npz",
+            }
+            manifest = {
+                "output_directory": str(project_root / "job"),
+                "train_size": 40,
+                "theta_seed": 42,
+                "max_epochs": 1500,
+                "metric_stride": 1,
+                "early_stop_patience": 20,
+                "early_stop_min_delta": 0.0001,
+                "train_prefix_hash": "train-hash",
+                "validation_hash": "validation-hash",
+                "test_hash": "test-hash",
+                "gurobi_seed": 42,
+            }
+
+            with mock.patch.object(job_mod, "PROJECT_ROOT", project_root):
+                commands = job_mod.build_job_commands(
+                    train_bank_path=project_root / "train_bank.npz",
+                    eval_manifest_path=eval_manifest_path,
+                    eval_manifest=eval_manifest,
+                    manifest=manifest,
+                )
+
+        two_stage = commands["2stage"]
+        evaluation = commands["evaluation"]
+        self.assertEqual(
+            Path(two_stage[two_stage.index("--validation-set") + 1]),
+            validation_path,
+        )
+        self.assertEqual(
+            Path(evaluation[evaluation.index("--eval-set") + 1]),
+            test_path,
+        )
+
     def test_refuses_train_size_not_present_in_prefix_hashes(self):
         job_mod = load_module(JOB_SCRIPT, "run_one_job_missing_prefix")
         with tempfile.TemporaryDirectory() as tmp:

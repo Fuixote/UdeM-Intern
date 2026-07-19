@@ -212,6 +212,30 @@ def _python_bin(selected: str | None = None) -> str:
     return selected or os.environ.get("KEP_PYTHON") or sys.executable
 
 
+def resolve_eval_artifact_path(
+    eval_manifest_path: str | Path,
+    raw_path: str | Path,
+    *,
+    project_root: str | Path | None = None,
+) -> Path:
+    path = Path(raw_path)
+    if path.is_absolute():
+        return path
+
+    eval_manifest_path = Path(eval_manifest_path)
+    manifest_relative = eval_manifest_path.parent / path
+    if manifest_relative.is_file():
+        return manifest_relative
+
+    root = PROJECT_ROOT if project_root is None else Path(project_root)
+    project_relative = root / path
+    if project_relative.is_file():
+        return project_relative
+
+    # Preserve the traditional manifest-relative fallback for useful failures.
+    return manifest_relative
+
+
 def build_job_commands(
     *,
     train_bank_path: str | Path,
@@ -226,13 +250,14 @@ def build_job_commands(
     two_stage_out = output_dir / "2stage"
     spoplus_out = output_dir / "spoplus"
     evaluation_out = output_dir / "evaluation"
-    eval_manifest_dir = Path(eval_manifest_path).parent
-    validation_path = Path(eval_manifest["validation_path"])
-    test_path = Path(eval_manifest["test_path"])
-    if not validation_path.is_absolute():
-        validation_path = eval_manifest_dir / validation_path
-    if not test_path.is_absolute():
-        test_path = eval_manifest_dir / test_path
+    validation_path = resolve_eval_artifact_path(
+        eval_manifest_path,
+        eval_manifest["validation_path"],
+    )
+    test_path = resolve_eval_artifact_path(
+        eval_manifest_path,
+        eval_manifest["test_path"],
+    )
     common_train_args = [
         "--train-bank",
         str(train_bank_path),
