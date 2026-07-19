@@ -181,3 +181,63 @@ exactly zero.
 
 The 10000-epoch cap was not hit. The maximum stopped epoch was 2425 for 2stage
 and 8649 for SPO+; their median stopped epochs were 740 and 359, respectively.
+
+## Dataset readiness assessment: 2026-07-20
+
+The dataset is internally valid and reproducible for the locked
+`pairs20/ndd2`, sample-size-50 regime. All 1000 topology and source files are
+present; topology and feasible-set hashes are unique; the label formula was
+independently recomputed for every row; and no non-finite target was found.
+The 1000 paired test samples and strict early-stop requirement make this a
+strong controlled v1 dataset.
+
+The exact zeros are real decision plateaus rather than rounding artifacts. Of
+641 zero labels, 186 have zero normalized gap for both methods and 455 have the
+same nonzero normalized gap. All 641 also have zero paired mean improvement and
+zero fraction of samples improved over 2stage. The target is nevertheless
+heavy-tailed: 241 rows have absolute improvement above 0.1 pp, 143 exceed 1 pp,
+and 18 exceed 20 pp.
+
+There is topology-complexity signal, especially for whether a label is nonzero,
+but the available scalar summaries do not predict its magnitude or direction
+well. Across the 21 nonconstant, topology-only scalar fields, the strongest
+Spearman correlation with absolute target is 0.310. A deterministic exploratory
+five-fold evaluation gave:
+
+```text
+model                     overall MAE   overall RMSE   overall R2
+all-zero baseline              1.362          5.199       -0.067
+fold-train mean                2.244          5.036       -0.001
+ridge topology summaries       2.217          5.029        0.002
+extra-trees summaries          2.171          4.991        0.017
+```
+
+On the 241 rows with `abs(label) > 0.1 pp`, the extra-trees R2 is -0.153.
+Topology summaries identify exact nonzero labels only moderately (ROC AUC
+0.669) and material labels weakly (ROC AUC 0.617); among the 241 material rows,
+positive-versus-negative direction is effectively random (ROC AUC 0.509). The
+material subset contains only 31 negative versus 210 positive rows.
+
+This weak scalar baseline does not rule out a structural GNN. There are seven
+graphs in three groups with identical values for all 21 scalar topology fields
+but different labels, with a maximum within-group range of 18.744 pp. Their
+connectivity or candidate-incidence structure therefore contains information
+that aggregate counts discard. A candidate-vertex incidence GNN or
+candidate-conflict GNN is better aligned with this signal than a vanilla GNN
+using only the 22-vertex compatibility graph.
+
+The main remaining validity limitation is replication. Every label uses the
+same data, theta, and Gurobi seed 42, so this dataset cannot estimate
+between-seed label variance or sign stability. It also contains only 20-pair,
+2-NDD graphs and only sample size 50. The target must therefore be interpreted
+as `DFL improvement under the locked seed-42, sample-50 protocol`, not yet as a
+universal intrinsic topology property.
+
+Before treating the labels as a stable GNN target, run a stratified repeat-seed
+audit with the existing test bank fixed and independently regenerated
+training/validation banks. Include exact-zero, small nonzero, material positive,
+material negative, and extreme topologies. Report label standard deviation,
+rank correlation, and sign/plateau consistency. For the first GNN baseline, use
+stratified five-fold topology splits, Huber or another outlier-robust regression
+loss, and report the all-zero baseline, full-set metrics, nonzero/material-subset
+metrics, rank correlation, and downstream method-selection regret.
