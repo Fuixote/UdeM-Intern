@@ -161,11 +161,13 @@ class Step5WeakLabelScriptTests(unittest.TestCase):
     def test_planner_emits_dry_run_only_command_with_train_size_40(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
+            job_root = root / "separate-cap-check"
             materialize_fake_bundle(root, sample_size=50, test_size=3)
 
             plan = planner.build_plan(
                 [TOPOLOGY_ROW],
                 output_root=root,
+                job_output_root=job_root,
                 regime=REGIME,
                 protocol="screen",
                 data_seed=42,
@@ -179,8 +181,11 @@ class Step5WeakLabelScriptTests(unittest.TestCase):
         self.assertIn("--train-size 40", command)
         self.assertIn("--sample-size 50", command)
         self.assertIn("--max-epochs 1500", command)
+        self.assertIn(str(job_root / "jobs"), command)
         self.assertIn("--dry-run", command)
         self.assertNotIn("--execute", command)
+        self.assertEqual(plan["artifact_root"], str(root))
+        self.assertEqual(plan["job_output_root"], str(job_root))
 
     def test_planner_resolves_both_eval_path_conventions(self):
         with tempfile.TemporaryDirectory() as tmp:

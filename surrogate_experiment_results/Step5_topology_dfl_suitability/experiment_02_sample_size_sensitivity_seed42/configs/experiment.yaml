@@ -1,0 +1,51 @@
+experiment:
+  experiment_id: step5_exp2_sample_size_sensitivity_seed42_v1
+  status: protocol_locked_pre_run
+  locked_date: 2026-07-19
+  purpose: distinguish low-data effects from topology decision plateaus
+
+data_namespace:
+  experiment_version: step5_exp1_weak_label_seed42_sample50_v1
+  reason: preserve exact sample prefixes and the existing topology-specific test banks
+  data_seed: 42
+  master_label_seed: 20260719
+  test_size: 1000
+  protocol: screen
+  regime: step2c_poly_d8_mult_eps050
+  context_generator_config: ../../experiment_01_weak_label_seed42_sample50/configs/context_generator.locked.yaml
+
+sample_sizes:
+  - sample_size: 50
+    training_size: 40
+    validation_size: 10
+    action: reuse_existing_smoke20
+  - sample_size: 100
+    training_size: 80
+    validation_size: 20
+    action: build_and_train
+  - sample_size: 250
+    training_size: 200
+    validation_size: 50
+    action: build_and_train
+
+training:
+  methods: 2stage,spoplus
+  theta_seed: 42
+  gurobi_seed: 42
+  max_epochs: 1500
+  metric_stride: 1
+  early_stop_patience: 20
+  early_stop_min_delta: 0.0001
+
+target:
+  primary: normalized_improvement_pp
+  formula: 100 * (test_mean_normalized_gap_2stage - test_mean_normalized_gap_spoplus)
+  interpretation: positive means SPO+ is better; negative means 2stage is better
+
+cap_check:
+  topology_id: G-15
+  sample_size: 50
+  reuse_existing_artifacts: true
+  baseline_max_epochs: 1500
+  comparison_max_epochs: 3000
+  output_is_separate_from_sample_size_runs: true

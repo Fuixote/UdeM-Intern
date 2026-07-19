@@ -233,6 +233,7 @@ def build_plan(
     topology_rows: list[dict[str, str]],
     *,
     output_root: str | Path,
+    job_output_root: str | Path | None = None,
     regime: str = builder.DEFAULT_REGIME,
     protocol: str = "screen",
     data_seed: int = builder.DEFAULT_DATA_SEED,
@@ -249,6 +250,7 @@ def build_plan(
     strict: bool = True,
 ) -> dict[str, Any]:
     output_root = Path(output_root)
+    job_output_root = output_root if job_output_root is None else Path(job_output_root)
     if int(max_epochs) <= 0:
         raise ValueError("max_epochs must be positive")
     if int(metric_stride) <= 0:
@@ -309,7 +311,7 @@ def build_plan(
             "validation_path": str(eval_manifest.get("validation_path", "")),
             "test_path": str(eval_manifest.get("test_path", "")),
             "output_dir": str(
-                output_root
+                job_output_root
                 / "jobs"
                 / str(regime)
                 / topology_id
@@ -363,6 +365,8 @@ def build_plan(
         "gurobi_seed": int(gurobi_seed),
         "protocol": str(protocol),
         "regime": str(regime),
+        "artifact_root": str(output_root),
+        "job_output_root": str(job_output_root),
         "commands_are_dry_run_only": True,
         "jobs": jobs,
     }
@@ -376,6 +380,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--topologies-csv", type=Path, default=DEFAULT_TOPOLOGIES)
     parser.add_argument("--output-root", type=Path, required=True)
+    parser.add_argument(
+        "--job-output-root",
+        type=Path,
+        default=None,
+        help="Optional separate job/result root while reading artifacts from --output-root.",
+    )
     parser.add_argument("--regime", default=builder.DEFAULT_REGIME)
     parser.add_argument("--protocol", choices=("screen", "confirm"), default="screen")
     parser.add_argument("--data-seed", type=int, default=builder.DEFAULT_DATA_SEED)
@@ -407,6 +417,7 @@ def main(argv: list[str] | None = None) -> int:
     plan = build_plan(
         rows,
         output_root=args.output_root,
+        job_output_root=args.job_output_root,
         regime=args.regime,
         protocol=args.protocol,
         data_seed=args.data_seed,
