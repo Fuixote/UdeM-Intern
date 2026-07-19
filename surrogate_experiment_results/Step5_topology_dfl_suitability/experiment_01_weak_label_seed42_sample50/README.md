@@ -2,7 +2,7 @@
 
 ## Status
 
-The local pipeline implementation and pre-smoke protocol lock are complete as of 2026-07-19. The implementation was recorded in commit `6208873d53dfe4e624a80bfbb2aea8b1cb40b386`, synchronized to Garnet, and used to complete the smoke20 artifact build and audit. No model jobs have been launched yet.
+The local pipeline implementation, pre-smoke protocol lock, and smoke20 execution are complete as of 2026-07-19. The implementation was recorded in commit `6208873d53dfe4e624a80bfbb2aea8b1cb40b386`, synchronized to Garnet, and used to complete the smoke20 artifact build, audit, training, evaluation, and weak-label review. The formal 1000-topology sweep has not started.
 
 The fixed experiment contract is:
 
@@ -64,7 +64,27 @@ The regenerated plan passed with 20 ready jobs. Independent token-level CSV revi
 - every command uses the locked 40/10/1000 split, seeds 42, `max_epochs=1500`, `metric_stride=1`, `early_stop_patience=20`, and `early_stop_min_delta=0.0001`;
 - `weak_label_jobs.csv` SHA-256: `e845ff293b01ff52fa2078001443ac476bff900d7a0d4c56678661528f4e9ea0`.
 
-The launcher preview reported `execute=false`, 20 normal jobs, 4 normal workers, 0 long jobs, and 1 reserved long worker. Post-preview checks found no `jobs/` directory, no job status files, and no paired-job manifests. No training has started. The next gate is an explicitly reviewed Garnet tmux launch with launcher-level `--execute`.
+The launcher preview reported `execute=false`, 20 normal jobs, 4 normal workers, 0 long jobs, and 1 reserved long worker. Post-preview checks found no `jobs/` directory, no job status files, and no paired-job manifests. At preview time no training had started; the reviewed execution is recorded below.
+
+## Smoke20 execution checkpoint
+
+The shared Step3 executor initially had the same mixed-relative-path assumption as the Step5 planner. Commit `186165066c6aea5286bf51fd711f7982a34ae607` added manifest-relative and project-root-relative resolution to `run_one_job.py` plus an integration regression test. The relevant local suites passed 34 tests, and the synchronized Garnet executor/Step5 suites passed 7/7 and 8/8.
+
+Execution proceeded through a gated `G-0` canary and then the remaining 19 jobs:
+
+- `G-0` canary: launcher success in approximately 50 seconds; 2stage, SPO+, and evaluation all succeeded; the one-row reviewer passed with `delta=0.0` and class `near_neutral`;
+- remaining sweep: worker limit 20, 19 jobs launched concurrently, successful `G-0` skipped by the resume gate;
+- launcher: `status=success`, `finished_jobs=19`, `skipped_jobs=1`, `failed_jobs=0`, elapsed 297.455 seconds;
+- reviewer: `passed=true`, `job_rows=20`, `success=20`, `label_rows=20`, `failures=[]`;
+- weak-label classes: 4 `helpful`, 16 `near_neutral`, 0 `harmful`;
+- delta range: minimum -0.0010602951, median 0.0, maximum 7.6952523780; 8/20 deltas were nonzero;
+- remaining-job median runtime: 55.116 seconds; main tail was `G-4` at 296.436 seconds, followed by `G-3` at 151.258 seconds and `G-9` at 138.226 seconds;
+- result inventory occupied approximately 1.5 GB on Garnet;
+- topology-summary SHA-256: `cfcfbb83771df80b1255d38cc07c15840f5e46c68aa9eabb6d68c16d3475cf98`;
+- integrity-audit SHA-256: `bd78e3813c8d170a1179b2134b78c8ed32b2e4bb62e778a1dd12caab468b3612`;
+- the shared Brevo completion watcher returned HTTP 201.
+
+The smoke used the frozen 1500-epoch protocol successfully. Epoch review nevertheless found that SPO+ for `G-4` and `G-15` had `best_epoch=1500`, `stopped_epoch=1500`, and did not trigger early stopping; no 2stage job hit the cap. Before launching the formal 1000-topology sweep, run a targeted same-artifact 1500-versus-3000 cap-sensitivity check for `G-4` and `G-15`. Do not change the formal cap unless that paired check changes delta materially or changes a weak-label class.
 
 ## Scripts
 

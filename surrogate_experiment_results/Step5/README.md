@@ -47,8 +47,14 @@
   `early_stop_min_delta=0.0001`. The generator config and 1000-row topology manifest are locked, and `results/topology_bank_audit.json` reports
   `passed=true` with no failures. On 2026-07-19, the `G-0` through `G-19` smoke20 artifacts were built on Garnet: 20/20 topology bundles passed
   the artifact audit with zero failures. The subsequent 20-row dry-run plan and launcher preview also passed: all jobs were ready, all commands were
-  dry-run-only, and the preview reported `execute=false` with 4 normal workers. No model training jobs have been launched yet; the next gate is an
-  explicitly reviewed Garnet tmux launch with launcher-level `--execute`.
+  dry-run-only, and the preview reported `execute=false` with 4 normal workers. At that checkpoint no model training had started; the subsequently
+  reviewed Garnet execution is recorded below.
+
+  The gated smoke execution completed on 2026-07-19. A real `G-0` canary passed all three stages, then the launcher used a 20-worker limit for the
+  remaining 19 jobs. All 20 topology jobs and labels passed review with zero failures: 4 labels were helpful and 16 were near-neutral. The remaining
+  sweep took 297.455 seconds, with `G-4` as the 296.436-second runtime tail. SPO+ for `G-4` and `G-15` selected and stopped at epoch 1500 without
+  triggering early stopping, while no 2stage job hit the cap. The next pre-formal gate is therefore a paired 1500-versus-3000 check for those two
+  topologies using the same artifacts; the frozen formal cap remains 1500 until that check supplies outcome evidence.
 
   ## Key Changes
 
