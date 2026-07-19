@@ -42,10 +42,11 @@
   Local validation covers the 40/10 split, artifact hashes, dry-run safety gate, launcher command conversion, label calculation, and real-bank
   compatibility. The real 1000-row bank passed the temporary validation with 1000 unique topology/hash rows and no missing template/source files.
 
-  No Step5 NPZ datasets or model jobs have been generated, and nothing has been synchronized to Garnet yet. The pre-smoke protocol is now locked in
+  The implementation was recorded in commit `6208873d53dfe4e624a80bfbb2aea8b1cb40b386` and synchronized to Garnet. The pre-smoke protocol is locked in
   `configs/experiment.yaml`: `master_label_seed=20260719`, `max_epochs=1500`, `metric_stride=1`, `early_stop_patience=20`, and
   `early_stop_min_delta=0.0001`. The generator config and 1000-row topology manifest are locked, and `results/topology_bank_audit.json` reports
-  `passed=true` with no failures.
+  `passed=true` with no failures. On 2026-07-19, the `G-0` through `G-19` smoke20 artifacts were built on Garnet: 20/20 topology bundles passed
+  the artifact audit with zero failures. No model training jobs have been launched yet; the next gate is dry-run plan generation and launcher review.
 
   ## Key Changes
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-The local pipeline implementation and pre-smoke protocol lock are complete as of 2026-07-19. No heavy artifacts have been materialized, no model jobs have been launched, and this experiment has not been synchronized to Garnet.
+The local pipeline implementation and pre-smoke protocol lock are complete as of 2026-07-19. The implementation was recorded in commit `6208873d53dfe4e624a80bfbb2aea8b1cb40b386`, synchronized to Garnet, and used to complete the smoke20 artifact build and audit. No model jobs have been launched yet.
 
 The fixed experiment contract is:
 
@@ -33,6 +33,24 @@ Locked configuration artifacts:
 - `results/topology_bank_audit.json`
 
 The locked topology manifest has 1000 rows and SHA-256 `c621300e21d06b2217951abf007317bf774e9e01616a0bbb5c050e121f5847a2`. The parsed generator config hash recorded in generated manifests is `97d25caaf4383fecfe31ba2a03491d7bd30fbab0f869d9dff14b17bfe0042e49`.
+
+## Smoke20 artifact checkpoint
+
+The first 20 topologies (`G-0` through `G-19`) were materialized and audited on Garnet on 2026-07-19 under:
+
+```text
+/local1/fuweik/UdeM-Intern/surrogate_experiment_results/Step5_topology_dfl_suitability/experiment_01_weak_label_seed42_sample50/results/smoke20
+```
+
+Verified results:
+
+- artifact build: `passed=true`, `built=20`, `failed=0`;
+- artifact audit: `passed=true`, `passed_topologies=20`, `failed_topologies=0`, `failures=[]`;
+- every topology has one 40-sample training bank, one 10-sample validation artifact, and one 1000-sample test artifact;
+- inventory: 60 NPZ files, 80 manifest JSON files, approximately 137 MB total;
+- protocol: `data_seed=42`, `master_label_seed=20260719`, `sample_size=50`, and regime `step2c_poly_d8_mult_eps050`.
+
+The next gate is to generate the 20-row dry-run job plan and preview the launcher. Training may start only after the CSV commands and launcher preview have been reviewed.
 
 ## Scripts
 
