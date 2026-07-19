@@ -1,7 +1,8 @@
 experiment:
   experiment_id: step5_exp3_formal_continuous_label_seed42_sample50_v1
-  status: protocol_locked_pre_run
+  status: running
   locked_date: 2026-07-19
+  started_at_garnet: 2026-07-19T10:22:34-04:00
   purpose: build continuous topology-level DFL suitability targets for GNN regression
   historical_smoke: surrogate_experiment_results/Step5_topology_dfl_suitability/experiment_01_weak_label_seed42_sample50
   sample_size_diagnostic: surrogate_experiment_results/Step5_topology_dfl_suitability/experiment_02_sample_size_sensitivity_seed42
@@ -47,8 +48,10 @@ target:
 execution:
   host: garnet
   scheduler: tmux_bounded_parallel
+  training_session: step5_formal1000_train
+  notification_session: step5_formal1000_notify
   artifact_shards: 16
-  normal_workers: 16
+  normal_workers: 20
   slurm: false
   expected_job_count: 1000
 

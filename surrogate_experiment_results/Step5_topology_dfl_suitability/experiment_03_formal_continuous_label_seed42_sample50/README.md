@@ -2,9 +2,10 @@
 
 ## Status
 
-Protocol locked on 2026-07-19. All 1000 formal artifact bundles have been built
-and audited, the 1000-row dry-run job plan has been generated and independently
-checked, and the launcher preview has passed. Formal training has not started.
+Protocol locked on 2026-07-19. All 1000 formal artifact bundles were built and
+audited, and the 1000-row job plan passed its independent checks. Formal
+training started on Garnet at 2026-07-19 10:22:34 -0400 with 20 concurrent
+normal workers and no long-worker queue.
 The completed smoke and sample-size sensitivity experiments remain immutable
 historical records with their original 1500/3000 epoch limits.
 
@@ -88,9 +89,10 @@ python "$PIPELINE/scripts/launch_weak_label_jobs.py" \
   --jobs-csv "$FORMAL_ROOT/plans/formal_jobs.csv" \
   --output-root "$FORMAL_ROOT" \
   --expected-job-count 1000 \
-  --normal-workers 16 \
+  --normal-workers 20 \
   --long-workers 0 \
-  --require-hostname garnet
+  --require-hostname garnet \
+  --execute
 
 python "$PIPELINE/scripts/review_weak_label_results.py" \
   --topologies-csv "$PIPELINE/configs/topologies.locked.csv" \
@@ -126,4 +128,17 @@ readiness failures, contain the locked 50/40/10 and test-1000 split, use seed
 The launcher preview reported `execute=false`, 1000 normal jobs, zero long
 jobs, 16 normal workers, and zero long workers on Garnet. A post-preview check
 found zero formal `job_status.json` files and no formal training process. The
-next step is an explicit launcher execution; it has not been performed yet.
+later execution uses 20 workers following an explicit user override.
+
+## Execution checkpoint: 2026-07-19
+
+The formal launcher was started with `--execute`, `--normal-workers 20`, and
+`--long-workers 0` in tmux session `step5_formal1000_train`. BLAS/OpenMP thread
+environment variables were set to 1 per job to limit nested thread expansion.
+The Brevo completion watcher is running in `step5_formal1000_notify`.
+
+At the first 60-second launcher checkpoint there were 20 active jobs, 12
+finished jobs, zero failures, and 968 pending jobs. A subsequent artifact-level
+check found 19 completed `job_status.json` records; all 19 reported success for
+the paired job, 2stage, SPO+, and evaluation stages. Both early-stopping files
+were present for every completed job and all had `should_stop=true`.

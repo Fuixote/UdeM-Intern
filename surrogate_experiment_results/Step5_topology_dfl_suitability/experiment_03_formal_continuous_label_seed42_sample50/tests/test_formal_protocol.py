@@ -30,6 +30,7 @@ class FormalProtocolTests(unittest.TestCase):
         self.assertEqual(config["target"]["task"], "regression")
         self.assertEqual(config["target"]["primary"], "normalized_improvement_pp")
         self.assertEqual(config["execution"]["expected_job_count"], 1000)
+        self.assertEqual(config["execution"]["normal_workers"], 20)
         self.assertTrue((ROOT / config["paths"]["topology_manifest"]).is_file())
         self.assertTrue((ROOT / config["paths"]["context_generator_config"]).is_file())
 
