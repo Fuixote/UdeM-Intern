@@ -14,9 +14,22 @@ if str(SCRIPT_DIR) not in sys.path:
 import gnn_data_common as common
 import plan_stratified_folds as folds
 import run_scalar_baselines as baselines
+import train_formal_gnn as formal_gnn
 
 
 class GNNScaffoldTests(unittest.TestCase):
+    def test_formal_gnn_outer_test_and_validation_folds_are_disjoint(self) -> None:
+        fold_rows = [
+            {"topology_id": f"G-{index}", "fold": str(index % 5)}
+            for index in range(1000)
+        ]
+        splits = formal_gnn.split_topology_ids(fold_rows, test_fold=3)
+        self.assertEqual({name: len(values) for name, values in splits.items()}, {"train": 600, "validation": 200, "test": 200})
+        self.assertEqual(splits["test"], {f"G-{index}" for index in range(1000) if index % 5 == 3})
+        self.assertEqual(splits["validation"], {f"G-{index}" for index in range(1000) if index % 5 == 4})
+        self.assertFalse(splits["train"] & splits["validation"])
+        self.assertFalse(splits["train"] & splits["test"])
+
     def test_graph_contains_compatibility_and_bidirectional_incidence(self) -> None:
         template = {
             "topology_id": "G-X",
