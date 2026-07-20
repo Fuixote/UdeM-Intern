@@ -46,6 +46,15 @@ pipeline will review all results, build the strict three-seed mean/std target
 table, and build the formal graph dataset after completion. It deliberately
 ends with `complete_gnn_not_started`; it does not launch a GNN.
 
+A Brevo completion watcher is running in tmux session
+`notify_step5_exp5_label_completion`. It watches the full pipeline session and
+checks every 60 seconds. The startup confirmation was accepted by Brevo with
+HTTP 201. When the pipeline session ends, the watcher scans
+`results/multiseed_completion1880/results` and
+`results/multiseed_completion1880/logs`, then sends one final email with subject
+`Step5 Experiment 05 formal GNN dataset pipeline finished`. The watcher log is
+`results/multiseed_completion1880/logs/notify_step5_exp5_label_completion.log`.
+
 ## Implemented local scaffold
 
 ```bash
