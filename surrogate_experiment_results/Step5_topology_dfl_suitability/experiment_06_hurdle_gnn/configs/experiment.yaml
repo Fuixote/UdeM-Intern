@@ -1,0 +1,56 @@
+experiment:
+  experiment_id: step5_exp6_hurdle_gnn_v1
+  status: local_validation_passed_smoke_not_launched
+  parent_experiment: step5_exp5_topology_gnn_regression_v1
+  purpose: handle the zero-inflated formal DFL improvement target with classification followed by subset regression
+
+data:
+  graph_source: ../experiment_05_topology_gnn_regression/results/multiseed_completion1880/results/formal_topology_incidence_graphs.jsonl
+  fold_source: ../experiment_05_topology_gnn_regression/results/formal_three_seed/splits/folds.csv
+  graph_sha256: 8a41232110bf7f151c0192c6723fe5e0d7f4b9dd83aa70aba7fa142e503fd522
+  fold_sha256: b66a9c2e529e1c23fd96762340c07ddc9d3aa4f8c0a25aa16cc77f3dac7c3b39
+  target: formal_label_mean_pp
+  topology_count: 1000
+  exact_zero_count: 607
+  nonzero_count: 393
+  material_abs_gt_0.1pp_count: 253
+  input_uses_training_samples: false
+  input_uses_test_statistics: false
+  target_used_as_input: false
+  uncertainty_used_as_input: false
+
+stage_one:
+  task: zero_vs_nonzero
+  objective: class_balanced_bce
+  positive_class: nonzero
+  positive_weight: training_fold_zero_count_divided_by_nonzero_count
+  checkpoint_metric: validation_weighted_bce
+  threshold: 0.5
+  metrics: [accuracy, balanced_accuracy, precision, recall, specificity, f1, auroc, average_precision]
+
+stage_two:
+  training_subsets:
+    nonzero: label_not_equal_zero
+    material: abs_label_gt_0.1pp
+  objectives: [huber, weighted_huber, mse, signed_log_mse, huber_rank]
+  weighted_huber_formula: (1 + min(abs(y)/train_q90_abs,1))/train_mean_weight
+  signed_log_formula: sign(y)*log1p(abs(y))
+  ranking_formula: huber + 0.25*pairwise_logistic_ranking
+  checkpoint_metric: validation_subset_mae_pp
+  prediction_modes: [raw_regressor, hard_hurdle, soft_hurdle, oracle_nonzero_gate]
+
+smoke:
+  fold: 0
+  seed: 42
+  classifier_jobs: 1
+  regressor_jobs: 10
+  total_jobs: 11
+  status: not_launched
+
+gate:
+  implementation_complete: true
+  unit_tests_passed: true
+  local_plan_passed: true
+  garnet_smoke_started: false
+  garnet_smoke_review_passed: false
+  full_five_fold_screen_enabled: false

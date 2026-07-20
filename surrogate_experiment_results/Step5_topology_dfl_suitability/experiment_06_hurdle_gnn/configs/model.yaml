@@ -1,0 +1,33 @@
+backbone:
+  family: relation_aware_candidate_vertex_incidence_gnn
+  node_input_dim: 10
+  hidden_dim: 64
+  message_passing_layers: 3
+  relation_count: 3
+  activation: relu
+  dropout: 0.1
+  pooling: concatenate_type_conditioned_mean_and_max
+  head: [128, 64, 1]
+
+training:
+  optimizer: adamw
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  batch_size: 32
+  max_epochs: 300
+  early_stop_patience: 30
+  early_stop_min_delta: 0.0001
+  device: cpu
+  torch_threads_per_job: 4
+  deterministic_algorithms: true
+
+classifier:
+  objective: class_balanced_bce
+  threshold: 0.5
+  selection_metric: validation_weighted_bce
+
+regressor:
+  training_subsets: [nonzero, material_abs_gt_0.1pp]
+  objectives: [huber, weighted_huber, mse, signed_log_mse, huber_rank]
+  ranking_weight: 0.25
+  selection_metric: validation_subset_mae_pp
