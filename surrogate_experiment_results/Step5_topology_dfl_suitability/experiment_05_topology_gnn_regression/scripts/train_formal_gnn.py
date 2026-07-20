@@ -248,7 +248,7 @@ def run_training(args: argparse.Namespace, graph_rows: list[dict[str, Any]], spl
                         dtype=torch.long,
                     ),
                     y=torch.tensor([float(row["target"]["value"])], dtype=torch.float32),
-                    topology_index=torch.tensor([topology_index[topology_id]], dtype=torch.long),
+                    topology_code=torch.tensor([topology_index[topology_id]], dtype=torch.long),
                 )
             )
 
@@ -278,7 +278,7 @@ def run_training(args: argparse.Namespace, graph_rows: list[dict[str, Any]], spl
                 raw = scaled * target_scale + target_mean
                 targets.extend(batch.y.detach().cpu().numpy().tolist())
                 predictions.extend(raw.detach().cpu().numpy().tolist())
-                indices.extend(batch.topology_index.detach().cpu().numpy().tolist())
+                indices.extend(batch.topology_code.detach().cpu().numpy().tolist())
         return np.asarray(targets), np.asarray(predictions), np.asarray(indices, dtype=int)
 
     best_epoch = -1
