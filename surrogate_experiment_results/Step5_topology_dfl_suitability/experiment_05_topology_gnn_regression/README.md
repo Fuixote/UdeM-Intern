@@ -2,8 +2,8 @@
 
 This directory contains the topology-only GNN scaffold and the completed formal
 three-seed label pipeline. The strict target and graph audits now pass for all
-1,000 topologies. GNN model training has not started; the final folds and scalar
-baselines must first be rebuilt against the formal target table.
+1,000 topologies. Formal folds, scalar baselines, and a 10-epoch CPU GNN timing
+smoke also pass. The 15-run formal GNN has not started.
 
 ## Prediction contract
 
@@ -107,10 +107,39 @@ ridge has MAE 5.260 pp and R2 -0.187. These results justify testing structural
 message passing later, but do not authorize formal GNN training before the seed
 audit.
 
+## Formal folds and scalar baselines (2026-07-20)
+
+The formal rebuild explicitly uses `formal_label_mean_pp`; every fold and OOF
+prediction target was independently matched back to the 1,000-row three-seed
+target table. The five folds each contain exactly 200 topologies, every target
+stratum differs by at most one example across folds, both audits pass, and no
+seed-42 provisional label is used.
+
+On all 1,000 formal targets, the zero baseline has MAE 1.350 pp and RMSE 5.170
+pp. Ridge has MAE 2.211 pp, RMSE 5.020 pp, R2 -0.0066, Spearman 0.111, and
+top-50 overlap 0.02. On the 253 material targets, ridge has MAE 5.041 pp and R2
+-0.180. These are the locked scalar baselines for formal GNN comparison.
+
+## Garnet CPU timing smoke (2026-07-20)
+
+The exact formal architecture was run for fold 0, seed 42, and 10 epochs on
+Garnet using PyTorch 2.11 CPU, PyG 2.7, and four torch threads. The nested split
+uses 600 training, 200 validation, and 200 untouched test topologies. The run
+completed successfully, selected epoch 8, obtained validation MAE 1.299 pp and
+test MAE 1.300 pp, and emitted 200 unique test predictions.
+
+After one-time PyG/RGCN warmup, mean steady time was 0.329 seconds per epoch.
+A full 500-epoch run is therefore capped near 2.74 minutes of training time.
+Including process/data overhead, 15 runs are conservatively projected at about
+43 minutes sequentially or 15 minutes with three workers. Early stopping should
+usually reduce this. The smoke exposed a PyG auto-increment issue for a custom
+field named `topology_index`; it was renamed to `topology_code`, retested, and
+the accepted smoke artifacts are from the fixed run.
+
 ## Start gate
 
-Formal GNN training may start only after all conditions are true. Conditions
-1-4 are complete; condition 5 remains pending:
+Formal GNN training may start only after all conditions are true. All five
+conditions are now complete; formal training is enabled but not yet launched:
 
 1. Experiment 04 artifact audit proves 120 fresh train/validation bundles use
    the exact Experiment 03 test hashes.

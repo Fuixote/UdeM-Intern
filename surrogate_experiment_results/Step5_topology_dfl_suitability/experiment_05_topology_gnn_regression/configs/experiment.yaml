@@ -1,6 +1,6 @@
 experiment:
   experiment_id: step5_exp5_topology_gnn_regression_v1
-  status: formal_targets_and_graph_ready_pending_fold_baseline_rebuild
+  status: formal_gnn_smoke_passed_ready_to_launch
   purpose: predict topology-level normalized DFL improvement from pure topology
 
 data:
@@ -58,9 +58,17 @@ baselines:
   scalar_feature_count: 21
   ridge_alpha: 10.0
   evaluation_subsets: [all, nonzero, material_abs_gt_0.1pp]
+  formal_rebuild_passed: true
+  formal_target_field: formal_label_mean_pp
+  formal_fold_sizes: [200, 200, 200, 200, 200]
+  formal_fold_sha256: b66a9c2e529e1c23fd96762340c07ddc9d3aa4f8c0a25aa16cc77f3dac7c3b39
+  formal_scalar_baseline_audit_sha256: f9ab844fe03e59080cbf31587f178e577d58cdbc76175914864a93f4b2492ee3
+  formal_ridge_all_r2: -0.006649673867329842
+  formal_ridge_all_spearman: 0.1109971130687266
+  formal_ridge_material_r2: -0.18048803788218049
 
 gate:
-  formal_gnn_training_enabled: false
+  formal_gnn_training_enabled: true
   required_experiment_04_integrity_passed: true
   experiment_04_integrity_passed: true
   experiment_04_stability_gate_passed: false
@@ -69,6 +77,8 @@ gate:
   complete_three_seed_topology_count: 1000
   formal_target_audit_passed: true
   formal_graph_audit_passed: true
-  formal_fold_audit_rebuilt: false
-  formal_scalar_baseline_audit_rebuilt: false
+  formal_fold_audit_rebuilt: true
+  formal_scalar_baseline_audit_rebuilt: true
+  formal_gnn_timing_smoke_passed: true
+  formal_gnn_training_started: false
   gate_decision_file: ../experiment_04_repeat_seed_stability_sample50/results/repeat_seed120/results/repeat_seed_review_audit.json

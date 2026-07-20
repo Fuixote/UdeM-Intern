@@ -1,5 +1,5 @@
 model:
-  status: specification_only_not_launched
+  status: smoke_passed_formal_not_launched
   family: relation_aware_candidate_vertex_incidence_gnn
   node_input_dim: 10
   hidden_dim: 64
@@ -20,9 +20,32 @@ training:
   early_stop_patience: 30
   selection_metric: validation_mae
   random_seeds: [42, 43, 44]
+  target_standardization: training_fold_mean_and_population_std
+  validation_fold_policy: next_fold_modulo_5
+  per_run_split_sizes: {train: 600, validation: 200, test: 200}
+  device: cpu
+  torch_threads_per_run: 4
 
 evaluation:
   cross_validation_folds: 5
   metrics: [mae, rmse, r2, pearson, spearman, top50_overlap]
   subsets: [all, nonzero, material_abs_gt_0.1pp]
   compare_against: [zero, fold_mean, ridge]
+
+smoke:
+  host: garnet.umontreal.cirrelt.lan
+  torch_version: 2.11.0+cpu
+  pyg_version: 2.7.0
+  fold: 0
+  validation_fold: 1
+  seed: 42
+  epochs: 10
+  status: success
+  best_epoch: 8
+  best_validation_mae_pp: 1.2994034827698488
+  test_mae_pp: 1.3002029585317358
+  steady_epoch_seconds: 0.32873583887703717
+  measured_wall_seconds: 8.38
+  projected_500_epoch_run_minutes: 2.74
+  projected_15_runs_sequential_minutes_with_overhead: 43
+  projected_15_runs_3_workers_minutes_with_overhead: 15
