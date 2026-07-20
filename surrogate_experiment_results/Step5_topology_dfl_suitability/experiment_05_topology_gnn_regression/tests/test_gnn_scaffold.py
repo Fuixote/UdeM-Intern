@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import argparse
 from pathlib import Path
+import shlex
 import sys
+import tempfile
 import unittest
 
 import numpy as np
@@ -12,12 +15,58 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 import gnn_data_common as common
+import launch_formal_gnn_jobs as formal_launcher
+import plan_formal_gnn_jobs as formal_planner
 import plan_stratified_folds as folds
+import review_formal_gnn_results as formal_review
 import run_scalar_baselines as baselines
 import train_formal_gnn as formal_gnn
 
 
 class GNNScaffoldTests(unittest.TestCase):
+    def test_formal_plan_is_exact_preview_only_matrix(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            output_root = Path(temporary) / "formal15"
+            args = argparse.Namespace(
+                python="python",
+                graph_jsonl=Path("graphs.jsonl"),
+                folds=Path("folds.csv"),
+                output_root=output_root,
+                node_input_dim=10,
+                hidden_dim=64,
+                layers=3,
+                relation_count=3,
+                dropout=0.1,
+                batch_size=32,
+                learning_rate=0.001,
+                weight_decay=0.0001,
+                max_epochs=500,
+                early_stop_patience=30,
+                early_stop_min_delta=0.0001,
+                threads=4,
+            )
+            jobs = formal_planner.build_jobs(args, ready=True)
+            self.assertEqual(len(jobs), 15)
+            self.assertEqual(
+                {(int(row["fold"]), int(row["seed"])) for row in jobs},
+                {(fold, seed) for fold in range(5) for seed in (42, 43, 44)},
+            )
+            self.assertTrue(all("--execute" not in shlex.split(row["command_preview"]) for row in jobs))
+            parsed = formal_launcher.parse_job(
+                {key: str(value) for key, value in jobs[0].items()},
+                output_root,
+            )
+            self.assertEqual(parsed.command[-1], "--execute")
+            self.assertEqual(parsed.threads, 4)
+
+    def test_formal_review_metrics_detect_perfect_predictions(self) -> None:
+        target = np.asarray([-1.0, 0.0, 2.0, 3.0])
+        result = formal_review.metrics(target, target.copy())
+        self.assertEqual(result["mae"], 0.0)
+        self.assertEqual(result["rmse"], 0.0)
+        self.assertEqual(result["r2"], 1.0)
+        self.assertEqual(result["spearman"], 1.0)
+
     def test_formal_gnn_outer_test_and_validation_folds_are_disjoint(self) -> None:
         fold_rows = [
             {"topology_id": f"G-{index}", "fold": str(index % 5)}
