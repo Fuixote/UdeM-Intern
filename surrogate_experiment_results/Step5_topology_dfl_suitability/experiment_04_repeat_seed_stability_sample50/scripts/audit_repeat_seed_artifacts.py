@@ -19,7 +19,15 @@ def append_once(failures: list[str], message: str) -> None:
         failures.append(message)
 
 
-def audit_bundle(row: dict[str, str], seed: int, output_root: Path, formal_output_root: Path) -> dict[str, Any]:
+def audit_bundle(
+    row: dict[str, str],
+    seed: int,
+    output_root: Path,
+    formal_output_root: Path,
+    *,
+    reference_cache: dict[str, dict[str, Any]] | None = None,
+    verify_test_npz: bool = True,
+) -> dict[str, Any]:
     topology_id = row["topology_id"]
     paths = builder.artifact_paths(output_root, regime=common.DEFAULT_REGIME, topology_id=topology_id, data_seed=seed, sample_size=common.SAMPLE_SIZE)
     fixed_test_path, fixed_manifest_path = common.reference_test_paths(topology_id, formal_output_root=formal_output_root)
@@ -33,47 +41,69 @@ def audit_bundle(row: dict[str, str], seed: int, output_root: Path, formal_outpu
 
     train = builder.common.read_npz_dataset(paths["train_bank"])
     validation = builder.common.read_npz_dataset(paths["validation"])
-    test = builder.common.read_npz_dataset(fixed_test_path)
     eval_manifest = common.read_json(paths["eval_manifest"])
     fit_manifest = common.read_json(paths["fit_manifest"])
     split_manifest = common.read_json(paths["split_manifest"])
-    test_manifest = common.read_json(fixed_manifest_path)
+
+    reference_cache = {} if reference_cache is None else reference_cache
+    reference = reference_cache.get(topology_id)
+    if reference is None:
+        test_manifest = common.read_json(fixed_manifest_path)
+        test_rows = list(test_manifest.get("test_samples", []))
+        test_hash = builder.common.sample_manifest_hashes(test_rows)
+        reference_failures: list[str] = []
+        if len(test_rows) != common.TEST_SIZE:
+            append_once(reference_failures, "test_size_mismatch")
+        if {sample.get("train_seed") for sample in test_rows} - {None}:
+            append_once(reference_failures, "test_varies_by_train_seed")
+        if str(test_manifest.get("topology_id", "")) != topology_id:
+            append_once(reference_failures, "test_manifest_topology_mismatch")
+        if str(test_manifest.get("test_hash", "")) != test_hash:
+            append_once(reference_failures, "test_manifest_hash_mismatch")
+        if verify_test_npz:
+            test = builder.common.read_npz_dataset(fixed_test_path)
+            npz_rows = list(test["manifest"].get("samples", []))
+            if len(npz_rows) != common.TEST_SIZE:
+                append_once(reference_failures, "test_npz_size_mismatch")
+            if builder.common.sample_manifest_hashes(npz_rows) != test_hash:
+                append_once(reference_failures, "test_npz_hash_mismatch")
+            if test["manifest"].get("dataset_hash") != test_hash:
+                append_once(reference_failures, "test_dataset_hash_mismatch")
+        reference = {
+            "test_hash": test_hash,
+            "fixed_test_path": common.project_relative(fixed_test_path),
+            "failures": reference_failures,
+        }
+        reference_cache[topology_id] = reference
+    failures.extend(reference["failures"])
 
     train_rows = list(train["manifest"].get("samples", []))
     validation_rows = list(validation["manifest"].get("samples", []))
-    test_rows = list(test["manifest"].get("samples", []))
     if len(train_rows) != common.TRAINING_SIZE:
         append_once(failures, "train_size_mismatch")
     if len(validation_rows) != common.VALIDATION_SIZE:
         append_once(failures, "validation_size_mismatch")
-    if len(test_rows) != common.TEST_SIZE:
-        append_once(failures, "test_size_mismatch")
     for label, manifest in (("train", train["manifest"]), ("validation", validation["manifest"]), ("fit", fit_manifest), ("eval", eval_manifest)):
         if int(manifest.get("train_seed", manifest.get("data_seed", -1))) != seed:
             append_once(failures, f"{label}_train_seed_mismatch")
-    if {sample.get("train_seed") for sample in test_rows} - {None}:
-        append_once(failures, "test_varies_by_train_seed")
 
     train_hash = builder.common.sample_manifest_hashes(train_rows)
     validation_hash = builder.common.sample_manifest_hashes(validation_rows)
-    test_hash = builder.common.sample_manifest_hashes(test_rows)
     if train["manifest"].get("bank_hash") != train_hash:
         append_once(failures, "train_hash_mismatch")
     if validation["manifest"].get("dataset_hash") != validation_hash:
         append_once(failures, "validation_hash_mismatch")
-    if test["manifest"].get("dataset_hash") != test_hash:
-        append_once(failures, "test_dataset_hash_mismatch")
+    test_hash = str(reference["test_hash"])
     expected_hash = str(row.get("test_hash", ""))
     for label, observed in (
         ("selection", expected_hash),
-        ("test_manifest", str(test_manifest.get("test_hash", ""))),
         ("eval", str(eval_manifest.get("test_hash", ""))),
         ("protocol", str(eval_manifest.get("repeat_seed_protocol", {}).get("reference_test_hash", ""))),
         ("npz", test_hash),
     ):
         if observed != expected_hash:
             append_once(failures, f"{label}_fixed_test_hash_mismatch")
-    expected_path = common.project_relative(fixed_test_path)
+    expected_path = str(reference["fixed_test_path"])
     if str(eval_manifest.get("test_path")) != expected_path:
         append_once(failures, "eval_fixed_test_path_mismatch")
     protocol = eval_manifest.get("repeat_seed_protocol", {})
@@ -99,8 +129,26 @@ def audit_bundle(row: dict[str, str], seed: int, output_root: Path, formal_outpu
     }
 
 
-def audit_all(rows: list[dict[str, str]], output_root: Path, formal_output_root: Path) -> dict[str, Any]:
-    bundles = [audit_bundle(row, seed, output_root, formal_output_root) for row in rows for seed in common.TRAIN_SEEDS]
+def audit_all(
+    rows: list[dict[str, str]],
+    output_root: Path,
+    formal_output_root: Path,
+    *,
+    verify_test_npz: bool = True,
+) -> dict[str, Any]:
+    reference_cache: dict[str, dict[str, Any]] = {}
+    bundles = [
+        audit_bundle(
+            row,
+            seed,
+            output_root,
+            formal_output_root,
+            reference_cache=reference_cache,
+            verify_test_npz=verify_test_npz,
+        )
+        for row in rows
+        for seed in common.TRAIN_SEEDS
+    ]
     failures = [f"{row['topology_id']}@{row['train_seed']}:{','.join(row['failures'])}" for row in bundles if not row["passed"]]
     for row in rows:
         topology_id = row["topology_id"]
@@ -119,6 +167,8 @@ def audit_all(rows: list[dict[str, str]], output_root: Path, formal_output_root:
         "observed_bundle_count": len(bundles),
         "passed_bundle_count": sum(bundle["passed"] for bundle in bundles),
         "fixed_test_bank": True,
+        "test_verification": "npz_and_manifest" if verify_test_npz else "manifest_and_locked_hash",
+        "reference_test_count": len(reference_cache),
         "failures": failures,
         "bundles": bundles,
     }
@@ -130,9 +180,15 @@ def main() -> int:
     parser.add_argument("--output-root", type=Path, default=common.DEFAULT_OUTPUT_ROOT)
     parser.add_argument("--formal-output-root", type=Path, default=common.DEFAULT_FORMAL_OUTPUT_ROOT)
     parser.add_argument("--audit-output", type=Path)
+    parser.add_argument("--test-verification", choices=("npz", "manifest"), default="npz")
     args = parser.parse_args()
     rows = common.read_csv(args.topologies_csv)
-    audit = audit_all(rows, args.output_root, args.formal_output_root)
+    audit = audit_all(
+        rows,
+        args.output_root,
+        args.formal_output_root,
+        verify_test_npz=args.test_verification == "npz",
+    )
     output = args.audit_output or args.output_root / "results" / "repeat_seed_artifact_audit.json"
     builder.common.atomic_write_json(output, audit)
     print(json.dumps({key: audit[key] for key in ("passed", "observed_topology_count", "observed_bundle_count", "passed_bundle_count", "failures")}, indent=2, sort_keys=True))

@@ -55,6 +55,7 @@ python "${EXP4_REL}/scripts/audit_repeat_seed_artifacts.py" \
   --topologies-csv "${TOPOLOGIES}" \
   --output-root "${OUTPUT_REL}" \
   --audit-output "${RESULT_DIR}/completion_artifact_audit.json" \
+  --test-verification manifest \
   > "${LOG_DIR}/artifact_audit.log" 2>&1
 
 write_phase "strict_plan_started jobs=1880"
