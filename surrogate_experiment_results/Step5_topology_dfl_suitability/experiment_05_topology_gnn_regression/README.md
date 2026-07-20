@@ -3,7 +3,7 @@
 This directory contains the topology-only GNN scaffold and the completed formal
 three-seed label pipeline. The strict target and graph audits now pass for all
 1,000 topologies. Formal folds, scalar baselines, and a 10-epoch CPU GNN timing
-smoke also pass. The 15-run formal GNN has not started.
+smoke also pass. The 15-run formal CPU GNN is now running on Garnet.
 
 ## Prediction contract
 
@@ -161,10 +161,34 @@ early stopping reduces both. The formal-training device remains CPU. These
 benchmark results are stored under `results/device_benchmark/`; no formal GNN
 run was launched by the benchmark.
 
+## Formal GNN run (started 2026-07-20)
+
+The formal run started on Garnet at `2026-07-20T09:52:37-04:00` in tmux
+session `step5_exp5_formal_gnn15`. It contains exactly 15 jobs: five outer test
+folds crossed with training seeds 42, 43, and 44. Each run uses a disjoint
+600/200/200 train/validation/test split, the locked formal three-seed target,
+batch size 32, four CPU threads, a 500-epoch cap, and validation-MAE early
+stopping with patience 30 and minimum delta 0.0001.
+
+The strict input audit and launcher preview passed before execution. The plan
+contains no `--execute` flag; the launcher adds it only in memory. The plan and
+jobs CSV SHA-256 values are respectively
+`e68495b9bffd1c4647075ab38e392149daf64a30a154cb6e1860ba587e44a70b`
+and `cf7e0cde1af38f7fa9cc64168970f90c120b2f87c04fdd4134deb27409c8ba8e`.
+
+Garnet already had another user's 15-core workload at launch, so this shared
+server run deliberately uses one worker and four threads instead of the
+three-worker maximum. The resumable launcher writes status and per-job logs
+under `results/formal_three_seed/gnn_formal15`. After all jobs succeed, the same
+pipeline audits 3,000 test predictions and builds one three-seed ensemble
+prediction for each of the 1,000 topologies. Brevo watcher session
+`notify_step5_exp5_formal_gnn15` sent its startup email and will send the final
+summary after the training session and review finish.
+
 ## Start gate
 
 Formal GNN training may start only after all conditions are true. All five
-conditions are now complete; formal training is enabled but not yet launched:
+conditions are complete, and the formal run described above has started:
 
 1. Experiment 04 artifact audit proves 120 fresh train/validation bundles use
    the exact Experiment 03 test hashes.

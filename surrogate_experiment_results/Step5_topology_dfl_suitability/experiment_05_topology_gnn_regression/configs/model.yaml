@@ -1,5 +1,5 @@
 model:
-  status: smoke_passed_formal_not_launched
+  status: formal_training_running
   family: relation_aware_candidate_vertex_incidence_gnn
   node_input_dim: 10
   hidden_dim: 64
@@ -25,6 +25,17 @@ training:
   per_run_split_sizes: {train: 600, validation: 200, test: 200}
   device: cpu
   torch_threads_per_run: 4
+
+formal_run:
+  host: garnet.umontreal.cirrelt.lan
+  device: cpu
+  folds: [0, 1, 2, 3, 4]
+  seeds: [42, 43, 44]
+  job_count: 15
+  workers: 1
+  maximum_requested_cpu_threads: 4
+  started_at_garnet: 2026-07-20T09:52:37-04:00
+  status: running
 
 device_benchmark:
   host: gcis-hbycis-rl1.ad.rit.edu
