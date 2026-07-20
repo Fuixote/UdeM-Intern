@@ -1,6 +1,6 @@
 experiment:
   experiment_id: step5_exp5_topology_gnn_regression_v1
-  status: formal_label_generation_running
+  status: formal_targets_and_graph_ready_pending_fold_baseline_rebuild
   purpose: predict topology-level normalized DFL improvement from pure topology
 
 data:
@@ -12,9 +12,9 @@ data:
   label_uncertainty_formula: population_std(normalized_improvement_pp_seed42, normalized_improvement_pp_seed43, normalized_improvement_pp_seed44)
   label_uncertainty_ddof: 0
   required_label_seeds: [42, 43, 44]
-  complete_three_seed_topologies: 60
-  incomplete_three_seed_topologies: 940
-  missing_seed_jobs: 1880
+  complete_three_seed_topologies: 1000
+  incomplete_three_seed_topologies: 0
+  missing_seed_jobs: 0
   topology_count: 1000
   graph_representation: candidate_vertex_incidence_with_compatibility_relations
   input_uses_training_samples: false
@@ -39,6 +39,18 @@ label_completion:
   initial_active_jobs: 24
   initial_pending_jobs: 1856
   initial_failed_jobs: 0
+  completed_at_garnet: 2026-07-20T01:39:42-04:00
+  finished_jobs: 1880
+  failed_jobs: 0
+  completion_review_passed: true
+  accepted_spoplus_cap_hits: [G-122@44, G-670@44]
+  accepted_cap_hit_policy: explicit_allowlist_requires_all_job_stages_success_and_stopped_epoch_10000
+  formal_target_audit_passed: true
+  formal_target_count: 1000
+  formal_graph_audit_passed: true
+  formal_graph_record_count: 1000
+  formal_target_sha256: e1b2cd6cfb575ce7924d07a665fc7c0755dc1758aad7ceb8c8a18d1d17a29f8b
+  formal_graph_sha256: 8a41232110bf7f151c0192c6723fe5e0d7f4b9dd83aa70aba7fa142e503fd522
   launches_gnn: false
 
 baselines:
@@ -54,4 +66,9 @@ gate:
   experiment_04_stability_gate_passed: false
   target_policy_approved_after_borderline_gate: true
   required_complete_three_seed_topology_count: 1000
+  complete_three_seed_topology_count: 1000
+  formal_target_audit_passed: true
+  formal_graph_audit_passed: true
+  formal_fold_audit_rebuilt: false
+  formal_scalar_baseline_audit_rebuilt: false
   gate_decision_file: ../experiment_04_repeat_seed_stability_sample50/results/repeat_seed120/results/repeat_seed_review_audit.json

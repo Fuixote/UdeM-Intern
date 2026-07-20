@@ -1,10 +1,9 @@
 # Experiment 05 — topology-only GNN regression
 
-This directory contains the topology-only GNN scaffold and the formal
-three-seed label-completion pipeline. GNN model training has not started.
-Experiment 04's 120 repeat-seed jobs and review are complete; formal model
-training now waits for the remaining 1,880 seed-43/44 label jobs and the final
-target, fold, and baseline audits.
+This directory contains the topology-only GNN scaffold and the completed formal
+three-seed label pipeline. The strict target and graph audits now pass for all
+1,000 topologies. GNN model training has not started; the final folds and scalar
+baselines must first be rebuilt against the formal target table.
 
 ## Prediction contract
 
@@ -23,12 +22,11 @@ standard deviation over those same three values (`ddof=0`). Both fields remain
 separate from graph inputs.
 
 At launch time, only the 60 Experiment 04 audit topologies had all three seed
-values. The other 940 topologies require two additional jobs each. Their 1,880
-label-generation jobs are now running on Garnet; until they pass the completion
-review, missing topologies must have an empty formal target and the pipeline is
-forbidden from silently substituting their seed-42 value.
+values. The other 940 topologies required two additional jobs each. Those 1,880
+label-generation jobs are complete, and no topology is missing a formal target.
+The pipeline never substituted a seed-42-only value.
 
-## Formal label completion run (started 2026-07-20)
+## Formal label completion run (completed 2026-07-20)
 
 The Garnet run started at `2026-07-19T21:57:04-04:00` in tmux session
 `step5_exp5_label_completion`. Its output root is
@@ -38,21 +36,29 @@ CSV contain 1,880 unique ready jobs: 940 for seed 43 and 940 for seed 44. All
 stored commands are dry-run commands, and the launcher preview passed before
 the execute launcher converted them in memory.
 
-The execute launcher uses 24 normal workers and no long-job queue. Its initial
-status was 24 active, 1,856 pending, 0 finished, and 0 failed. Each job retains
+The execute launcher used 24 normal workers and no long-job queue. All 1,880
+jobs completed successfully with zero launcher failures. Each job retained
 the locked sample-50 protocol (40 train, 10 validation, fixed 1,000-sample test
 bank), `max_epochs=10000`, early-stop patience 20, and min delta 0.0001. The
-pipeline will review all results, build the strict three-seed mean/std target
-table, and build the formal graph dataset after completion. It deliberately
-ends with `complete_gnn_not_started`; it does not launch a GNN.
+pipeline review explicitly accepts `G-122@44` and `G-670@44` as audited SPO+
+epoch-cap checkpoints: both methods and evaluation succeeded, both stopped at
+the locked 10,000 epoch cap, and their decision behavior was already valid.
+No other cap hit is accepted implicitly.
 
-A Brevo completion watcher is running in tmux session
-`notify_step5_exp5_label_completion`. It watches the full pipeline session and
-checks every 60 seconds. The startup confirmation was accepted by Brevo with
-HTTP 201. When the pipeline session ends, the watcher scans
-`results/multiseed_completion1880/results` and
-`results/multiseed_completion1880/logs`, then sends one final email with subject
-`Step5 Experiment 05 formal GNN dataset pipeline finished`. The watcher log is
+The finalize-only run completed at `2026-07-20T01:39:42-04:00`. The completion
+review passed 1,880/1,880 labels with zero failures. The formal target audit
+reports 1,000 complete three-seed topologies, zero missing seeds, and
+`formal_ready=true`. The graph audit reports 1,000 records, 1,000 unique
+topology/feasible-set hashes, no target leakage, and zero failures. The target
+CSV SHA-256 is `e1b2cd6cfb575ce7924d07a665fc7c0755dc1758aad7ceb8c8a18d1d17a29f8b`;
+the graph JSONL SHA-256 is
+`8a41232110bf7f151c0192c6723fe5e0d7f4b9dd83aa70aba7fa142e503fd522`.
+The pipeline ended with `complete_gnn_not_started`; it did not launch a GNN.
+
+The original Brevo watcher sent its final email when the first pipeline stopped
+at the strict two-cap-hit review gate. A second external watcher was not started
+for the finalize-only recovery because external result/log transmission was not
+approved at that step. The original watcher log is
 `results/multiseed_completion1880/logs/notify_step5_exp5_label_completion.log`.
 
 ## Implemented local scaffold
@@ -64,12 +70,12 @@ python surrogate_experiment_results/Step5_topology_dfl_suitability/experiment_05
 python surrogate_experiment_results/Step5_topology_dfl_suitability/experiment_05_topology_gnn_regression/scripts/build_multiseed_targets.py
 ```
 
-Once the target audit reports all 1,000 topologies complete, the formal graph
-build must explicitly use the target table and strict mode:
+The completed formal graph build explicitly used the target table and strict
+mode:
 
 ```bash
 python surrogate_experiment_results/Step5_topology_dfl_suitability/experiment_05_topology_gnn_regression/scripts/build_incidence_dataset.py \
-  --target-table surrogate_experiment_results/Step5_topology_dfl_suitability/experiment_05_topology_gnn_regression/results/scaffold/targets/multiseed_targets.csv \
+  --target-table surrogate_experiment_results/Step5_topology_dfl_suitability/experiment_05_topology_gnn_regression/results/multiseed_completion1880/results/multiseed_targets.csv \
   --require-formal-targets
 ```
 
@@ -104,7 +110,7 @@ audit.
 ## Start gate
 
 Formal GNN training may start only after all conditions are true. Conditions
-1-3 are complete; conditions 4-5 remain pending:
+1-4 are complete; condition 5 remains pending:
 
 1. Experiment 04 artifact audit proves 120 fresh train/validation bundles use
    the exact Experiment 03 test hashes.
