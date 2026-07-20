@@ -77,8 +77,62 @@ only subset. Weighted Huber and plain MSE were worse; adding ranking loss was
 close to, but did not improve on, plain Huber. Signed-log MSE is the leading
 MAE candidate while Huber is the leading RMSE/R2 candidate.
 
-Current status: implementation, five unit tests, locked input audit, dependency
-planning, launcher previews, and the 11-job smoke all pass. The next gated run
-is the seed-42 five-fold screen: five classifiers plus 50 regressors. The
-reviewer pools the five disjoint test folds into 1,000-topology OOF metrics;
-only variants that survive that screen may be promoted to seeds 43 and 44.
+## Seed-42 five-fold screen
+
+The formal seed-42 screen completed on Garnet on 2026-07-20. All five
+classifiers and all 50 regressors succeeded. The review passed with 800
+per-fold metric rows and 160 pooled OOF metric rows. Each variant's OOF metrics
+are recomputed from 1,000 unique test predictions, not averaged from fold-level
+metrics.
+
+The pooled stage-one classifier result is:
+
+| count | AUROC | AP | balanced accuracy | F1 | recall | specificity |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1,000 | 0.6931 | 0.5303 | 0.6549 | 0.6264 | 0.8041 | 0.5058 |
+
+Its confusion matrix is TP=316, TN=307, FP=300, and FN=77. Per-fold AUROC
+ranges from 0.6535 to 0.7234 and balanced accuracy from 0.6233 to 0.6989, so the
+zero/nonzero topology signal is modest but present across every fold.
+
+The most informative deployable OOF comparisons are:
+
+| model | MAE (pp) | RMSE (pp) | R2 | Spearman |
+| --- | ---: | ---: | ---: | ---: |
+| zero predictor | **1.3499** | 5.1704 | -0.0678 | n/a |
+| Experiment 05 seed 42 | 1.5859 | 5.0919 | -0.0356 | 0.0502 |
+| Experiment 05 three-seed ensemble | 1.5800 | 5.0800 | -0.0308 | 0.0465 |
+| soft gate, nonzero, signed-log MSE | 1.5753 | 5.0828 | -0.0320 | 0.0399 |
+| hard gate, nonzero, signed-log MSE | 1.6400 | 5.0606 | -0.0230 | 0.0669 |
+| soft gate, material, signed-log MSE | 1.9954 | **4.9988** | **0.0018** | 0.0800 |
+| hard gate, nonzero, Huber | 2.0946 | 5.0323 | -0.0116 | 0.0954 |
+
+No deployable hurdle variant dominates the baselines. `nonzero + signed-log
+MSE` has the best hurdle MAE, but it is still worse than predicting zero and is
+effectively tied with the Experiment 05 ensemble. `material + signed-log MSE`
+has the best RMSE/R2, improving ensemble RMSE by about 1.6%, but its MAE is
+about 26% worse. The highest deployable Spearman, 0.1142, comes from soft-gated
+`material + MSE`, but that model has MAE 2.9687, RMSE 5.1270, and R2 -0.0500.
+
+Most importantly, stage two does not learn the magnitude ordering conditional
+on being nonzero. Across all deployable variants the best nonzero-only
+Spearman is -0.0325 and the best material-only Spearman is -0.0405; all
+conditional R2 values are negative. The apparently strong oracle-gate
+full-dataset Spearman values around 0.4 therefore come mainly from placing true
+zeros exactly at zero, not from ranking uplift among nonzero topologies.
+
+The objective verdict is:
+
+- signed-log MSE is the strongest point-prediction compromise;
+- Huber offers competitive RMSE but substantially worse MAE;
+- Huber plus ranking loss does not improve ranking over Huber;
+- weighted Huber and plain MSE do not improve the end-to-end point metrics;
+- material-only training trades MAE for a small RMSE improvement but does not
+  recover conditional magnitude signal.
+
+Current decision: keep the hurdle formulation as a useful diagnostic and keep
+the zero/nonzero classifier as a viable topology-only task, but do not promote
+the ten stage-two variants to seeds 43 and 44. Predicting the uplift magnitude
+from pure topology remains unsupported by this experiment. The authoritative
+outputs are `results/formal_seed42_fivefold/review/classifier_oof_metrics.csv`,
+`aggregate_variant_metrics.csv`, and `hurdle_review.audit.json`.

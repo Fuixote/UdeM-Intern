@@ -46,7 +46,7 @@ def load_env_file(path):
 
 def tmux_session_exists(session):
     result = subprocess.run(
-        ["tmux", "has-session", "-t", session],
+        ["tmux", "has-session", "-t", "={}".format(session)],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         check=False,

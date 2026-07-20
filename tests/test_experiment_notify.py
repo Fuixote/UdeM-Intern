@@ -3,6 +3,7 @@ import io
 from contextlib import redirect_stdout
 import types
 import unittest
+from unittest import mock
 from pathlib import Path
 
 
@@ -61,6 +62,17 @@ class ExperimentNotifyTest(unittest.TestCase):
         self.assertIn("Watcher started successfully.", sent[0][1])
         self.assertIn("Watched tmux sessions: rit_migration_all", sent[0][1])
         self.assertIn("Migration finished.", sent[1][1])
+
+    def test_tmux_session_check_uses_exact_target_name(self):
+        completed = types.SimpleNamespace(returncode=0)
+        with mock.patch.object(experiment_notify.subprocess, "run", return_value=completed) as run:
+            self.assertTrue(experiment_notify.tmux_session_exists("experiment"))
+        run.assert_called_once_with(
+            ["tmux", "has-session", "-t", "=experiment"],
+            stdout=experiment_notify.subprocess.DEVNULL,
+            stderr=experiment_notify.subprocess.DEVNULL,
+            check=False,
+        )
 
     def test_dry_run_prints_start_and_completion_messages_without_sending(self):
         sent = []

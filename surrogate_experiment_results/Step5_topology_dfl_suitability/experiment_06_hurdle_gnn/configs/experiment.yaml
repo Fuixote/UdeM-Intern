@@ -1,6 +1,6 @@
 experiment:
   experiment_id: step5_exp6_hurdle_gnn_v1
-  status: smoke_review_passed_seed42_fivefold_ready
+  status: seed42_fivefold_review_passed_no_multiseed_regressor_promotion
   parent_experiment: step5_exp5_topology_gnn_regression_v1
   purpose: handle the zero-inflated formal DFL improvement target with classification followed by subset regression
 
@@ -74,8 +74,37 @@ formal_seed42_fivefold:
   total_jobs: 55
   workers: 1
   threads_per_job: 4
-  status: ready_not_launched
+  status: complete_review_passed
+  completed_at: 2026-07-20T11:12:39-04:00
+  successful_classifier_jobs: 5
+  successful_regressor_jobs: 50
   aggregate_test_topology_count_per_variant: 1000
+  classifier_oof:
+    auroc: 0.6930844976545896
+    average_precision: 0.5302620556060784
+    balanced_accuracy: 0.6549186547111518
+    f1: 0.6263627353815658
+    recall: 0.8040712468193384
+    specificity: 0.5057660626029654
+  best_deployable_mae:
+    gate: soft_hurdle
+    regression_subset: nonzero
+    objective: signed_log_mse
+    mae_pp: 1.5752791727139306
+    rmse_pp: 5.082783639326506
+    r2: -0.03196111427774606
+    spearman: 0.039918669568248494
+  best_deployable_rmse:
+    gate: soft_hurdle
+    regression_subset: material
+    objective: signed_log_mse
+    mae_pp: 1.9953649476088822
+    rmse_pp: 4.998827916479621
+    r2: 0.0018485105341271568
+    spearman: 0.08001697671098136
+  conditional_regression_supported: false
+  best_nonzero_subset_spearman: -0.03250033616359398
+  best_material_subset_spearman: -0.04050624378930848
 
 gate:
   implementation_complete: true
@@ -84,5 +113,7 @@ gate:
   garnet_smoke_started: true
   garnet_smoke_review_passed: true
   full_five_fold_screen_enabled: true
-  full_five_fold_screen_started: false
-  full_five_fold_screen_review_passed: false
+  full_five_fold_screen_started: true
+  full_five_fold_screen_review_passed: true
+  multiseed_regressor_promotion_enabled: false
+  multiseed_regressor_promotion_reason: no deployable variant dominates baselines and conditional magnitude regression has negative R2 and Spearman
