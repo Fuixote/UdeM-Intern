@@ -67,6 +67,26 @@ baselines:
   formal_ridge_all_spearman: 0.1109971130687266
   formal_ridge_material_r2: -0.18048803788218049
 
+device_benchmark:
+  passed: true
+  host: gcis-hbycis-rl1.ad.rit.edu
+  accelerator: NVIDIA RTX PRO 6000 Blackwell Max-Q Workstation Edition
+  cuda_version: 13.0
+  torch_cpu_version: 2.11.0+cpu
+  torch_cuda_version: 2.11.0+cu130
+  pyg_version: 2.7.0
+  model_parameters: 76737
+  warmup_epochs: 5
+  measured_epochs: 30
+  cpu_epoch_seconds_median: 0.2699388009496033
+  native_cuda_epoch_seconds_median: 0.596280466997996
+  cuda_time_multiplier_vs_cpu: 2.208946860919485
+  cuda_speedup_vs_cpu: 0.45270441661224253
+  torch_scatter_epoch_seconds_median: 0.6311527414945886
+  peak_cuda_memory_bytes: 27641344
+  formal_device_decision: cpu
+  formal_training_launched: false
+
 gate:
   formal_gnn_training_enabled: true
   required_experiment_04_integrity_passed: true

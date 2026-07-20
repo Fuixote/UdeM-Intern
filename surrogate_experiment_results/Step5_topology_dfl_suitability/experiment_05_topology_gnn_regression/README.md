@@ -136,6 +136,31 @@ usually reduce this. The smoke exposed a PyG auto-increment issue for a custom
 field named `topology_index`; it was renamed to `topology_code`, retested, and
 the accepted smoke artifacts are from the fixed run.
 
+## lab-pc CPU/GPU benchmark (2026-07-20)
+
+The formal 76,737-parameter RGCN was benchmarked on lab-pc against the exact
+formal graph and fold artifacts, using fold 0 as test, fold 1 as validation,
+seed 42, batch size 32, four CPU threads, five warmup epochs, and 30 measured
+training-plus-validation epochs. Both runs used PyTorch 2.11 and PyG 2.7. The
+CPU build was compared with the independent `exp5-gnn-gpu` environment using
+CUDA 13.0 on the NVIDIA RTX PRO 6000 Blackwell Max-Q. The source graph and fold
+SHA-256 values matched the locked formal artifacts.
+
+The lab-pc CPU median was 0.270 seconds per epoch. Native CUDA took 0.596
+seconds per epoch, so GPU execution was 2.21 times slower (0.45x CPU
+throughput), not faster. The optional matching `torch-scatter` wheel was also
+tested and was slower still at 0.631 seconds per epoch, so it was removed from
+the independent GPU environment. Peak CUDA tensor memory was only 27.6 MB,
+consistent with the workload being too small to amortize graph-kernel and
+host/device overhead.
+
+At the 500-epoch cap, the median single-run projections are 2.25 minutes on
+lab-pc CPU versus 4.97 minutes on native CUDA. For 15 sequential runs, the same
+upper-bound projections are 33.7 versus 74.5 minutes before process overhead;
+early stopping reduces both. The formal-training device remains CPU. These
+benchmark results are stored under `results/device_benchmark/`; no formal GNN
+run was launched by the benchmark.
+
 ## Start gate
 
 Formal GNN training may start only after all conditions are true. All five

@@ -26,6 +26,24 @@ training:
   device: cpu
   torch_threads_per_run: 4
 
+device_benchmark:
+  host: gcis-hbycis-rl1.ad.rit.edu
+  date: 2026-07-20
+  graph_sha256: 8a41232110bf7f151c0192c6723fe5e0d7f4b9dd83aa70aba7fa142e503fd522
+  fold_sha256: b66a9c2e529e1c23fd96762340c07ddc9d3aa4f8c0a25aa16cc77f3dac7c3b39
+  fold: 0
+  validation_fold: 1
+  seed: 42
+  warmup_epochs: 5
+  measured_epochs: 30
+  cpu_epoch_seconds_median: 0.2699388009496033
+  native_cuda_epoch_seconds_median: 0.596280466997996
+  cuda_to_cpu_time_ratio: 2.208946860919485
+  cuda_throughput_relative_to_cpu: 0.45270441661224253
+  torch_scatter_cuda_epoch_seconds_median: 0.6311527414945886
+  peak_cuda_memory_bytes: 27641344
+  decision: keep_cpu
+
 evaluation:
   cross_validation_folds: 5
   metrics: [mae, rmse, r2, pearson, spearman, top50_overlap]
