@@ -1,6 +1,6 @@
 experiment:
   experiment_id: step5_exp5_topology_gnn_regression_v1
-  status: target_policy_locked_waiting_full_three_seed_labels
+  status: formal_label_generation_running
   purpose: predict topology-level normalized DFL improvement from pure topology
 
 data:
@@ -22,6 +22,24 @@ data:
   target_used_as_input: false
   folds: 5
   split_seed: 20260720
+
+label_completion:
+  host: garnet.umontreal.cirrelt.lan
+  tmux_session: step5_exp5_label_completion
+  output_root: results/multiseed_completion1880
+  started_at_garnet: 2026-07-19T21:57:04-04:00
+  topology_count: 940
+  job_count: 1880
+  seed_job_counts: {43: 940, 44: 940}
+  workers: 24
+  artifact_audit_passed: true
+  artifact_audit_passed_bundles: 1880
+  strict_plan_passed: true
+  launcher_preview_passed: true
+  initial_active_jobs: 24
+  initial_pending_jobs: 1856
+  initial_failed_jobs: 0
+  launches_gnn: false
 
 baselines:
   models: [zero, fold_mean, ridge]

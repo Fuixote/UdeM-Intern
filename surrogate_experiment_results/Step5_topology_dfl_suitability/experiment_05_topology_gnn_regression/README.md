@@ -1,8 +1,10 @@
 # Experiment 05 — topology-only GNN regression
 
-This directory is a local scaffold, not a started GNN experiment. Formal model
-training is blocked until Experiment 04 finishes all 120 repeat-seed jobs and
-its integrity and stability gates are reviewed.
+This directory contains the topology-only GNN scaffold and the formal
+three-seed label-completion pipeline. GNN model training has not started.
+Experiment 04's 120 repeat-seed jobs and review are complete; formal model
+training now waits for the remaining 1,880 seed-43/44 label jobs and the final
+target, fold, and baseline audits.
 
 ## Prediction contract
 
@@ -20,11 +22,29 @@ quantity over train seeds 42, 43, and 44. Label uncertainty is the population
 standard deviation over those same three values (`ddof=0`). Both fields remain
 separate from graph inputs.
 
-Only the 60 Experiment 04 audit topologies currently have all three seed
-values. The other 940 topologies require two additional jobs each, so 1,880
-label-generation jobs remain before a protocol-consistent 1,000-topology GNN
-dataset exists. Missing topologies must have an empty formal target; the
-pipeline is forbidden from silently substituting their seed-42 value.
+At launch time, only the 60 Experiment 04 audit topologies had all three seed
+values. The other 940 topologies require two additional jobs each. Their 1,880
+label-generation jobs are now running on Garnet; until they pass the completion
+review, missing topologies must have an empty formal target and the pipeline is
+forbidden from silently substituting their seed-42 value.
+
+## Formal label completion run (started 2026-07-20)
+
+The Garnet run started at `2026-07-19T21:57:04-04:00` in tmux session
+`step5_exp5_label_completion`. Its output root is
+`results/multiseed_completion1880`. The pre-launch artifact audit passed all
+1,880 seed bundles over 940 topologies with zero failures. The strict plan and
+CSV contain 1,880 unique ready jobs: 940 for seed 43 and 940 for seed 44. All
+stored commands are dry-run commands, and the launcher preview passed before
+the execute launcher converted them in memory.
+
+The execute launcher uses 24 normal workers and no long-job queue. Its initial
+status was 24 active, 1,856 pending, 0 finished, and 0 failed. Each job retains
+the locked sample-50 protocol (40 train, 10 validation, fixed 1,000-sample test
+bank), `max_epochs=10000`, early-stop patience 20, and min delta 0.0001. The
+pipeline will review all results, build the strict three-seed mean/std target
+table, and build the formal graph dataset after completion. It deliberately
+ends with `complete_gnn_not_started`; it does not launch a GNN.
 
 ## Implemented local scaffold
 
@@ -74,7 +94,8 @@ audit.
 
 ## Start gate
 
-Formal GNN training may start only after all conditions are true:
+Formal GNN training may start only after all conditions are true. Conditions
+1-3 are complete; conditions 4-5 remain pending:
 
 1. Experiment 04 artifact audit proves 120 fresh train/validation bundles use
    the exact Experiment 03 test hashes.
