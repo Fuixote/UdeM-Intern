@@ -71,6 +71,63 @@ class GNNScaffoldTests(unittest.TestCase):
         self.assertEqual(first, second)
         self.assertEqual({row["fold"] for row in first}, set(range(5)))
 
+    def test_formal_folds_and_baselines_use_three_seed_mean(self) -> None:
+        feature_rows = []
+        target_rows = []
+        for index in range(1000):
+            topology_id = f"G-{index}"
+            feature = {
+                field: str((index + feature_index) % 7)
+                for feature_index, field in enumerate(common.SCALAR_FEATURES)
+            }
+            feature.update(
+                {
+                    "topology_id": topology_id,
+                    "topology_hash": f"topology-{index}",
+                    "feasible_set_hash": f"feasible-{index}",
+                    "normalized_improvement_pp": "999.0",
+                }
+            )
+            target_rows.append(
+                {
+                    "topology_id": topology_id,
+                    "topology_hash": f"topology-{index}",
+                    "feasible_set_hash": f"feasible-{index}",
+                    "formal_label_mean_pp": str((index % 17 - 8) / 10.0),
+                    "label_uncertainty_std_pp": "0.25",
+                    "formal_label_ready": "True",
+                }
+            )
+            feature_rows.append(feature)
+
+        folds.validate_targets(
+            target_rows,
+            target_field="formal_label_mean_pp",
+            require_formal_targets=True,
+        )
+        fold_rows = folds.assign_folds(
+            target_rows,
+            folds=5,
+            seed=7,
+            target_field="formal_label_mean_pp",
+        )
+        merged = baselines.merge_feature_targets(
+            feature_rows,
+            target_rows,
+            target_field="formal_label_mean_pp",
+            require_formal_targets=True,
+        )
+        prediction_rows, audit = baselines.run(
+            merged,
+            [{key: str(value) for key, value in row.items()} for row in fold_rows],
+            target_field="formal_label_mean_pp",
+            require_formal_targets=True,
+        )
+        self.assertTrue(audit["passed"])
+        self.assertEqual(audit["target_field"], "formal_label_mean_pp")
+        self.assertEqual(prediction_rows[0]["target_name"], "formal_label_mean_pp")
+        self.assertNotEqual(prediction_rows[0]["target_value"], 999.0)
+
     def test_ridge_predicts_linear_signal(self) -> None:
         x = np.arange(20, dtype=float).reshape(-1, 1)
         y = 1.0 + 2.0 * x[:, 0]

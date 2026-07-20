@@ -17,6 +17,41 @@ import numpy as np
 import gnn_data_common as common
 
 
+def merge_feature_targets(
+    feature_rows: list[dict[str, str]],
+    target_rows: list[dict[str, str]],
+    *,
+    target_field: str,
+    require_formal_targets: bool,
+) -> list[dict[str, str]]:
+    feature_by_id = {row["topology_id"]: row for row in feature_rows}
+    target_by_id = {row["topology_id"]: row for row in target_rows}
+    if len(feature_by_id) != len(feature_rows):
+        raise ValueError("feature topology ids are not unique")
+    if len(target_by_id) != len(target_rows):
+        raise ValueError("target topology ids are not unique")
+    if set(feature_by_id) != set(target_by_id):
+        raise ValueError("feature and target topology sets differ")
+    merged = []
+    for feature_row in feature_rows:
+        topology_id = feature_row["topology_id"]
+        feature = dict(feature_row)
+        target = target_by_id[topology_id]
+        for hash_field in ("topology_hash", "feasible_set_hash"):
+            if str(feature.get(hash_field, "")) != str(target.get(hash_field, "")):
+                raise ValueError(f"{topology_id}:{hash_field}_mismatch")
+        if require_formal_targets and not common.truthy(target.get("formal_label_ready")):
+            raise ValueError(f"{topology_id}:formal_target_not_ready")
+        try:
+            feature[target_field] = str(float(target[target_field]))
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError(f"{topology_id}:target_unavailable:{target_field}") from exc
+        feature["formal_label_ready"] = target.get("formal_label_ready", "")
+        feature["label_uncertainty_std_pp"] = target.get("label_uncertainty_std_pp", "")
+        merged.append(feature)
+    return merged
+
+
 def pearson(left: np.ndarray, right: np.ndarray) -> float | None:
     if len(left) < 2 or np.std(left) == 0 or np.std(right) == 0:
         return None
@@ -63,13 +98,41 @@ def ridge_predict(train_x: np.ndarray, train_y: np.ndarray, test_x: np.ndarray, 
     return test_design @ coefficients
 
 
-def run(rows: list[dict[str, str]], fold_rows: list[dict[str, str]], alpha: float = 10.0) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+def run(
+    rows: list[dict[str, str]],
+    fold_rows: list[dict[str, str]],
+    alpha: float = 10.0,
+    *,
+    target_field: str = "normalized_improvement_pp",
+    require_formal_targets: bool = False,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     fold_by_id = {row["topology_id"]: int(row["fold"]) for row in fold_rows}
+    if len(fold_by_id) != len(fold_rows):
+        raise ValueError("fold topology ids are not unique")
     if set(fold_by_id) != {row["topology_id"] for row in rows}:
         raise ValueError("fold topology set differs from formal summary")
+    target_by_id = {row["topology_id"]: float(row[target_field]) for row in rows}
     x = np.asarray([[float(row[field]) for field in common.SCALAR_FEATURES] for row in rows], dtype=float)
-    y = np.asarray([float(row["normalized_improvement_pp"]) for row in rows], dtype=float)
+    y = np.asarray([float(row[target_field]) for row in rows], dtype=float)
     folds = np.asarray([fold_by_id[row["topology_id"]] for row in rows], dtype=int)
+    failures: list[str] = []
+    if len(rows) != 1000:
+        failures.append(f"sample_count_mismatch:{len(rows)}!=1000")
+    if len(set(folds.tolist())) != 5:
+        failures.append(f"fold_count_mismatch:{len(set(folds.tolist()))}!=5")
+    if not np.all(np.isfinite(x)):
+        failures.append("nonfinite_scalar_features")
+    if not np.all(np.isfinite(y)):
+        failures.append("nonfinite_targets")
+    for fold_row in fold_rows:
+        if fold_row.get("target_name") and fold_row["target_name"] != target_field:
+            failures.append(f"fold_target_name_mismatch:{fold_row['topology_id']}")
+        if fold_row.get("target_value") not in (None, ""):
+            expected = target_by_id[fold_row["topology_id"]]
+            if not math.isclose(float(fold_row["target_value"]), expected, rel_tol=0.0, abs_tol=1e-12):
+                failures.append(f"fold_target_value_mismatch:{fold_row['topology_id']}")
+    if require_formal_targets and any(not common.truthy(row.get("formal_label_ready")) for row in rows):
+        failures.append("formal_targets_not_ready")
     predictions = {
         "zero": np.zeros(len(rows), dtype=float),
         "fold_mean": np.zeros(len(rows), dtype=float),
@@ -85,6 +148,8 @@ def run(rows: list[dict[str, str]], fold_rows: list[dict[str, str]], alpha: floa
         prediction_rows.append({
             "topology_id": row["topology_id"],
             "fold": int(folds[index]),
+            "target_name": target_field,
+            "target_value": float(y[index]),
             "target_normalized_improvement_pp": float(y[index]),
             "zero_prediction": float(predictions["zero"][index]),
             "fold_mean_prediction": float(predictions["fold_mean"][index]),
@@ -106,14 +171,17 @@ def run(rows: list[dict[str, str]], fold_rows: list[dict[str, str]], alpha: floa
         predicted_top = set(np.argsort(prediction)[-top_count:].tolist())
         ranking[model] = {"top50_overlap": len(true_top & predicted_top) / top_count}
     audit = {
-        "passed": len(rows) == 1000 and len(prediction_rows) == 1000,
+        "passed": not failures and len(prediction_rows) == 1000,
         "sample_count": len(rows),
         "fold_count": len(set(folds.tolist())),
         "features": common.SCALAR_FEATURES,
-        "target_is_not_an_input_feature": "normalized_improvement_pp" not in common.SCALAR_FEATURES,
+        "target_field": target_field,
+        "formal_targets_required": require_formal_targets,
+        "target_is_not_an_input_feature": target_field not in common.SCALAR_FEATURES,
         "ridge_alpha": alpha,
         "metrics": metric_rows,
         "ranking": ranking,
+        "failures": failures,
     }
     return prediction_rows, audit
 
@@ -131,12 +199,31 @@ def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--formal-summary", type=Path, default=common.DEFAULT_FORMAL_SUMMARY)
+    parser.add_argument("--target-table", type=Path)
+    parser.add_argument("--target-field", default="normalized_improvement_pp")
+    parser.add_argument("--require-formal-targets", action="store_true")
     parser.add_argument("--folds", type=Path, default=common.DEFAULT_OUTPUT_ROOT / "splits" / "folds.csv")
     parser.add_argument("--alpha", type=float, default=10.0)
     parser.add_argument("--prediction-output", type=Path, default=common.DEFAULT_OUTPUT_ROOT / "baselines" / "scalar_oof_predictions.csv")
     parser.add_argument("--audit-output", type=Path, default=common.DEFAULT_OUTPUT_ROOT / "baselines" / "scalar_baselines.audit.json")
     args = parser.parse_args()
-    predictions, result = run(common.read_csv(args.formal_summary), common.read_csv(args.folds), args.alpha)
+    rows = common.read_csv(args.formal_summary)
+    if args.target_table is not None:
+        rows = merge_feature_targets(
+            rows,
+            common.read_csv(args.target_table),
+            target_field=args.target_field,
+            require_formal_targets=args.require_formal_targets,
+        )
+    elif args.require_formal_targets:
+        raise ValueError("--require-formal-targets requires --target-table")
+    predictions, result = run(
+        rows,
+        common.read_csv(args.folds),
+        args.alpha,
+        target_field=args.target_field,
+        require_formal_targets=args.require_formal_targets,
+    )
     write_csv(args.prediction_output, predictions)
     args.audit_output.parent.mkdir(parents=True, exist_ok=True)
     args.audit_output.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
