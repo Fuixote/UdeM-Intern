@@ -49,6 +49,11 @@ Add `--execute` only on Garnet after the artifact audit and preview pass. Formal
 GNN training remains disabled until `review_repeat_seed_results.py` reports both
 integrity success and the documented stability gate result.
 
+The Garnet-only wrapper `scripts/run_garnet_pipeline.sh` performs that exact
+gated sequence in one resumable pipeline: eight artifact shards, strict audit,
+strict 120-row plan, launcher preview, 20-worker execution, then final review.
+It never invokes Experiment 05 training.
+
 ## Outputs
 
 - `configs/topologies.repeat60.csv`: locked 60-topology panel.
