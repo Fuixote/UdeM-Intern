@@ -123,7 +123,7 @@ def write_csv(path: Path, rows: list[dict[str, Any]], fields: list[str] | None =
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--formal-summary", type=Path, default=common.DEFAULT_FORMAL_SUMMARY)
-    parser.add_argument("--repeat-labels", type=Path, default=DEFAULT_REPEAT_LABELS)
+    parser.add_argument("--repeat-labels", type=Path, action="append", default=None)
     parser.add_argument("--output", type=Path, default=common.DEFAULT_OUTPUT_ROOT / "targets" / "multiseed_targets.csv")
     parser.add_argument("--audit-output", type=Path, default=common.DEFAULT_OUTPUT_ROOT / "targets" / "multiseed_targets.audit.json")
     parser.add_argument(
@@ -134,7 +134,8 @@ def main() -> int:
     parser.add_argument("--require-complete", action="store_true")
     args = parser.parse_args()
     formal_rows = common.read_csv(args.formal_summary)
-    repeat_rows = common.read_csv(args.repeat_labels)
+    repeat_paths = args.repeat_labels or [DEFAULT_REPEAT_LABELS]
+    repeat_rows = [row for path in repeat_paths for row in common.read_csv(path)]
     targets, missing_rows, audit = aggregate_targets(formal_rows, repeat_rows)
     write_csv(args.output, targets)
     formal_fields = list(formal_rows[0]) if formal_rows else []

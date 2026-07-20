@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Audit the 120 fit bundles and prove they share the formal fixed test banks."""
+"""Audit repeat-seed fit bundles and prove they share the formal fixed test banks."""
 
 from __future__ import annotations
 
@@ -112,10 +112,10 @@ def audit_all(rows: list[dict[str, str]], output_root: Path, formal_output_root:
                 failures.append(f"{topology_id}:training_hash_did_not_change_across_train_seeds")
     return {
         "passed": not failures,
-        "expected_topology_count": 60,
+        "expected_topology_count": len(rows),
         "observed_topology_count": len(rows),
         "train_seeds": list(common.TRAIN_SEEDS),
-        "expected_bundle_count": 120,
+        "expected_bundle_count": len(rows) * len(common.TRAIN_SEEDS),
         "observed_bundle_count": len(bundles),
         "passed_bundle_count": sum(bundle["passed"] for bundle in bundles),
         "fixed_test_bank": True,

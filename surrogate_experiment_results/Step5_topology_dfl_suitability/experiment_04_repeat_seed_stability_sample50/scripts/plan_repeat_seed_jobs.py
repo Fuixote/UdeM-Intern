@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create one audited dry-run plan containing 60 topologies x two train seeds."""
+"""Create an audited dry-run plan over two repeat train seeds."""
 
 from __future__ import annotations
 
@@ -13,7 +13,15 @@ import repeat_seed_common as common
 planner = common.base_planner()
 
 
-def combined_plan(rows: list[dict[str, str]], artifact_root: Path, job_output_root: Path, *, strict: bool = True, python_bin: str | None = None) -> dict:
+def combined_plan(
+    rows: list[dict[str, str]],
+    artifact_root: Path,
+    job_output_root: Path,
+    *,
+    expected_job_count: int = 120,
+    strict: bool = True,
+    python_bin: str | None = None,
+) -> dict:
     jobs = []
     failures: list[str] = []
     per_seed = []
@@ -44,8 +52,8 @@ def combined_plan(rows: list[dict[str, str]], artifact_root: Path, job_output_ro
     job_ids = [job["job_id"] for job in jobs]
     if len(job_ids) != len(set(job_ids)):
         failures.append("duplicate_job_ids")
-    if len(jobs) != 120:
-        failures.append(f"job_count_mismatch:{len(jobs)}!=120")
+    if len(jobs) != int(expected_job_count):
+        failures.append(f"job_count_mismatch:{len(jobs)}!={int(expected_job_count)}")
     if strict and any(job["status"] != "ready" for job in jobs):
         failures.append("not_all_jobs_ready")
     all_ready = all(job["status"] == "ready" for job in jobs)
@@ -56,6 +64,7 @@ def combined_plan(rows: list[dict[str, str]], artifact_root: Path, job_output_ro
         "topology_count": len(rows),
         "train_seeds": list(common.TRAIN_SEEDS),
         "job_count": len(jobs),
+        "expected_job_count": int(expected_job_count),
         "ready_count": sum(job["status"] == "ready" for job in jobs),
         "fixed_test_bank": True,
         "reference_test_seed": common.REFERENCE_SEED,
@@ -83,9 +92,17 @@ def main() -> int:
     parser.add_argument("--jobs-csv-output", type=Path)
     parser.add_argument("--python", default=None)
     parser.add_argument("--allow-missing-artifacts", action="store_true")
+    parser.add_argument("--expected-job-count", type=int, default=120)
     args = parser.parse_args()
     rows = common.read_csv(args.topologies_csv)
-    plan = combined_plan(rows, args.artifact_root, args.job_output_root, strict=not args.allow_missing_artifacts, python_bin=args.python)
+    plan = combined_plan(
+        rows,
+        args.artifact_root,
+        args.job_output_root,
+        expected_job_count=args.expected_job_count,
+        strict=not args.allow_missing_artifacts,
+        python_bin=args.python,
+    )
     plan_output = args.plan_output or args.job_output_root / "plans" / "repeat_seed120_plan.json"
     csv_output = args.jobs_csv_output or args.job_output_root / "plans" / "repeat_seed120_jobs.csv"
     planner.common.atomic_write_json(plan_output, plan)
