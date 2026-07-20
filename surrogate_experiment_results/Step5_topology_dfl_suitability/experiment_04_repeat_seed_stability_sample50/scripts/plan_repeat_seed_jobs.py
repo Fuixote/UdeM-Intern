@@ -21,6 +21,7 @@ def combined_plan(
     expected_job_count: int = 120,
     strict: bool = True,
     python_bin: str | None = None,
+    verify_test_npz: bool = True,
 ) -> dict:
     jobs = []
     failures: list[str] = []
@@ -43,6 +44,7 @@ def combined_plan(
             early_stop_min_delta=common.EARLY_STOP_MIN_DELTA,
             python_bin=python_bin,
             strict=strict,
+            verify_test_npz=verify_test_npz,
         )
         per_seed.append({"train_seed": seed, "passed": plan["passed"], "job_count": plan["job_count"], "ready_count": plan["ready_count"]})
         failures.extend(f"seed{seed}:{failure}" for failure in plan["failures"])
@@ -93,6 +95,7 @@ def main() -> int:
     parser.add_argument("--python", default=None)
     parser.add_argument("--allow-missing-artifacts", action="store_true")
     parser.add_argument("--expected-job-count", type=int, default=120)
+    parser.add_argument("--test-verification", choices=("npz", "manifest"), default="npz")
     args = parser.parse_args()
     rows = common.read_csv(args.topologies_csv)
     plan = combined_plan(
@@ -102,6 +105,7 @@ def main() -> int:
         expected_job_count=args.expected_job_count,
         strict=not args.allow_missing_artifacts,
         python_bin=args.python,
+        verify_test_npz=args.test_verification == "npz",
     )
     plan_output = args.plan_output or args.job_output_root / "plans" / "repeat_seed120_plan.json"
     csv_output = args.jobs_csv_output or args.job_output_root / "plans" / "repeat_seed120_jobs.csv"

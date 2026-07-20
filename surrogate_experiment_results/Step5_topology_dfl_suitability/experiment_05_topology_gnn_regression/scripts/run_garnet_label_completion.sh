@@ -64,6 +64,7 @@ python "${EXP4_REL}/scripts/plan_repeat_seed_jobs.py" \
   --artifact-root "${OUTPUT_REL}" \
   --job-output-root "${OUTPUT_REL}" \
   --expected-job-count 1880 \
+  --test-verification manifest \
   --plan-output "${OUTPUT_REL}/plans/multiseed_completion1880_plan.json" \
   --jobs-csv-output "${OUTPUT_REL}/plans/multiseed_completion1880_jobs.csv" \
   > "${LOG_DIR}/plan.log" 2>&1

@@ -136,6 +136,7 @@ def readiness_failures(
     eval_manifest_path: Path,
     eval_manifest: dict[str, Any],
     training_hash: str | None,
+    verify_test_npz: bool = True,
 ) -> list[str]:
     failures: list[str] = []
     if not train_bank_path.is_file():
@@ -176,7 +177,7 @@ def readiness_failures(
         test_path = _resolve_eval_path(eval_manifest_path, eval_manifest["test_path"])
         if not test_path.is_file():
             failures.append("test_npz_missing")
-        else:
+        elif verify_test_npz:
             try:
                 observed_test_size = int(common.read_npz_dataset(test_path)["manifest"].get("sample_count", -1))
             except Exception:
@@ -248,6 +249,7 @@ def build_plan(
     long_topologies: set[str] | None = None,
     python_bin: str | None = None,
     strict: bool = True,
+    verify_test_npz: bool = True,
 ) -> dict[str, Any]:
     output_root = Path(output_root)
     job_output_root = output_root if job_output_root is None else Path(job_output_root)
@@ -286,6 +288,7 @@ def build_plan(
             eval_manifest_path=paths["eval_manifest"],
             eval_manifest=eval_manifest,
             training_hash=training_hash,
+            verify_test_npz=verify_test_npz,
         )
         if strict and failures:
             raise ValueError(f"artifact_not_ready {topology_id}:" + ",".join(failures))
@@ -402,6 +405,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--topology-id", action="append", default=None)
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--allow-missing-artifacts", action="store_true")
+    parser.add_argument("--test-verification", choices=("npz", "manifest"), default="npz")
     parser.add_argument("--plan-output", type=Path, default=None)
     parser.add_argument("--jobs-csv-output", type=Path, default=None)
     return parser.parse_args(argv)
@@ -432,6 +436,7 @@ def main(argv: list[str] | None = None) -> int:
         long_topologies=parse_csv_set(args.long_topologies),
         python_bin=args.python,
         strict=not args.allow_missing_artifacts,
+        verify_test_npz=args.test_verification == "npz",
     )
     plan_output = args.plan_output or Path(args.output_root) / "plans" / "weak_label_plan.json"
     jobs_output = args.jobs_csv_output or Path(args.output_root) / "plans" / "weak_label_jobs.csv"
