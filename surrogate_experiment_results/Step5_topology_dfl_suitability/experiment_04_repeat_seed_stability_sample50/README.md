@@ -4,15 +4,22 @@ This experiment is the hard gate before formal topology-only GNN training. It
 separates the effect of the 40/10 training/validation draw from the topology and
 from the fixed evaluation population.
 
-## Current status (Garnet)
+## Final status (Garnet)
 
-The gated pipeline started real training on Garnet at
-`2026-07-19T21:09:21-04:00` in tmux session `step5_exp4_seed_audit`. Before the
-launcher was allowed to execute, all 120 new train/validation bundles passed the
-fixed-test-bank audit, the strict planner reported 120/120 jobs ready, and the
-20-worker launcher preview passed. The first health check reported 18 finished,
-20 active, 82 pending, and zero failures. Experiment 05 formal GNN training has
-not started.
+The gated pipeline completed at `2026-07-19T21:24:04-04:00`. All 120 paired
+jobs succeeded with no failures, all 180 seed-level labels were exported, and
+the integrity audit passed. Pairwise seed correlations were:
+
+- seed 42 vs 43: Pearson 0.9981, Spearman 0.8058, top-10 overlap 0.9;
+- seed 42 vs 44: Pearson 0.9823, Spearman 0.6946, top-10 overlap 0.9;
+- seed 43 vs 44: Pearson 0.9895, Spearman 0.7084, top-10 overlap 0.9.
+
+The preregistered stability gate did **not** pass because the minimum pairwise
+Spearman was 0.6946, narrowly below the required 0.7000. Zero-plateau
+consistency was 1.0 and material-sign consistency was 0.9, both above their 0.8
+requirements. Therefore the result is valid but the formal GNN remains blocked
+until the target aggregation policy and the borderline rank-instability cases
+are reviewed; Experiment 05 formal training has not started.
 
 ## Locked protocol
 

@@ -1,7 +1,8 @@
 experiment:
   experiment_id: step5_exp4_repeat_seed_stability_sample50_v1
-  status: running_on_garnet
+  status: complete_integrity_passed_stability_gate_failed
   started_at_garnet: 2026-07-19T21:09:21-04:00
+  completed_at_garnet: 2026-07-19T21:24:04-04:00
   purpose: quantify train-seed stability before any formal topology-only GNN training
 
 selection:
@@ -59,6 +60,16 @@ job_plan:
   job_count: 120
   ready_count: 120
   commands_were_previewed_before_execute: true
+
+final_review:
+  integrity_passed: true
+  successful_new_job_count: 120
+  label_row_count: 180
+  stability_topology_count: 60
+  stability_gate_passed: false
+  minimum_pairwise_spearman: 0.6945515318054712
+  zero_plateau_consistency: 1.0
+  material_sign_consistency: 0.9
 
 gate:
   integrity_requires_all_120_success: true
