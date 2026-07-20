@@ -1,0 +1,28 @@
+model:
+  status: specification_only_not_launched
+  family: relation_aware_candidate_vertex_incidence_gnn
+  node_input_dim: 10
+  hidden_dim: 64
+  message_passing_layers: 3
+  relation_count: 3
+  activation: relu
+  dropout: 0.1
+  pooling: concatenate_type_conditioned_mean_and_max
+  regression_head: [128, 64, 1]
+
+training:
+  objective: huber_loss
+  optimizer: adamw
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  batch_size: 32
+  max_epochs: 500
+  early_stop_patience: 30
+  selection_metric: validation_mae
+  random_seeds: [42, 43, 44]
+
+evaluation:
+  cross_validation_folds: 5
+  metrics: [mae, rmse, r2, pearson, spearman, top50_overlap]
+  subsets: [all, nonzero, material_abs_gt_0.1pp]
+  compare_against: [zero, fold_mean, ridge]

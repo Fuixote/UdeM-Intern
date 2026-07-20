@@ -1,0 +1,53 @@
+experiment:
+  experiment_id: step5_exp4_repeat_seed_stability_sample50_v1
+  status: implementation_ready_waiting_remote_artifacts
+  purpose: quantify train-seed stability before any formal topology-only GNN training
+
+selection:
+  source: experiment_03_formal_continuous_label_seed42_sample50
+  topology_count: 60
+  categories:
+    ceiling_zero: 10
+    nonzero_gap_plateau: 10
+    small_nonzero: 10
+    material_positive: 10
+    material_negative: 10
+    extreme_positive: 5
+    extreme_negative: 5
+
+data:
+  sample_size: 50
+  training_size: 40
+  validation_size: 10
+  train_seeds: [43, 44]
+  reference_label_seed: 42
+  master_label_seed: 20260719
+  fixed_test_size: 1000
+  fixed_test_bank_source: experiment_03_formal_continuous_label_seed42_sample50
+  test_bank_varies_with_train_seed: false
+  full_training_and_validation_resampling: true
+
+training:
+  methods: [2stage, spoplus]
+  theta_seed: 42
+  gurobi_seed: 42
+  max_epochs: 10000
+  max_epochs_role: emergency_safety_cap
+  metric_stride: 1
+  early_stop_patience: 20
+  early_stop_min_delta: 0.0001
+  require_early_stop: true
+
+execution:
+  host: garnet
+  scheduler: tmux_bounded_parallel
+  expected_new_job_count: 120
+  normal_workers: 20
+  slurm: false
+  formal_gnn_may_start: false
+
+gate:
+  integrity_requires_all_120_success: true
+  minimum_pairwise_spearman: 0.7
+  minimum_zero_plateau_consistency: 0.8
+  minimum_material_sign_consistency: 0.8

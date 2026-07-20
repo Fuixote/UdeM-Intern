@@ -1,0 +1,28 @@
+experiment:
+  experiment_id: step5_exp5_topology_gnn_regression_v1
+  status: scaffolded_waiting_experiment_04_seed_audit
+  purpose: predict topology-level normalized DFL improvement from pure topology
+
+data:
+  provisional_target_source: experiment_03_seed42
+  formal_target_source: blocked_until_experiment_04_gate
+  target: normalized_improvement_pp
+  topology_count: 1000
+  graph_representation: candidate_vertex_incidence_with_compatibility_relations
+  input_uses_training_samples: false
+  input_uses_test_statistics: false
+  target_used_as_input: false
+  folds: 5
+  split_seed: 20260720
+
+baselines:
+  models: [zero, fold_mean, ridge]
+  scalar_feature_count: 21
+  ridge_alpha: 10.0
+  evaluation_subsets: [all, nonzero, material_abs_gt_0.1pp]
+
+gate:
+  formal_gnn_training_enabled: false
+  required_experiment_04_integrity_passed: true
+  required_experiment_04_stability_gate_passed: true
+  gate_decision_file: ../experiment_04_repeat_seed_stability_sample50/results/repeat_seed120/results/repeat_seed_review_audit.json
