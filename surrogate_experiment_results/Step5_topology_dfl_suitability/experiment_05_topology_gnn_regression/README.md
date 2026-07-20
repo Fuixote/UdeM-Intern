@@ -3,7 +3,7 @@
 This directory contains the topology-only GNN scaffold and the completed formal
 three-seed label pipeline. The strict target and graph audits now pass for all
 1,000 topologies. Formal folds, scalar baselines, and a 10-epoch CPU GNN timing
-smoke also pass. The 15-run formal CPU GNN is now running on Garnet.
+smoke also pass. The 15-run formal CPU GNN and its strict review are complete.
 
 ## Prediction contract
 
@@ -161,7 +161,7 @@ early stopping reduces both. The formal-training device remains CPU. These
 benchmark results are stored under `results/device_benchmark/`; no formal GNN
 run was launched by the benchmark.
 
-## Formal GNN run (started 2026-07-20)
+## Formal GNN run (completed 2026-07-20)
 
 The formal run started on Garnet at `2026-07-20T09:52:37-04:00` in tmux
 session `step5_exp5_formal_gnn15`. It contains exactly 15 jobs: five outer test
@@ -182,13 +182,34 @@ three-worker maximum. The resumable launcher writes status and per-job logs
 under `results/formal_three_seed/gnn_formal15`. After all jobs succeed, the same
 pipeline audits 3,000 test predictions and builds one three-seed ensemble
 prediction for each of the 1,000 topologies. Brevo watcher session
-`notify_step5_exp5_formal_gnn15` sent its startup email and will send the final
-summary after the training session and review finish.
+`notify_step5_exp5_formal_gnn15` sent both its startup and completion emails
+and then exited normally.
+
+All 15 jobs succeeded with zero failures. Every run early-stopped between 31
+and 87 epochs (median 45); no run reached the 500-epoch cap. The single-worker
+launcher finished in 410.9 seconds, and summed per-run training time was 323.3
+seconds. The strict review passed with 3,000 unique per-seed test predictions
+and 1,000 three-seed ensemble predictions. The pipeline completed at
+`2026-07-20T09:59:28-04:00`, and the Brevo watcher sent its completion email.
+
+The three-seed ensemble obtains MAE 1.580 pp, RMSE 5.080 pp, R2 -0.0308,
+Spearman 0.0465, and top-50 overlap 0.08 on all 1,000 topologies. On the 253
+material targets, its MAE is 5.120 pp and R2 is -0.281. This first formal GNN
+does not establish a broad predictive advantage: its all-target MAE is better
+than ridge but worse than the zero baseline; its RMSE is better than zero but
+worse than ridge; and its Spearman correlation remains below ridge. Its clear
+relative gain is top-50 overlap (0.08 versus ridge's 0.02), which is useful for
+candidate ranking but not enough to claim generally accurate regression.
+
+The review audit SHA-256 is
+`049ed4fd1de6452dc84cca1fdaaff45c9e8667ee77ccc22b90436ddfcd85264d`;
+the ensemble prediction CSV SHA-256 is
+`06d33b9a55ba5e0ac5ac191e4581dcff9f80e0a92dd693ea4b52dbafe804a617`.
 
 ## Start gate
 
 Formal GNN training may start only after all conditions are true. All five
-conditions are complete, and the formal run described above has started:
+conditions are complete, and the formal run described above has finished:
 
 1. Experiment 04 artifact audit proves 120 fresh train/validation bundles use
    the exact Experiment 03 test hashes.

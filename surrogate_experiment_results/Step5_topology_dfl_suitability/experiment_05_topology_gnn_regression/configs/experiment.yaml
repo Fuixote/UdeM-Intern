@@ -1,6 +1,6 @@
 experiment:
   experiment_id: step5_exp5_topology_gnn_regression_v1
-  status: formal_gnn_training_running
+  status: formal_gnn_complete_review_passed
   purpose: predict topology-level normalized DFL improvement from pure topology
 
 data:
@@ -106,9 +106,34 @@ formal_training:
   plan_sha256: e68495b9bffd1c4647075ab38e392149daf64a30a154cb6e1860ba587e44a70b
   jobs_csv_sha256: cf7e0cde1af38f7fa9cc64168970f90c120b2f87c04fdd4134deb27409c8ba8e
   notification_start_email_sent: true
+  completed_at_garnet: 2026-07-20T09:59:28-04:00
+  launcher_elapsed_seconds: 410.903
+  finished_jobs: 15
+  failed_jobs: 0
+  early_stop_count: 15
+  epoch_cap_count: 0
+  epochs_completed_min: 31
+  epochs_completed_median: 45
+  epochs_completed_max: 87
+  total_training_seconds: 323.31167375599034
   review_expected_test_prediction_count: 3000
   review_expected_ensemble_prediction_count: 1000
-  status: running
+  review_passed: true
+  review_test_prediction_count: 3000
+  review_ensemble_prediction_count: 1000
+  review_audit_sha256: 049ed4fd1de6452dc84cca1fdaaff45c9e8667ee77ccc22b90436ddfcd85264d
+  all_predictions_sha256: 7389bddc9df56c4ffb880af5b2940d9ff978fe12ee110716f8ab723933b978ff
+  ensemble_predictions_sha256: 06d33b9a55ba5e0ac5ac191e4581dcff9f80e0a92dd693ea4b52dbafe804a617
+  run_metrics_sha256: 7f2e47bb6dc28427e5cb197913472737dbdbd08799469460a4602bc46d07c015
+  notification_completion_email_sent: true
+  ensemble_all_mae_pp: 1.5800440217188734
+  ensemble_all_rmse_pp: 5.080000419757793
+  ensemble_all_r2: -0.03083126567443073
+  ensemble_all_spearman: 0.04649468500150392
+  ensemble_top50_overlap: 0.08
+  ensemble_material_mae_pp: 5.120141761065786
+  ensemble_material_r2: -0.28098552039446667
+  status: complete_review_passed
 
 gate:
   formal_gnn_training_enabled: true
@@ -124,4 +149,6 @@ gate:
   formal_scalar_baseline_audit_rebuilt: true
   formal_gnn_timing_smoke_passed: true
   formal_gnn_training_started: true
+  formal_gnn_training_completed: true
+  formal_gnn_review_passed: true
   gate_decision_file: ../experiment_04_repeat_seed_stability_sample50/results/repeat_seed120/results/repeat_seed_review_audit.json

@@ -1,5 +1,5 @@
 model:
-  status: formal_training_running
+  status: formal_training_complete_review_passed
   family: relation_aware_candidate_vertex_incidence_gnn
   node_input_dim: 10
   hidden_dim: 64
@@ -35,7 +35,19 @@ formal_run:
   workers: 1
   maximum_requested_cpu_threads: 4
   started_at_garnet: 2026-07-20T09:52:37-04:00
-  status: running
+  completed_at_garnet: 2026-07-20T09:59:28-04:00
+  successful_runs: 15
+  failed_runs: 0
+  early_stop_count: 15
+  epoch_cap_count: 0
+  epochs_completed_range: [31, 87]
+  epochs_completed_median: 45
+  ensemble_all_mae_pp: 1.5800440217188734
+  ensemble_all_rmse_pp: 5.080000419757793
+  ensemble_all_r2: -0.03083126567443073
+  ensemble_all_spearman: 0.04649468500150392
+  ensemble_top50_overlap: 0.08
+  status: complete_review_passed
 
 device_benchmark:
   host: gcis-hbycis-rl1.ad.rit.edu
