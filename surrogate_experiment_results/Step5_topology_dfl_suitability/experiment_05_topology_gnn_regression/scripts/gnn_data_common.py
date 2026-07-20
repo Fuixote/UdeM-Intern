@@ -72,7 +72,16 @@ def stable_key(seed: int, *parts: str) -> str:
     return hashlib.sha256("|".join([str(seed), *parts]).encode("utf-8")).hexdigest()
 
 
-def build_graph_record(summary_row: dict[str, str], template: dict[str, Any]) -> dict[str, Any]:
+def truthy(value: Any) -> bool:
+    return value is True or str(value).lower() in {"true", "1", "yes"}
+
+
+def build_graph_record(
+    summary_row: dict[str, str],
+    template: dict[str, Any],
+    *,
+    formal_target_row: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     topology_id = str(summary_row["topology_id"])
     if str(template.get("topology_id")) != topology_id:
         raise ValueError(f"template topology mismatch for {topology_id}")
@@ -137,6 +146,36 @@ def build_graph_record(summary_row: dict[str, str], template: dict[str, Any]) ->
             edge_type.extend([RELATION_TYPES["vertex_to_candidate"], RELATION_TYPES["candidate_to_vertex"]])
 
     structural = {field: float(summary_row[field]) for field in SCALAR_FEATURES}
+    if formal_target_row is None:
+        target = {
+            "name": "normalized_improvement_pp",
+            "value": float(summary_row["normalized_improvement_pp"]),
+            "source": "experiment_03_seed42_provisional_pending_full_multiseed_labels",
+            "formal": False,
+        }
+        label_uncertainty = None
+    elif truthy(formal_target_row.get("formal_label_ready")):
+        target = {
+            "name": "formal_label_mean_pp",
+            "value": float(formal_target_row["formal_label_mean_pp"]),
+            "source": "mean_over_train_seeds_42_43_44",
+            "formal": True,
+        }
+        label_uncertainty = {
+            "name": "label_uncertainty_std_pp",
+            "value": float(formal_target_row["label_uncertainty_std_pp"]),
+            "ddof": int(formal_target_row["uncertainty_ddof"]),
+            "source": "population_std_over_train_seeds_42_43_44",
+        }
+    else:
+        target = {
+            "name": "formal_label_mean_pp",
+            "value": None,
+            "source": "incomplete_three_seed_label",
+            "formal": False,
+        }
+        label_uncertainty = None
+
     record = {
         "topology_id": topology_id,
         "topology_hash": summary_row["topology_hash"],
@@ -150,11 +189,8 @@ def build_graph_record(summary_row: dict[str, str], template: dict[str, Any]) ->
         "edge_type": edge_type,
         "edge_type_names": RELATION_TYPES,
         "scalar_topology_features": structural,
-        "target": {
-            "name": "normalized_improvement_pp",
-            "value": float(summary_row["normalized_improvement_pp"]),
-            "source": "experiment_03_seed42_provisional_pending_experiment_04",
-        },
+        "target": target,
+        "label_uncertainty": label_uncertainty,
     }
     if len(node_ids) != len(node_features):
         raise AssertionError("node id/feature length mismatch")
@@ -171,6 +207,9 @@ def validate_no_target_leakage(record: dict[str, Any]) -> list[str]:
     leaked = sorted((feature_names | scalar_names) & forbidden)
     if leaked:
         failures.append(f"forbidden_input_features:{','.join(leaked)}")
-    if record.get("target", {}).get("name") != "normalized_improvement_pp":
+    if record.get("target", {}).get("name") not in {
+        "normalized_improvement_pp",
+        "formal_label_mean_pp",
+    }:
         failures.append("target_name_mismatch")
     return failures

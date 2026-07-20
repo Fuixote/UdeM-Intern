@@ -1,12 +1,20 @@
 experiment:
   experiment_id: step5_exp5_topology_gnn_regression_v1
-  status: scaffolded_waiting_experiment_04_seed_audit
+  status: target_policy_locked_waiting_full_three_seed_labels
   purpose: predict topology-level normalized DFL improvement from pure topology
 
 data:
   provisional_target_source: experiment_03_seed42
-  formal_target_source: blocked_until_experiment_04_gate
-  target: normalized_improvement_pp
+  formal_target_source: mean_over_train_seeds_42_43_44
+  target: formal_label_mean_pp
+  target_formula: mean(normalized_improvement_pp_seed42, normalized_improvement_pp_seed43, normalized_improvement_pp_seed44)
+  label_uncertainty: label_uncertainty_std_pp
+  label_uncertainty_formula: population_std(normalized_improvement_pp_seed42, normalized_improvement_pp_seed43, normalized_improvement_pp_seed44)
+  label_uncertainty_ddof: 0
+  required_label_seeds: [42, 43, 44]
+  complete_three_seed_topologies: 60
+  incomplete_three_seed_topologies: 940
+  missing_seed_jobs: 1880
   topology_count: 1000
   graph_representation: candidate_vertex_incidence_with_compatibility_relations
   input_uses_training_samples: false
@@ -24,5 +32,8 @@ baselines:
 gate:
   formal_gnn_training_enabled: false
   required_experiment_04_integrity_passed: true
-  required_experiment_04_stability_gate_passed: true
+  experiment_04_integrity_passed: true
+  experiment_04_stability_gate_passed: false
+  target_policy_approved_after_borderline_gate: true
+  required_complete_three_seed_topology_count: 1000
   gate_decision_file: ../experiment_04_repeat_seed_stability_sample50/results/repeat_seed120/results/repeat_seed_review_audit.json

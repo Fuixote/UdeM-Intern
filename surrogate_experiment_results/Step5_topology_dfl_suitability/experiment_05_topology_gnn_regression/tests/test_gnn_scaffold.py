@@ -36,6 +36,31 @@ class GNNScaffoldTests(unittest.TestCase):
         self.assertEqual(record["edge_type"].count(common.RELATION_TYPES["candidate_to_vertex"]), 3)
         self.assertEqual(common.validate_no_target_leakage(record), [])
 
+    def test_formal_graph_target_uses_mean_and_keeps_uncertainty_separate(self) -> None:
+        template = {
+            "topology_id": "G-X",
+            "vertices": [{"id": "0", "type": "Pair"}],
+            "arcs": [],
+            "feasible_candidates": [],
+        }
+        row = {field: "1" for field in common.SCALAR_FEATURES}
+        row.update({
+            "topology_id": "G-X", "topology_hash": "th", "feasible_set_hash": "fh",
+            "template_path": "template.json", "normalized_improvement_pp": "99.0",
+        })
+        target = {
+            "formal_label_ready": "True",
+            "formal_label_mean_pp": "2.5",
+            "label_uncertainty_std_pp": "0.75",
+            "uncertainty_ddof": "0",
+        }
+        record = common.build_graph_record(row, template, formal_target_row=target)
+        self.assertEqual(record["target"]["name"], "formal_label_mean_pp")
+        self.assertEqual(record["target"]["value"], 2.5)
+        self.assertTrue(record["target"]["formal"])
+        self.assertEqual(record["label_uncertainty"]["value"], 0.75)
+        self.assertNotIn("label_uncertainty_std_pp", record["scalar_topology_features"])
+
     def test_stratified_assignment_is_deterministic(self) -> None:
         rows = []
         values = [0.0, 0.02, -0.02, 0.5, -0.5, 5.0, -5.0] * 10

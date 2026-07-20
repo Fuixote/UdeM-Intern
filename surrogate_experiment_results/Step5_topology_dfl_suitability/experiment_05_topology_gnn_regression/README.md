@@ -13,11 +13,18 @@ topology; bidirectional incidence edges connect each candidate to its member
 vertices. No sampled train/validation/test context, objective gap, seed, or
 label-derived statistic is an input feature.
 
-The provisional target is Experiment 03's
+The provisional target was Experiment 03's seed-42
 `normalized_improvement_pp = 100 * (normalized_gap_2stage - normalized_gap_SPO+)`.
-It is stored separately from graph features. After the Experiment 04 audit, the
-target policy must be locked: retain seed-42 targets only if the stability gate
-supports that choice, or replace them with a documented multi-seed aggregate.
+Following Experiment 04, the formal target policy is locked to the mean of that
+quantity over train seeds 42, 43, and 44. Label uncertainty is the population
+standard deviation over those same three values (`ddof=0`). Both fields remain
+separate from graph inputs.
+
+Only the 60 Experiment 04 audit topologies currently have all three seed
+values. The other 940 topologies require two additional jobs each, so 1,880
+label-generation jobs remain before a protocol-consistent 1,000-topology GNN
+dataset exists. Missing topologies must have an empty formal target; the
+pipeline is forbidden from silently substituting their seed-42 value.
 
 ## Implemented local scaffold
 
@@ -25,6 +32,16 @@ supports that choice, or replace them with a documented multi-seed aggregate.
 python surrogate_experiment_results/Step5_topology_dfl_suitability/experiment_05_topology_gnn_regression/scripts/build_incidence_dataset.py
 python surrogate_experiment_results/Step5_topology_dfl_suitability/experiment_05_topology_gnn_regression/scripts/plan_stratified_folds.py
 python surrogate_experiment_results/Step5_topology_dfl_suitability/experiment_05_topology_gnn_regression/scripts/run_scalar_baselines.py
+python surrogate_experiment_results/Step5_topology_dfl_suitability/experiment_05_topology_gnn_regression/scripts/build_multiseed_targets.py
+```
+
+Once the target audit reports all 1,000 topologies complete, the formal graph
+build must explicitly use the target table and strict mode:
+
+```bash
+python surrogate_experiment_results/Step5_topology_dfl_suitability/experiment_05_topology_gnn_regression/scripts/build_incidence_dataset.py \
+  --target-table surrogate_experiment_results/Step5_topology_dfl_suitability/experiment_05_topology_gnn_regression/results/scaffold/targets/multiseed_targets.csv \
+  --require-formal-targets
 ```
 
 These commands create:
@@ -64,4 +81,6 @@ Formal GNN training may start only after all conditions are true:
 2. All 120 paired 2stage/SPO+ jobs and evaluations succeed and early-stop.
 3. The three-seed review is interpreted and the target aggregation policy is
    recorded here and in `configs/experiment.yaml`.
-4. Fold and baseline audits pass with the final target table.
+4. All 1,000 topologies have seeds 42/43/44, and the strict multi-seed target
+   audit reports `formal_ready=true`.
+5. Fold and baseline audits are rebuilt and pass with the final target table.
