@@ -66,13 +66,6 @@ def build_dataset(
     }:
         raise ValueError("expected deterministic 600/200/200 split")
 
-    train_features = torch.cat(
-        [torch.tensor(row["node_features"], dtype=torch.float32)[:, 6:10] for row in split_records["train"]],
-        dim=0,
-    )
-    continuous_mean = train_features.mean(dim=0)
-    continuous_std = train_features.std(dim=0, unbiased=False)
-    continuous_std[continuous_std == 0] = 1.0
     train_targets = torch.tensor(
         [float(row["target"]["value"]) for row in split_records["train"]],
         dtype=torch.float32,
@@ -87,7 +80,6 @@ def build_dataset(
         data_rows = []
         for row in rows:
             x = torch.tensor(row["node_features"], dtype=torch.float32)
-            x[:, 6:10] = (x[:, 6:10] - continuous_mean) / continuous_std
             edge_index = torch.tensor(
                 [row["edge_source"], row["edge_target"]],
                 dtype=torch.long,
@@ -99,17 +91,14 @@ def build_dataset(
                     edge_index=edge_index,
                     edge_type=torch.tensor(row["edge_type"], dtype=torch.long),
                     node_type=torch.argmax(x[:, :2], dim=1),
-                    y=torch.tensor([(y_pp - float(target_mean)) / float(target_std)], dtype=torch.float32),
-                    y_pp=torch.tensor([y_pp], dtype=torch.float32),
-                    topology_index=torch.tensor([int(row["topology_id"].split("-")[-1])], dtype=torch.long),
+                    y=torch.tensor([y_pp], dtype=torch.float32),
+                    topology_code=torch.tensor([int(row["topology_id"].split("-")[-1])], dtype=torch.long),
                 )
             )
         datasets[split_name] = data_rows
     scaling = {
         "target_mean": float(target_mean),
         "target_std": float(target_std),
-        "continuous_mean": [float(value) for value in continuous_mean],
-        "continuous_std": [float(value) for value in continuous_std],
     }
     return datasets, scaling
 
@@ -129,6 +118,7 @@ def make_model(torch: Any, RGCNConv: Any, global_mean_pool: Any, global_max_pool
                 torch.nn.Dropout(0.1),
                 torch.nn.Linear(128, 64),
                 torch.nn.ReLU(),
+                torch.nn.Dropout(0.1),
                 torch.nn.Linear(64, 1),
             )
 
@@ -178,6 +168,7 @@ def main() -> int:
         raise RuntimeError("CUDA benchmark requested but torch.cuda.is_available() is false")
     torch.set_num_threads(args.torch_threads)
     set_seed(args.seed, torch)
+    torch.use_deterministic_algorithms(True)
     load_started = time.perf_counter()
     records, folds = load_records(args.graphs, args.folds)
     datasets, scaling = build_dataset(
@@ -207,7 +198,8 @@ def main() -> int:
             batch = batch.to(device)
             optimizer.zero_grad(set_to_none=True)
             prediction = model(batch)
-            loss = functional.huber_loss(prediction, batch.y.reshape(-1))
+            target_scaled = (batch.y.reshape(-1) - target_mean) / target_std
+            loss = functional.huber_loss(prediction, target_scaled)
             loss.backward()
             optimizer.step()
             losses.append(float(loss.detach().cpu()))
@@ -217,7 +209,7 @@ def main() -> int:
             for batch in validation_loader:
                 batch = batch.to(device)
                 prediction_pp = model(batch) * target_std + target_mean
-                absolute_errors.extend(torch.abs(prediction_pp - batch.y_pp.reshape(-1)).cpu().tolist())
+                absolute_errors.extend(torch.abs(prediction_pp - batch.y.reshape(-1)).cpu().tolist())
         return statistics.fmean(losses), statistics.fmean(absolute_errors)
 
     for _ in range(args.warmup_epochs):
