@@ -4,6 +4,16 @@ This experiment is the hard gate before formal topology-only GNN training. It
 separates the effect of the 40/10 training/validation draw from the topology and
 from the fixed evaluation population.
 
+## Current status (Garnet)
+
+The gated pipeline started real training on Garnet at
+`2026-07-19T21:09:21-04:00` in tmux session `step5_exp4_seed_audit`. Before the
+launcher was allowed to execute, all 120 new train/validation bundles passed the
+fixed-test-bank audit, the strict planner reported 120/120 jobs ready, and the
+20-worker launcher preview passed. The first health check reported 18 finished,
+20 active, 82 pending, and zero failures. Experiment 05 formal GNN training has
+not started.
+
 ## Locked protocol
 
 - Select 60 topologies deterministically from the completed Experiment 03 labels.

@@ -1,6 +1,7 @@
 experiment:
   experiment_id: step5_exp4_repeat_seed_stability_sample50_v1
-  status: implementation_ready_waiting_remote_artifacts
+  status: running_on_garnet
+  started_at_garnet: 2026-07-19T21:09:21-04:00
   purpose: quantify train-seed stability before any formal topology-only GNN training
 
 selection:
@@ -41,10 +42,23 @@ training:
 execution:
   host: garnet
   scheduler: tmux_bounded_parallel
+  training_session: step5_exp4_seed_audit
   expected_new_job_count: 120
   normal_workers: 20
   slurm: false
   formal_gnn_may_start: false
+
+artifact_audit:
+  passed: true
+  observed_topology_count: 60
+  observed_bundle_count: 120
+  passed_bundle_count: 120
+
+job_plan:
+  passed: true
+  job_count: 120
+  ready_count: 120
+  commands_were_previewed_before_execute: true
 
 gate:
   integrity_requires_all_120_success: true
