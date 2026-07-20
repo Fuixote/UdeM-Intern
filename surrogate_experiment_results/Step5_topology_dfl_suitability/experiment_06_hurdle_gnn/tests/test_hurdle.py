@@ -17,6 +17,7 @@ if str(SCRIPT_DIR) not in sys.path:
 import hurdle_common as common
 import launch_hurdle_jobs as launcher
 import plan_hurdle_jobs as planner
+import review_hurdle_results as reviewer
 
 
 class HurdleTests(unittest.TestCase):
@@ -76,6 +77,50 @@ class HurdleTests(unittest.TestCase):
             self.assertEqual(parsed_classifier.command[-1], "--execute")
             self.assertEqual(parsed_regressor.command[-1], "--execute")
             self.assertEqual(parsed_regressor.dependency_path, Path(regressors[0]["dependency_path"]))
+
+    def test_oof_aggregation_pools_disjoint_folds(self) -> None:
+        classifier_rows = []
+        regressor_rows = []
+        for fold, targets in ((0, [0.0, 2.0]), (1, [0.0, -1.0])):
+            for index, target in enumerate(targets):
+                common_fields = {
+                    "topology_id": f"G-{fold * 2 + index}",
+                    "fold": fold,
+                    "seed": 42,
+                }
+                classifier_rows.append(
+                    {
+                        **common_fields,
+                        "target_is_nonzero": int(target != 0.0),
+                        "probability_nonzero": 0.9 if target != 0.0 else 0.1,
+                    }
+                )
+                regressor_rows.append(
+                    {
+                        **common_fields,
+                        "regression_subset": "nonzero",
+                        "objective": "mse",
+                        "target_formal_label_mean_pp": target,
+                        "raw_regression_prediction_pp": target,
+                        "hard_hurdle_prediction_pp": target,
+                        "soft_hurdle_prediction_pp": target,
+                        "oracle_nonzero_gate_prediction_pp": target,
+                    }
+                )
+        classifier_metrics = reviewer.aggregate_classifier_predictions(classifier_rows)
+        self.assertEqual(classifier_metrics[0]["fold_count"], 2)
+        self.assertEqual(classifier_metrics[0]["count"], 4)
+        self.assertEqual(classifier_metrics[0]["auroc"], 1.0)
+        regression_metrics = reviewer.aggregate_regressor_predictions(regressor_rows)
+        all_hard = next(
+            row
+            for row in regression_metrics
+            if row["prediction_mode"] == "hard_hurdle" and row["subset"] == "all"
+        )
+        self.assertEqual(all_hard["fold_count"], 2)
+        self.assertEqual(all_hard["count"], 4)
+        self.assertEqual(all_hard["mae"], 0.0)
+        self.assertEqual(all_hard["r2"], 1.0)
 
 
 if __name__ == "__main__":

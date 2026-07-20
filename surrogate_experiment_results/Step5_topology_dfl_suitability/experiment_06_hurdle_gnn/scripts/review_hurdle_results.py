@@ -4,12 +4,75 @@
 from __future__ import annotations
 
 import argparse
+from collections import defaultdict
 import json
 import math
 from pathlib import Path
 from typing import Any
 
+import numpy as np
+
 import hurdle_common as common
+
+
+PREDICTION_COLUMNS = {
+    "raw_regressor": "raw_regression_prediction_pp",
+    "hard_hurdle": "hard_hurdle_prediction_pp",
+    "soft_hurdle": "soft_hurdle_prediction_pp",
+    "oracle_nonzero_gate": "oracle_nonzero_gate_prediction_pp",
+}
+
+
+def aggregate_classifier_predictions(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    grouped: dict[int, list[dict[str, Any]]] = defaultdict(list)
+    for row in rows:
+        grouped[int(row["seed"])].append(row)
+    output = []
+    for seed, seed_rows in sorted(grouped.items()):
+        target = np.asarray([int(row["target_is_nonzero"]) for row in seed_rows], dtype=int)
+        probability = np.asarray([float(row["probability_nonzero"]) for row in seed_rows], dtype=float)
+        metrics = common.binary_metrics(target, probability, threshold=0.5)
+        confusion = metrics.pop("confusion")
+        output.append(
+            {
+                "seed": seed,
+                "fold_count": len({int(row["fold"]) for row in seed_rows}),
+                **metrics,
+                **confusion,
+            }
+        )
+    return output
+
+
+def aggregate_regressor_predictions(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    grouped: dict[tuple[int, str, str], list[dict[str, Any]]] = defaultdict(list)
+    for row in rows:
+        grouped[(int(row["seed"]), row["regression_subset"], row["objective"])].append(row)
+    output = []
+    for (seed, regression_subset, objective), variant_rows in sorted(grouped.items()):
+        target = np.asarray([float(row["target_formal_label_mean_pp"]) for row in variant_rows], dtype=float)
+        masks = {
+            "all": np.ones(len(target), dtype=bool),
+            "zero": target == 0.0,
+            "nonzero": target != 0.0,
+            "material_abs_gt_0.1pp": np.abs(target) > 0.1,
+        }
+        fold_count = len({int(row["fold"]) for row in variant_rows})
+        for prediction_mode, column in PREDICTION_COLUMNS.items():
+            prediction = np.asarray([float(row[column]) for row in variant_rows], dtype=float)
+            for subset, mask in masks.items():
+                output.append(
+                    {
+                        "seed": seed,
+                        "fold_count": fold_count,
+                        "regression_subset": regression_subset,
+                        "objective": objective,
+                        "prediction_mode": prediction_mode,
+                        "subset": subset,
+                        **common.regression_metrics(target[mask], prediction[mask]),
+                    }
+                )
+    return output
 
 
 def main() -> int:
@@ -24,8 +87,10 @@ def main() -> int:
     regressor_jobs = common.read_csv(args.regressor_jobs)
     failures: list[str] = []
     classifier_rows = []
+    classifier_prediction_rows = []
     metric_rows = []
     run_rows = []
+    regressor_prediction_rows = []
     if len(classifier_jobs) != args.expected_classifier_jobs:
         failures.append(f"classifier_job_count_mismatch:{len(classifier_jobs)}!={args.expected_classifier_jobs}")
     if len(regressor_jobs) != args.expected_regressor_jobs:
@@ -42,6 +107,7 @@ def main() -> int:
             failures.append(f"invalid_classifier_result:{job['job_id']}")
         if len(predictions) != 200 or len({row["topology_id"] for row in predictions}) != 200:
             failures.append(f"classifier_prediction_mismatch:{job['job_id']}")
+        classifier_prediction_rows.extend(predictions)
         test = result.get("test_metrics", {})
         classifier_rows.append(
             {
@@ -85,6 +151,7 @@ def main() -> int:
             failures.append(f"regressor_identity_mismatch:{job['job_id']}")
         if len(predictions) != 200 or len({row["topology_id"] for row in predictions}) != 200:
             failures.append(f"regressor_prediction_mismatch:{job['job_id']}")
+        regressor_prediction_rows.extend(predictions)
         run_rows.append(
             {
                 "job_id": job["job_id"],
@@ -112,19 +179,51 @@ def main() -> int:
     for row in run_rows:
         if not math.isfinite(row["best_validation_subset_mae_pp"]):
             failures.append(f"nonfinite_validation_metric:{row['job_id']}")
+    expected_folds_by_seed: dict[int, set[int]] = defaultdict(set)
+    for job in classifier_jobs:
+        expected_folds_by_seed[int(job["seed"])].add(int(job["fold"]))
+    for seed, folds in expected_folds_by_seed.items():
+        classifier_seed_rows = [row for row in classifier_prediction_rows if int(row["seed"]) == seed]
+        expected_count = 200 * len(folds)
+        if len(classifier_seed_rows) != expected_count:
+            failures.append(f"classifier_oof_count_mismatch:seed{seed}:{len(classifier_seed_rows)}!={expected_count}")
+        if len({row["topology_id"] for row in classifier_seed_rows}) != expected_count:
+            failures.append(f"classifier_oof_topology_mismatch:seed{seed}")
+        for regression_subset in common.REGRESSION_SUBSETS:
+            for objective in common.OBJECTIVES:
+                variant_rows = [
+                    row
+                    for row in regressor_prediction_rows
+                    if int(row["seed"]) == seed
+                    and row["regression_subset"] == regression_subset
+                    and row["objective"] == objective
+                ]
+                if len(variant_rows) != expected_count:
+                    failures.append(
+                        f"regressor_oof_count_mismatch:seed{seed}:{regression_subset}:{objective}:"
+                        f"{len(variant_rows)}!={expected_count}"
+                    )
+                if len({row["topology_id"] for row in variant_rows}) != expected_count:
+                    failures.append(f"regressor_oof_topology_mismatch:seed{seed}:{regression_subset}:{objective}")
+    classifier_oof_rows = aggregate_classifier_predictions(classifier_prediction_rows)
+    aggregate_metric_rows = aggregate_regressor_predictions(regressor_prediction_rows)
     ranking_rows = [
         row
-        for row in metric_rows
+        for row in aggregate_metric_rows
         if row["subset"] in {"all", "material_abs_gt_0.1pp", "nonzero"}
         and row["prediction_mode"] in {"hard_hurdle", "soft_hurdle", "oracle_nonzero_gate"}
     ]
-    ranking_rows.sort(key=lambda row: (row["subset"], row["prediction_mode"], float(row["mae"])))
+    ranking_rows.sort(key=lambda row: (row["seed"], row["subset"], row["prediction_mode"], float(row["mae"])))
     best_by_target = {}
+    seed_count = len({row["seed"] for row in aggregate_metric_rows})
     for row in ranking_rows:
-        key = f"{row['prediction_mode']}:{row['subset']}"
+        prefix = f"seed{row['seed']}:" if seed_count > 1 else ""
+        key = f"{prefix}{row['prediction_mode']}:{row['subset']}"
         best_by_target.setdefault(
             key,
             {
+                "seed": row["seed"],
+                "fold_count": row["fold_count"],
                 "regression_subset": row["regression_subset"],
                 "objective": row["objective"],
                 "mae": row["mae"],
@@ -150,6 +249,30 @@ def main() -> int:
             "f1",
             "auroc",
             "average_precision",
+        ],
+    )
+    common.atomic_write_csv(
+        review_dir / "classifier_oof_metrics.csv",
+        classifier_oof_rows,
+        [
+            "seed",
+            "fold_count",
+            "count",
+            "positive_count",
+            "negative_count",
+            "threshold",
+            "accuracy",
+            "balanced_accuracy",
+            "precision",
+            "recall",
+            "specificity",
+            "f1",
+            "auroc",
+            "average_precision",
+            "tp",
+            "tn",
+            "fp",
+            "fn",
         ],
     )
     common.atomic_write_csv(
@@ -183,6 +306,25 @@ def main() -> int:
         "spearman",
     ]
     common.atomic_write_csv(review_dir / "variant_metrics.csv", metric_rows, metric_fields)
+    aggregate_metric_fields = [
+        "seed",
+        "fold_count",
+        "regression_subset",
+        "objective",
+        "prediction_mode",
+        "subset",
+        "count",
+        "mae",
+        "rmse",
+        "r2",
+        "pearson",
+        "spearman",
+    ]
+    common.atomic_write_csv(
+        review_dir / "aggregate_variant_metrics.csv",
+        aggregate_metric_rows,
+        aggregate_metric_fields,
+    )
     audit = {
         "passed": not failures,
         "status": "success" if not failures else "failed",
@@ -191,6 +333,8 @@ def main() -> int:
         "regressor_job_count": len(regressor_jobs),
         "successful_regressor_count": len(run_rows),
         "variant_metric_count": len(metric_rows),
+        "classifier_oof_metric_count": len(classifier_oof_rows),
+        "aggregate_variant_metric_count": len(aggregate_metric_rows),
         "regression_subsets": list(common.REGRESSION_SUBSETS),
         "objectives": list(common.OBJECTIVES),
         "best_by_prediction_mode_and_subset": best_by_target,

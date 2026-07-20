@@ -44,6 +44,41 @@ three-seed expansion. The full seed-42 screen would contain five classifiers
 and 50 regressors. Only the strongest variants should be promoted to seeds 43
 and 44.
 
-Current status: the implementation, four unit tests, locked input audit, 11-row
-dependency plan, and both launcher previews pass locally. No Experiment 06
-training has been launched yet.
+## Fold-0 smoke result
+
+The `fold=0, seed=42` smoke completed on Garnet on 2026-07-20. All 11 jobs
+succeeded and the review audited 160 per-run metric rows without failures. The
+classifier early-stopped after 62 epochs at epoch 32. On its 200-topology test
+fold it achieved AUROC 0.7234, average precision 0.5924, balanced accuracy
+0.6989, recall 0.8077, and F1 0.6597. Its confusion matrix was TP=63, TN=72,
+FP=50, and FN=15. This is evidence that topology carries useful zero/nonzero
+signal, but it is only one fold.
+
+The best deployable fold-0 variants on the full test fold were:
+
+| gate | stage-two training set | objective | MAE (pp) | RMSE (pp) | R2 | Spearman |
+| --- | --- | --- | ---: | ---: | ---: | ---: |
+| hard | nonzero | signed-log MSE | 1.3957 | 4.5046 | 0.0164 | 0.1324 |
+| soft | nonzero | signed-log MSE | 1.3611 | 4.5428 | -0.0003 | 0.1034 |
+| hard | nonzero | Huber | 1.8006 | **4.4673** | **0.0326** | 0.1380 |
+| soft | nonzero | Huber | 1.7099 | 4.4780 | 0.0280 | 0.1128 |
+
+For reference on the identical fold, Experiment 05 seed 42 had MAE 1.3002,
+RMSE 4.5448, and R2 -0.0012; its three-seed ensemble had MAE 1.3376, RMSE
+4.5409, and R2 0.0005; the zero predictor had MAE 1.0629, RMSE 4.6522, and R2
+-0.0491. Thus the smoke hurdle model improves tail-sensitive RMSE/R2 but does
+not beat the zero or Experiment 05 baselines on MAE. The oracle nonzero gate
+reached MAE 1.1755 with signed-log MSE and RMSE 4.3519/R2 0.0820 with Huber,
+showing that classification error is a material bottleneck.
+
+The smoke ordering does not support dropping small nonzero labels: every best
+deployable full-fold row trained on the full nonzero subset, not the material-
+only subset. Weighted Huber and plain MSE were worse; adding ranking loss was
+close to, but did not improve on, plain Huber. Signed-log MSE is the leading
+MAE candidate while Huber is the leading RMSE/R2 candidate.
+
+Current status: implementation, five unit tests, locked input audit, dependency
+planning, launcher previews, and the 11-job smoke all pass. The next gated run
+is the seed-42 five-fold screen: five classifiers plus 50 regressors. The
+reviewer pools the five disjoint test folds into 1,000-topology OOF metrics;
+only variants that survive that screen may be promoted to seeds 43 and 44.
