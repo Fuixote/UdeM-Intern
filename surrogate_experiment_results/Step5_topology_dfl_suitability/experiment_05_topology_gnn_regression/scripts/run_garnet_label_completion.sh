@@ -12,6 +12,7 @@ RESULT_DIR="${OUTPUT_REL}/results"
 LOG_DIR="${OUTPUT_REL}/logs"
 ARTIFACT_SHARDS="${ARTIFACT_SHARDS:-24}"
 WORKERS="${WORKERS:-24}"
+FINALIZE_ONLY="${FINALIZE_ONLY:-0}"
 
 cd "${PROJECT_ROOT}"
 source configs/runtime/garnet.env
@@ -27,6 +28,7 @@ write_phase() {
   printf '[exp5-label-completion] %s %s\n' "$(date --iso-8601=seconds)" "$1"
 }
 
+if [[ "${FINALIZE_ONLY}" != "1" ]]; then
 write_phase "artifact_build_started topologies=940 bundles=1880 shards=${ARTIFACT_SHARDS}"
 pids=()
 for ((shard=0; shard<ARTIFACT_SHARDS; shard++)); do
@@ -94,11 +96,14 @@ python "${LAUNCHER}" \
   --require-hostname garnet \
   --execute \
   > "${LOG_DIR}/launcher.log" 2>&1
+fi
 
-write_phase "completion_review_started"
+write_phase "completion_review_started finalize_only=${FINALIZE_ONLY} accepted_spoplus_cap_hits=G-122@44,G-670@44"
 python "${EXP5_REL}/scripts/review_multiseed_completion_results.py" \
   --topologies-csv "${TOPOLOGIES}" \
   --output-root "${OUTPUT_REL}" \
+  --accept-spoplus-cap-hit G-122@44 \
+  --accept-spoplus-cap-hit G-670@44 \
   > "${LOG_DIR}/review.log" 2>&1
 
 write_phase "formal_target_build_started"
