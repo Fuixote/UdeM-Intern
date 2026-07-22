@@ -1,0 +1,179 @@
+experiment:
+  experiment_id: step5_exp7_material_dfl_suitability_classification_v1
+  status: formal_seed42_complete_promotion_gate_failed
+  parent_experiments:
+    - step5_exp5_topology_gnn_regression_v1
+    - step5_exp6_hurdle_gnn_v1
+  research_question: can pure topology identify instances where SPO+ produces a practically material improvement?
+
+data:
+  topology_count: 1000
+  target_table: ../experiment_05_topology_gnn_regression/results/multiseed_completion1880/results/multiseed_targets.csv
+  target_table_sha256: e1b2cd6cfb575ce7924d07a665fc7c0755dc1758aad7ceb8c8a18d1d17a29f8b
+  scalar_feature_source: ../experiment_03_formal_continuous_label_seed42_sample50/results/formal1000/results/weak_label_topology_summary.csv
+  scalar_feature_source_sha256: 0e7b8554c63da668a2ad1b2ddd84386ec91970dd2a27d7986e417806af68deba
+  incidence_graph_source: ../experiment_05_topology_gnn_regression/results/multiseed_completion1880/results/formal_topology_incidence_graphs.jsonl
+  incidence_graph_source_sha256: 8a41232110bf7f151c0192c6723fe5e0d7f4b9dd83aa70aba7fa142e503fd522
+  topology_only_inputs_exclude:
+    - formal_label_mean_pp
+    - seed_level_labels
+    - label_uncertainty_std_pp
+    - sampled_context
+    - test_statistics
+
+labels:
+  primary_task:
+    positive: primary_label == material_helpful
+    negative: primary_label != material_helpful
+    harmful_role: safety_evaluation_not_primary_training_class
+  secondary_task: three_class_material_harmful_neutral_helpful
+  primary:
+    material_helpful: formal_label_mean_pp > 0.5
+    material_harmful: formal_label_mean_pp < -0.5
+    neutral_or_uncertain: otherwise
+  confidence_aware:
+    sign_agreement: at least two of three seed deltas match the primary material direction
+    bootstrap_ci:
+      method: exact ordered n=3 nonparametric percentile bootstrap
+      resamples: 27
+      alpha: 0.05
+      requirement: interval excludes zero in the primary material direction
+    high_variance:
+      definition: label_uncertainty_std_pp > 0.5
+      action: map confidence label to neutral_or_uncertain and retain uncertainty reason
+    strict_confidence_label: primary material label AND sign agreement AND bootstrap CI excludes zero AND not high variance
+  primary_counts:
+    material_harmful: 11
+    neutral_or_uncertain: 827
+    material_helpful: 162
+  strict_confidence_counts:
+    material_harmful: 4
+    neutral_or_uncertain: 877
+    material_helpful: 119
+
+splits:
+  folds: 5
+  split_seed: 20260722
+  stratification: primary_label
+  expected_fold_size: 200
+  nested_model_split: 600_train_200_validation_200_test
+  validation_fold: (test_fold + 1) mod 5
+  target_used_only_for_stratification: true
+
+locked_local_artifacts:
+  material_labels_sha256: 1ef744a7277b01355837e53fb11ac68754f769f65ba27a059c1fe37f74bbdbe8
+  material_folds_sha256: f26edb03ed0fd9edb7d5ca0f33ea9643e7328d3ebb59a9fe5df4becc473f0499
+  candidate_conflict_graph_sha256: 0bb55f9f5f4df309ee72ad7a6f5b471ea39aa1558a341d9c13d53f0080d0dbfa
+  candidate_conflict_graph_records: 1000
+  candidate_nodes: 18468
+  directed_conflict_edges: 691794
+
+model_sequence:
+  - class_prior_and_random_score_binary: local_fivefold_oof_complete
+  - scalar_logistic_binary: local_fivefold_oof_complete
+  - scalar_extra_trees_binary: local_fivefold_oof_complete
+  - incidence_gnn_binary: formal_seed42_fivefold_complete_gate_failed
+  - three_class_models: secondary_local_checkpoint_only
+  - candidate_conflict_gnn: target_free_graph_ready_blocked_by_incidence_gate
+  - topology_plus_cheap_context: blocked_pending_context_budget
+
+local_results:
+  scalar_binary_fivefold_oof:
+    prevalence: 0.162
+    class_prior_auprc: 0.16207716049382717
+    logistic_auroc: 0.6410987359674711
+    logistic_auprc: 0.22651904972076822
+    extra_trees_auroc: 0.5845782138542679
+    extra_trees_auprc: 0.19036838123158395
+    always_spoplus_policy_regret_pp: 0.02339036944196622
+    logistic_validation_regret_policy_regret_pp: 0.04375561421990248
+    extra_trees_validation_regret_policy_regret_pp: 0.05198921129941813
+  scalar_primary_fivefold_oof:
+    class_prior:
+      macro_auroc: 0.48841536307580685
+      macro_auprc: 0.3324217497990338
+      macro_f1: 0.30176975004561213
+      helpful_auprc: 0.16090895061728394
+    logistic:
+      macro_auroc: 0.6609572422818811
+      macro_auprc: 0.41236376101518196
+      macro_f1: 0.3314689825635741
+      helpful_auprc: 0.21050853422734295
+    extra_trees:
+      macro_auroc: 0.5916650131523741
+      macro_auprc: 0.36815043463566094
+      macro_f1: 0.39831323729628815
+      helpful_auprc: 0.19110760415556352
+  incidence_gnn_fold0_seed42_smoke:
+    formal: false
+    best_epoch: 3
+    epochs_completed: 33
+    macro_auroc: 0.7235475769295566
+    macro_auprc: 0.41803391563944164
+    macro_f1: 0.42154287659905637
+    helpful_auroc: 0.668154761904762
+    helpful_auprc: 0.28557192294204536
+    helpful_precision: 0.3333333333333333
+    helpful_recall: 0.59375
+    fixed_probability_threshold_0_5_selected_count: 0
+    requires_full_fivefold_and_calibration_review: true
+  incidence_gnn_binary_seed42_fivefold:
+    formal: true
+    oof_topologies: 1000
+    successful_folds: 5
+    failed_folds: 0
+    auroc: 0.6341524499837945
+    auprc: 0.21310028208263376
+    brier: 0.2300379084482382
+    ece_10bin: 0.2995401803858377
+    selected_count: 926
+    helpful_precision: 0.17278617710583152
+    helpful_recall: 0.9876543209876543
+    harmful_selected_count: 11
+    oracle_improvement_captured: 0.9973702758924533
+    policy_regret_pp: 0.026878768771330563
+    always_spoplus_policy_regret_pp: 0.02339036944196622
+    favorable_folds_against_best_scalar: 2
+    promotion_gate_passed: false
+
+metrics:
+  classification:
+    - primary_binary_helpful_auroc
+    - primary_binary_helpful_auprc
+    - per_class_auroc
+    - per_class_auprc
+    - macro_auroc_ovr
+    - macro_auprc_ovr
+    - macro_f1
+  calibration:
+    - binary_brier
+    - binary_nll
+    - binary_ece_10bin
+    - multiclass_brier
+    - log_loss
+    - helpful_ece_10bin
+    - top_label_ece_10bin
+  policy:
+    primary_threshold: validation_only_regret_optimal_cost_0pp
+    secondary_thresholds: [validation_precision_at_least_0.4, validation_precision_at_least_0.5]
+    helpful_precision: selected primary-helpful fraction
+    policy_regret_pp: mean(max(delta,0) - selected*delta)
+    oracle_improvement_captured: sum(selected*max(delta,0))/sum(max(delta,0))
+    net_oracle_fraction: sum(selected*delta)/sum(max(delta,0))
+    compute_adjusted_net_benefit_costs_pp: [0.0, 0.05, 0.1, 0.25, 0.5]
+
+execution_gates:
+  labels_and_audit_required_before_splits: true
+  split_audit_required_before_any_model: true
+  scalar_baselines_required_before_gnn: true
+  incidence_gnn_requires_local_smoke: true
+  incidence_full_fivefold_validation_temperature_scaling_locked: true
+  incidence_full_fivefold_validation_threshold_protocol_locked: true
+  seed42_before_seeds43_44: true
+  seed42_promotion_gate_passed: false
+  seeds43_44_status: blocked
+  candidate_conflict_gnn_status: blocked_by_incidence_gate
+  candidate_conflict_gnn_requires_graph_hash_and_no_leakage_audit: true
+  cheap_context_requires_explicit_context_budget_and_compute_cost_conversion: true
+  formal_cpu_runs_host: garnet
+  formal_gpu_required: false
